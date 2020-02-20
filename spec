@@ -1,0 +1,20 @@
+LatMod
+{
+  +lat.spec
+}
+orthogonal
+{
+  +spec
+}
+structure
+{
+  +spec
+}
+symplectic
+{
+  +spec
+}
+unitary
+{
+  +spec
+}

@@ -1,3 +1,7 @@
+Attach("hackobj.m");
+Attach("hgenus.m");
+Attach("moddedhlat.m");
+
 L := CyclotomicField(5);
 ZZ_L := MaximalOrder(L);
 Lambda := Module(ZZ_L,4);

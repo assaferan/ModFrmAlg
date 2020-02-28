@@ -1,4 +1,5 @@
 174,0
+A,ModDed,1,LatticeFormsScale
 S,Random,"Returns a ""random"" element of Lambda",0,2,0,0,0,0,0,0,0,148,,0,0,361,,160,-38,-38,-38,-38,-38
 S,HasComplexConjugate,No,0,1,0,0,0,0,0,0,0,262,,36,-38,-38,-38,-38,-38
 S,ComplexConjugate,"Return the complex conjugate of I when it's defined. When it's not, it returns I",0,1,0,0,0,0,0,0,0,324,,217,-38,-38,-38,-38,-38

@@ -1,6 +1,3 @@
-// At the moment - this file is not being used as it causes
-// crashes when loading the library more than once
-
 // Watson transformation
 
 import "lattice.m" : pMaximalGram;
@@ -182,7 +179,7 @@ intrinsic Watson(M::ModFrmAlg, p::RngIntElt : BeCareful := true)
 	return Watson(Module(M), p : BeCareful := BeCareful);
 end intrinsic;
 
-intrinsic Watson(M::ModFrmAlg, pR::RngOrdIdl : BeCareful := true)
+intrinsic Watson(M::ModFrmAlg, pR::RngIntElt : BeCareful := true)
 	-> ModDedLat
 { Compute the Watson transformation at a prime. }
 	return Watson(Module(M), pR : BeCareful := BeCareful);

@@ -1,0 +1,80 @@
+declare type RfxFrm;
+declare attributes RfxFrm:
+  V, // the vector space
+  F, // the field
+  type, // alternating, symmetric or Hermitian
+  matrix, // the matrix representing the form
+  aut; // the associated automorphism of F
+
+/* constructors */
+
+intrinsic ReflexiveForm(M::AlgMatElt, alpha::Map) -> RfxFrm
+{.}
+phi := New(RfxFrm);
+phi`F := Domain(alpha);
+assert Codomain(alpha) eq phi`F;
+n := NumberOfRows(M);
+is_coercible, M_F :=  IsCoercible(MatrixAlgebra(phi`F,n), M); 
+phi`V := RowSpace(M_F);
+phi`matrix := M_F;
+phi`aut := extendMap(alpha, phi`V);
+
+return phi;
+
+end intrinsic;
+
+/* print */
+
+intrinsic Print(phi::RfxFrm)
+{.}
+printf "Reflexive form on the vector space \n%o\n", phi`V;
+printf "Defined by the matrix: \n%o", phi`matrix;
+end intrinsic;
+
+/* access */
+
+intrinsic FieldAutomorphism(phi::RfxFrm) -> Map
+{.}
+   return phi`aut;
+end intrinsic;
+
+intrinsic BaseField(phi::RfxFrm) -> Fld
+{.}
+   return phi`F;
+end intrinsic;
+
+intrinsic VectorSpace(phi::RfxFrm) -> ModTupFld
+{.}
+   return phi`V;
+end intrinsic;
+
+intrinsic Matrix(phi::RfxFrm) -> AlgMatElt
+{.}
+   return phi`matrix;
+end intrinsic;
+
+intrinsic Type(phi::RfxFrm) -> MonStgElt
+{.}
+   return phi`type;
+end intrinsic;
+
+/* Evaluation */
+
+intrinsic extendMap(alpha::Map, V::ModTupFld) -> Map
+{.}
+  require BaseField(V) eq Domain(alpha) : "map must be defined on elements!";
+  return map< V -> V | v :->  V![alpha(v[i]) : i in [1..Dimension(V)]]>;
+end intrinsic;
+
+intrinsic Evaluate(phi::RfxFrm, u::ModTupFldElt, v::ModTupFldElt) -> FldElt
+{.}
+  return (phi`aut(u) * phi`matrix, v); 
+end intrinsic;
+
+// That's the best I could do at the moment. How does one create
+// an intrinsic for a call with several variables?
+
+intrinsic '@'(v::Tup, phi::RfxFrm) -> FldElt
+{.}
+  return Evaluate(phi, v[1], v[2]);
+end intrinsic;

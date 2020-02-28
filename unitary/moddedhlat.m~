@@ -8,8 +8,6 @@
 //
 //====================
 
-declare attributes ModDed:
-   LatticeFormsScale;
 
 intrinsic Random(Lambda::ModDed, B::RngIntElt) -> ModTupFldElt
   {Returns a "random" element of Lambda.}
@@ -35,7 +33,7 @@ end intrinsic;
 intrinsic ComplexConjugate(I::RngOrdFracIdl) -> RngOrdIdl
   {Return the complex conjugate of I when it's defined.  When it's not, it returns I.}
   O := Order(I);
-  L := AbsoluteField(FieldOfFractions(O));
+  L := FieldOfFractions(O);
   if HasComplexConjugate(L) then
     return ideal<O|[ComplexConjugate(L!x) : x in Generators(I)]>;
   else
@@ -50,7 +48,7 @@ end intrinsic;
 
 intrinsic ComplexConjugate(x::ModTupFldElt) -> ModTupFldElt
   {Return the complex conjugate of x when it's defined.  When it's not, it returns x.}
-  L := AbsoluteField(BaseField(Parent(x)));
+  L := BaseField(Parent(x));
   _,cc := HasComplexConjugate(L);
   return Parent(x)![cc(y) : y in Eltseq(x)]; 
 end intrinsic;
@@ -62,7 +60,7 @@ end intrinsic;
 
 intrinsic ComplexConjugate(M::AlgMatElt) -> AlgMatElt
   {Return the complex conjugate of M when it's defined. When it's, it just gives back M.}
-  L := AbsoluteField(FieldOfFractions(BaseRing(M)));
+  L := FieldOfFractions(BaseRing(M));
   if HasComplexConjugate(L) then
     return Parent(M)![ComplexConjugate(L!x) : x in Eltseq(M)]; 
   else
@@ -77,7 +75,7 @@ end intrinsic;
 
 intrinsic ComplexConjugate(M::ModMatFldElt) -> AlgMatElt
   {Return the complex conjugate of M when it's defined. When it's, it just gives back M.}
-  L := AbsoluteField(FieldOfFractions(BaseRing(M)));
+  L := FieldOfFractions(BaseRing(M));
   if HasComplexConjugate(L) then
     return Parent(M)![ComplexConjugate(L!x) : x in Eltseq(M)]; 
   else
@@ -157,26 +155,20 @@ end intrinsic;
 // ******************************************************************************
 
 
-intrinsic LineReps(Lambda::ModDed, P::RngOrdIdl :
-		   UseAutomorphisms := true, BeCareful := true) ->.
+intrinsic LineReps(Lambda::ModDed, P::RngOrdIdl : UseAutomorphisms := true) ->.
   {Computes basis vectors for the lines in L/P*L}
 
   n := Dimension(Lambda);
   pbLambda := PseudoBasis(Lambda);
   coeff_ideals := [x[1] : x in pbLambda];
   B := Matrix(Basis(Lambda));
-  if UseAutomorphisms then 
-    if assigned Lambda`LatticeAutomorphismGroup then
-      G := Lambda`LatticeAutomorphismGroup;
-    else
-      G := LatticeAutomorphismGroup(Lambda);
-      Lambda`LatticeAutomorphismGroup := G;
-    end if;
+  if assigned Lambda`LatticeAutomorphismGroup then
+    G := Lambda`LatticeAutomorphismGroup;
   else
-    G := sub<GL(n, Integers()) | >;
+    G := LatticeAutomorphismGroup(Lambda);
+    Lambda`LatticeAutomorphismGroup := G;
   end if;
-  gens_L := [PullUp(Matrix(g), Lambda, Lambda :
-		  BeCareful := BeCareful) : g in Generators(G)];
+  gens_L := [PullUp(Matrix(g), Lambda, Lambda) : g in Generators(G)];
 
   kP,redP := ResidueClassField(P);
   A := [[x : x in Generators(I) | x notin P*I][1] : I in coeff_ideals];
@@ -184,7 +176,6 @@ intrinsic LineReps(Lambda::ModDed, P::RngOrdIdl :
 
   f := function(v)
     w := Eltseq(v*B^-1);
-    // why is w[i] / A[i] integral?
     ans := [redP(w[i]/A[i]) : i in [1..n]];
     return ans;
   end function;
@@ -252,19 +243,14 @@ intrinsic Lattice(Lambda::ModDed) -> Lat
   B := ChangeRing(InnerProductMatrix(V), FieldOfFractions(ZZ_L));
   d := Degree(ZZ_L);
   m := Dimension(Lambda);
-  L_abs := AbsoluteField(FieldOfFractions(ZZ_L));
 
   pbLambda := PseudoBasis(Lambda);
   LambdaZZBasis := &cat[ [ V!(x*pb[2]) : x in Basis(pb[1]) ] : pb in pbLambda ];
-  LambdaZZBasisConj := [V![ComplexConjugate(L_abs!t) : t in Eltseq(v)] : v in LambdaZZBasis];
+  LambdaZZBasisConj := [V![ComplexConjugate(t) : t in Eltseq(v)] : v in LambdaZZBasis];
 
   phis := [Matrix(d*m, d*m, [ Trace((Matrix(z*x)*B*Transpose(Matrix(y)))[1,1]) : x in LambdaZZBasis, y in LambdaZZBasisConj ]) 
                : z in Basis(ZZ_L)];
-  D := LCM([Denominator(x) : x in phis]);
-  phis := [ChangeRing(D*phi, Integers()) : phi in phis];
-  
-//  phis := [ChangeRing(phi, Integers()) : phi in phis];
-//  phis := [ChangeRing(phi, Rationals()) : phi in phis];
+  phis := [ChangeRing(phi, Integers()) : phi in phis];
 
   LambdaZZ := LatticeWithGram(phis[1]);
 
@@ -272,7 +258,6 @@ intrinsic Lattice(Lambda::ModDed) -> Lat
   Lambda`LatticeZZBasis := LambdaZZBasis;
   Lambda`LatticeZZBasisConj := LambdaZZBasisConj;
   Lambda`LatticeAuxForms := phis[1..#phis];
-  Lambda`LatticeFormsScale := D;
 
   return LambdaZZ;
 end intrinsic;
@@ -299,7 +284,7 @@ intrinsic LatticeAutomorphismGroup(Lambda::ModDed : BeCareful := true) -> GrpMat
       print "Scalar multiplication commutation test passed.";
     else 
       print "Automorphisms don't commute with multiplication by scalars from L!";
-      end if;
+    end if;
   end if;
 
   return AutLambdaZZ;
@@ -316,11 +301,9 @@ intrinsic IsIsometric(Lambda::ModDed, Pi::ModDed : Special := false, BeCareful :
   require  Lambda`AmbientSpace eq Pi`AmbientSpace : "Lattices must come from the same space.";
 
   LambdaZZ := Lattice(Lambda);
+  LambdaZZAuxForms := Lambda`LatticeAuxForms;
   PiZZ := Lattice(Pi);
-// For some reason, IsIsometric can only eat integral matrices for the forms
-// so we scale everything	       
-  LambdaZZAuxForms := [Pi`LatticeFormsScale * x : x in Lambda`LatticeAuxForms];
-  PiZZAuxForms := [Lambda`LatticeFormsScale * x : x in Pi`LatticeAuxForms];
+  PiZZAuxForms := Pi`LatticeAuxForms;
 
   bl, g := IsIsometric(LambdaZZ, LambdaZZAuxForms, PiZZ, PiZZAuxForms);
 
@@ -364,7 +347,6 @@ intrinsic PullUp(g::AlgMatElt, Lambda::ModDed, Pi::ModDed : BeCareful := true) -
     rowL := Vector([L!rowQ[j*d+1..(j+1)*d] : j in [0..m-1]]); 
     Append(~rows,rowL);
   end for;
-  
   ans := Matrix(rows);
   
   if BeCareful then

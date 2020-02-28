@@ -1,5 +1,3 @@
-// This file is currently not loaded, since it causes crashes
-
 //freeze;
 
 declare type ProcPL;

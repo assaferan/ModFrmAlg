@@ -1,11 +1,10 @@
 n := Dimension(Lambda);
 kP,redP := ResidueClassField(P);
-pbLambda := PseudoBasis(Lambda);
 coeff_ideals := [x[1] : x in pbLambda];
 A := [[x : x in Generators(I) | x notin P*I][1] : I in coeff_ideals];
 B := BasisMatrix(Lambda);
-G := LatticeAutomorphismGroup(Lambda);
-gens_L := [PullUp(Matrix(g), Lambda, Lambda) : g in Generators(G)];
+G := Lambda`LatticeAutomorphismGroup;
+gens_L := [PullUp(g, Lambda, Lambda) : g in Generators(G)];
 C := [Vector(A[i]*B[i]) : i in [1..n]];
 
 

@@ -32,7 +32,7 @@ declare attributes ModDed:
   ModDedZZ_FBasis,    // Basis for LambdaZZ.
   ModDedZZ_FAuxForms, // The auxiliary forms which define LambdaZZ as a module over ZZ_F.
 
-  QuadraticSpace,     // 
+//  QuadraticSpace,     // 
   Lattice,            // = Lattice(Lambda) = LambdaZZ, the lattice pushed down to ZZ, of type Lat.
   LatticeZZBasis,     // Basis for LambdaZZ.
   LatticeZZBasisConj, // Componentwise complex conjugate of LambdaZZ.
@@ -45,23 +45,6 @@ declare attributes ModDed:
 
   ppStandardBases,    // Cached standard bases.  
   almost_basis;
-
-declare attributes ModFrmAlg:
-
-  BaseField, // Field over which the group is defined
-  HermitianExtensionField, // Extension field for unitary groups
-  SplittingField,  // These should be the same 
-  CartanName,
-  Rank,
-  LieGroupOverSplittingField,
-  Weight,
-  WeightModule,
-  IsFull,
-  IsCuspidal,
-  IsEisenstein,
-  SplittingMap,
-  QuadraticSpace,
-  MotherLattice;
 
 //=======
 //
@@ -94,7 +77,7 @@ intrinsic HackobjPrintModFrmAlg(M::ModFrmAlg, level::MonStgElt)
   printf CartanName(M);
   printf " over \n   %o", BaseField(M);
   if CartanName(M)[1] eq "A" then
-    printf "\n   relative to the field %o", M`HermitianExtensionField;
+    printf "\n   relative to the field %o", HermitianExtensionField(M);
   end if;
   printf "\n   Weight: %o", Weight(M);
   printf "\n   Splitting field: %o", SplittingField(M);
@@ -149,29 +132,6 @@ end intrinsic;
 //
 //=======
 
-function get_rational_lattice(L : H := 1)
-  O_E := BaseRing(L);
-  E := FieldOfFractions(O_E);
-  aut := Automorphisms(E);
-  B_L := Basis(L);
-  B_E := Basis(O_E);
-  dim := #B_L;
-  if (H eq 1) then H := IdentityMatrix(E, dim); end if;
-  deg := #B_E;
-  nvars := dim*deg;
-  E_X := PolynomialRing(E, nvars);
-  BLX := [ChangeRing(v, E_X) : v in B_L];
-  vecs := [ &+ [(&+[ a(B_E[j]) * E_X.((i-1)*deg + j) :
-	    j in [1..deg] ])*BLX[i]  : i in [1..dim]] : a in aut];
-  norm_form := InnerProduct(vecs[1]*ChangeRing(H, E_X), vecs[2]);
-  coefs := &cat [[MonomialCoefficient(norm_form, E_X.i * E_X.j) :
-			       j in [i..nvars]] : i in [1..nvars]];
-  A := UpperTriangularMatrix(coefs);
-  Q := ChangeRing((A + Transpose(A))/2, Rationals());
-  Q_lat := LatticeWithGram(Q);
-  return Q_lat;
-end function;
-
 function InitAn(F, n, L);
   assert n ge 1;
 
@@ -203,20 +163,7 @@ function InitAn(F, n, L);
   Lambda`ParentModFrmAlg := M;
   Lambda`QuadraticSpace := V;
   M`MotherLattice := Lambda;
-  M`L := Lambda;
-
-/*
-  Lambda := Module(PseudoMatrix(IdentityMatrix(Integers(L), n+1)));
-  M`L := get_rational_lattice(Lambda);
-  V := QuadraticSpace(IdentityMatrix(Rationals(), (n+1)*Degree(L)));
-// This is what we really want but is not working at the moment -
-// Figure out why
-// V := AmbientQuadraticSpace(InnerProductMatrix(M`L));
-  M`QuadraticSpace := V;
-  M`MotherLattice := Lambda;
-  Lambda`ParentModFrmAlg := M;
-  Lambda`QuadraticSpace := V;
-*/
+  
   return M;
 end function;
 

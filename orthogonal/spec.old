@@ -12,6 +12,7 @@
 	linalg.m
 	l-functions.m
 	orbits.m
+	watson.m
 	jordan.m
 	localsquares.m
 	spinornorm.m

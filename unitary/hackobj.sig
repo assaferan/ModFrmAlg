@@ -1,7 +1,8 @@
 174,0
 A,ModTupRng,1,almost_basis
 A,ModTupFld,5,Quadraticity,QSpaceBasis,QSpaceBasisMatrix,AuxForms,ScalarMultQMats
-A,ModDed,15,AmbientSpace,Discriminant,Dual,ModDedZZ_F,ModDedZZ_FBasis,ModDedZZ_FAuxForms,Lattice,LatticeZZBasis,LatticeZZBasisConj,LatticeAuxForms,LatticeAutomorphismGroup,ParentModFrmAlg,Discriminant,ppStandardBases,almost_basis
+A,ModDed,16,AmbientSpace,Discriminant,Dual,ModDedZZ_F,ModDedZZ_FBasis,ModDedZZ_FAuxForms,QuadraticSpace,Lattice,LatticeZZBasis,LatticeZZBasisConj,LatticeAuxForms,LatticeAutomorphismGroup,ParentModFrmAlg,Discriminant,ppStandardBases,almost_basis
+A,ModFrmAlg,14,BaseField,HermitianExtensionField,SplittingField,CartanName,Rank,LieGroupOverSplittingField,Weight,WeightModule,IsFull,IsCuspidal,IsEisenstein,SplittingMap,QuadraticSpace,MotherLattice
 S,HackobjPrintModFrmAlg,,0,2,0,0,1,0,0,0,0,298,,0,0,ModFrmAlg,,-38,-38,-38,-38,-38,-38
 S,HackobjCoerceModFrmAlg,,0,2,0,0,0,0,0,0,0,-1,,0,0,ModFrmAlg,,36,-1,-38,-38,-38,-38
 S,HackobjInModFrmAlg,,0,2,0,0,0,0,0,0,0,ModFrmAlg,,0,0,-1,,36,-38,-38,-38,-38,-38

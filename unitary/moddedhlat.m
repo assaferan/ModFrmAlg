@@ -8,8 +8,42 @@
 //
 //====================
 
-declare attributes ModDed:
-   LatticeFormsScale;
+declare attributes ModTupRng:
+  almost_basis;       // If M=I_1*a_1 + ... + I_n*a_n and
+                      // b_i is in I_i-I_i^2, then almost_basis is
+                      // [b_1*a_1, ..., b_n*a_n].
+		      // This doesn't work for I_i not prime.
+
+declare attributes ModTupFld:
+  Quadraticity,       // "Orthogonal", "Hermitian", etc.
+  QSpaceBasis,        // A basis of V as a Q-vector space 
+  QSpaceBasisMatrix,  // The matrix of QSpaceBasis pushed down to Q
+  AuxForms,           // The auxilliary forms that define V as an L-space
+  ScalarMultQMats;    // Matrices of multiplication by elements of the basis of the base field of V 
+
+declare attributes ModDed:   
+                      // = Lambda
+  AmbientSpace,       // Lambda's ambient L-space
+  Discriminant,       // Discriminant
+  Dual,               // Dual lattice  
+  ModDedZZ_F,         // The Hermitian lattice Lambda, pushed down to ZZ_F 
+  ModDedZZ_FBasis,    // Basis for LambdaZZ.
+  ModDedZZ_FAuxForms, // The auxiliary forms which define LambdaZZ as a module over ZZ_F.
+
+  QuadraticSpace,     // 
+  Lattice,            // = Lattice(Lambda) = LambdaZZ, the lattice pushed down to ZZ, of type Lat.
+  LatticeZZBasis,     // Basis for LambdaZZ.
+  LatticeZZBasisConj, // Componentwise complex conjugate of LambdaZZ.
+  LatticeAuxForms,    // The auxiliary forms which define LambdaZZ as a module over ZZ_F.
+  LatticeAutomorphismGroup,
+                      // = LatticeAutomorphismGroup(Lambda), the automorphism group of LambdaZZ.
+  ParentModFrmAlg,    // = M
+
+  Discriminant,       // = Discriminant(Lambda), the discriminant ideal of Lambda.
+
+  ppStandardBases,    // Cached standard bases.  
+  almost_basis,
+  LatticeFormsScale;
 
 intrinsic Random(Lambda::ModDed, B::RngIntElt) -> ModTupFldElt
   {Returns a "random" element of Lambda.}

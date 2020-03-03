@@ -169,7 +169,7 @@ intrinsic LineReps(Lambda::ModDed, P::RngOrdIdl :
     if assigned Lambda`LatticeAutomorphismGroup then
       G := Lambda`LatticeAutomorphismGroup;
     else
-      G := LatticeAutomorphismGroup(Lambda);
+    G := LatticeAutomorphismGroup(Lambda : BeCareful := BeCareful);
       Lambda`LatticeAutomorphismGroup := G;
     end if;
   else

@@ -1,12 +1,10 @@
 {
-	struct.m
 	helper.m
 	quadratic.m
 	lattice.m
 	genus.m
 	isotropic.m
 	stdbasis.m
-	hecke.m
 	path.m
 	saveload.m
 	linalg.m

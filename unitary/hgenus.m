@@ -37,11 +37,15 @@ intrinsic NeighborVectors(Lambda::ModDed,
   p := Factorization(NP)[1,1];
   if RamificationIndex(P) ne RamificationIndex(p) then 
     decomp := "ramified";
+    // !!! For now we only use split primes
+    return [];
   else
     if InertiaDegree(P) eq InertiaDegree(p) then
       decomp := "split";
     else
       decomp := "inert";
+      // !!! for now we only use split primes
+      return [];
     end if;
   end if;
 
@@ -138,6 +142,59 @@ end intrinsic;
 //
 //=======
 
+procedure computeHGenusReps(M : BeCareful := true, Force := false,
+			    Orbits := false)
+  if not Force and assigned M`genus then return; end if;
+
+  upTo := 0;
+
+  // Initialize the list with the module defining M
+  genList := [Module(M)];
+
+  // Later - add critical primes, etc. !!!
+  ps := [];
+  ps_idx := 1;
+
+  RR := RealField();
+  mass := UnitaryMass(BaseRing(M), Dimension(Module(M)));
+tmp_mass := RR!#LatticeAutomorphismGroup(Module(M) :
+					 BeCareful := BeCareful)^(-1);
+
+  eps := RR!10^(-30);
+
+  while (Abs(tmp_mass - mass) gt eps) do
+    repeat
+      upTo +:= 10;
+      ps := [p : p in PrimesUpTo(upTo, BaseRing(M)) |
+	     GCD(Integers()!Norm(Discriminant(Module(M)))*2, Norm(p)) eq 1];
+    until #ps ne 0;
+
+    while (ps_idx le #ps) and (Abs(tmp_mass - mass) gt eps) do
+      nbd := Neighborhood(Module(M), ps[ps_idx]);
+      for lat in nbd do
+		if not (&or[IsIsometric(lat, r :
+			    BeCareful := BeCareful) : r in genList]) then
+          Append(~genList, lat);
+          tmp_mass +:= 1/(#LatticeAutomorphismGroup(lat :
+						    BeCareful := BeCareful));
+        end if; 
+      end for;
+      ps_idx +:= 1;
+    end while;
+  end while;
+
+  // TODO: Replace the last two until statements with the appropriate
+  //  conditions to check the mass formula to see if we need to compute
+  //  genus representatives at multiple primes.
+
+  // Assign the genus symbol for the space of algebraic modular forms.
+  M`genus := New(GenusSym);
+  M`genus`Representative := M`L;
+  M`genus`Representatives := genList;
+//  M`genus`RepresentativesAssoc := invs;
+
+end procedure;
+
 // This works when Lamda is defined over an extension of a number field.
 // 
 
@@ -158,7 +215,9 @@ tm:=Cputime();
 count := 0;
 while #unexpanded gt 0 do
         count := count + 1;
-        print "expanded:", #expanded, "unexpanded:", #unexpanded, "count:", count;  
+        if BeCareful then
+          print "expanded:", #expanded, "unexpanded:", #unexpanded, "count:", count;
+        end if;
 	Pi := unexpanded[1];
         ngbr_vectors := NeighborVectors(Pi,P,ComplexConjugate(P) :
 				BeCareful := BeCareful);
@@ -169,7 +228,9 @@ while #unexpanded gt 0 do
 		RhoZZ := Lattice(Rho);	
    		if not exists(t){Sigma : Sigma in expanded cat unexpanded | IsIsometric(Rho,Sigma : BeCareful := BeCareful)} then
 			Append(~unexpanded,Rho);
-			print Cputime(tm), "seconds:", #expanded+#unexpanded,"classes found so far.";
+                        if (BeCareful) then
+			  print Cputime(tm), "seconds:", #expanded+#unexpanded,"classes found so far.";
+                        end if;
 		end if;
 	end for;
 	Remove(~unexpanded,1);
@@ -183,27 +244,26 @@ end intrinsic;
 // very naive implementation - just going over all neighbours,
 // and checking isometries - (Np^2+Np+1)*(g^2) isometry tests
 
-intrinsic HeckeOperator(genus::SeqEnum[ModDed],
-			P::RngOrdIdl) -> AlgMatElt[RngInt]
-{.}
+function HeckeOperatorTrivialWeightUnitary(M, P : BeCareful := true)
+  genus := Representatives(Genus(M));
   d := #genus;
   T := MatrixAlgebra(Integers(), d)!0;
   Pbar := ComplexConjugate(P);
   for gen_idx1 in [1..d] do
-    ngbr_vectors := NeighborVectors(genus[gen_idx1],P,Pbar :
-				    UseAutomorphisms := false);
+	       ngbr_vectors := NeighborVectors(genus[gen_idx1],P,Pbar :
+			  BeCareful := BeCareful, UseAutomorphisms := false);
     for X in ngbr_vectors do
       Rho := Neighbor(genus[gen_idx1],P,Pbar,X);
       RhoZZ := Lattice(Rho);
       for gen_idx2 in [1..d] do
-	if IsIsometric(Rho, genus[gen_idx2] : BeCareful := false) then
+	if IsIsometric(Rho, genus[gen_idx2] : BeCareful := BeCareful) then
           T[gen_idx2, gen_idx1] +:= 1;
 	end if;
       end for;
     end for;
   end for;
   return T;
-end intrinsic;
+end function;
 
 // ******************************************************************************
 // ******************************************************************************

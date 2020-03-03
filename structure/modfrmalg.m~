@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -13,11 +13,6 @@
  
  ***************************************************************************/
 
-// imports
-
-import "../orthogonal/QQ/genus-QQ.m" : computeGenusRepsQQ;
-import "../orthogonal/CN1/genus-CN1.m" : computeGenusRepsCN1;
-import "../unitary/hgenus.m" : computeHGenusReps;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -27,72 +22,123 @@ import "../unitary/hgenus.m" : computeHGenusReps;
 
 /* constructors */
 
-// At the moment we only allow the inner form to be given by an integral
-// matrix. However, there seems to be no reason for that.
-
 intrinsic AlgebraicModularForms(G::GrpLie,
-				innerForm::AlgMatElt[Rng]) -> ModFrmAlg
-{ Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by the isometry class of a specific matrix.}
+				innerForm::AlgMatElt[RngOrd]) -> ModFrmAlg
+{ Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by a specific matrix.}
 	// The rationals as a number field.
-       
+        // K := RationalsAsNumberField();
 
         K := BaseRing(G);
-        require IsField(K) : "Lie group must be defined over a field";
-        if Type(K) eq FldRat then
-           K := RationalsAsNumberField();
-        end if;
+        require IsField(K);
 	// The integers as a maximal order.
 	R := Integers(K);
 
 	// Coerce the inner form into coefficients of the maximal order.
 	innerForm := ChangeRing(innerForm, R);
 
-        if " " in CartanName(G) then
-	  error "Groups of type %o are not supported.\n", CartanName(G);
-        end if;
+	return AlgebraicModularForms(innerForm : isogenyType := isogenyType);
+end intrinsic;
 
-        cartanType := CartanName(G)[1];
+intrinsic AlgebraicModularForms(innerForm::AlgMatElt[FldRat]) -> ModFrmAlg
+{ Builds the space of orthogonal algebraic modular forms with respect to Gram
+matrix over the integers. }
+	try
+		// Attempt to coerce the inner form to the integers.
+		innerForm := ChangeRing(innerForm, Integers());
+	catch e
+		require false: "Inner form must be coercible to the integers.";
+	end try;
 
-        if cartanType in ["B", "D"] then
-           V := AmbientQuadraticSpace(innerForm);
+	return AlgebraicModularForms(innerForm);
+end intrinsic;
 
-	   // Retrieve the standard lattice for this quadratic space.
-	   L := StandardLattice(V);
-           isogenyType := "O";
-	else if cartanType eq "A" then
-	   require not IsSplit(G) : "Group is not compact.";
-           // This has some issues when working on with FldCyc
-	   // _, cc := HasComplexConjugate(K);
-           gal, _, phi := AutomorphismGroup(K,DefRing(G));
-           cc := phi([g : g in gal | Order(g) eq 2][1]);
-           V := UnitarySpace(ChangeRing(innerForm, K), cc);
-           // Should change this to be the lattice
-           // corresponding to the innerForm
-           L := Module(R, Dimension(V));
-           L`AmbientSpace := V;
-           isogenyType := "U";
-        else
-	  error "Groups of type %o are not supported.\n", cartanType;
-        end if;
-        end if;
+intrinsic AlgebraicModularForms(innerForm::AlgMatElt[RngOrd]
+		: isogenyType := "O") -> ModFrmAlg
+{ Builds the space of orthogonal algebraic modular forms with respect to the
+specified Gram matrix. }
+	// Build the quadratic space with specified inner form.
+	V := AmbientQuadraticSpace(innerForm);
 
-        if IsSemisimple(G) then
-           isogenyType := "S" cat isogenyType;
-        end if;
+	// Retrieve the standard lattice for this quadratic space.
+	L := StandardLattice(V);
 
-        // !!! Remember to change the name of this parameter - these are not
-        // isogeny types in general !
+	return AlgebraicModularForms(L, 0, isogenyType);
+end intrinsic;
+
+intrinsic AlgebraicModularForms(innerForm::AlgMatElt[FldNum]) -> ModFrmAlg
+{ Builds the space of orthgonal algebraic modular forms with respect to the
+specified Gram matrix. }
+	// Retrieve the base ring of the inner form.
+	R := Integers(BaseRing(innerForm));
+
+	try
+		// Attempt to coerce the inner form into the number ring.
+		innerForm := ChangeRing(innerForm, R);
+	catch e
+		require false: "Inner form not coercible into number ring.";
+	end try;
+
+	return AlgebraicModularForms(innerForm);
+end intrinsic;
+
+intrinsic AlgebraicModularForms(innerForm::AlgMatElt) -> ModFrmAlg
+{ Builds the space of orthogonal algebraic modular forms with respect to the
+specified Gram matrix. This routine tries to convert the base ring to something
+we can work with first, however. }
+	// Get the base ring of the inner form.
+	R := BaseRing(innerForm);
+
+	try
+		// Attempt to determine the integral structure of R.
+		R := Integers(R);
+		innerForm := ChangeRing(innerForm, R);
+	catch e
+		require false: "Invalid base ring for inner form.";
+	end try;
+
+	return AlgebraicModularForms(innerForm);
+end intrinsic;
+
+intrinsic AlgebraicModularForms(innerForm::AlgMatElt, isogenyType::MonStgElt)
+	-> ModFrmAlg
+{ Builds the space of algebraic modular forms. }
+	return AlgebraicModularForms(innerForm, 0, isogenyType);
+end intrinsic;
+
+intrinsic AlgebraicModularForms(lat::Lat) -> ModFrmAlg
+{ Builds the space of algebraic modular forms from the specified lattice. }
+	return AlgebraicModularForms(GramMatrix(lat));
+end intrinsic;
+
+intrinsic AlgebraicModularForms(L::ModDedLat) -> ModFrmAlg
+{ Computes the space of algebraic modular forms. }
+	return AlgebraicModularForms(L, 0, "O");
+end intrinsic;
+
+intrinsic AlgebraicModularForms(
+	lat::ModDedLat, weight::RngIntElt, isogenyType::MonStgElt)
+		-> ModFrmAlg
+{ Computes the space of algebraic modular forms with specified isogeny type and
+weight given by homogeneous polynomials. }
 	// Make sure the isogeny type is valid.
-        require isogenyType in [ "SO", "O" , "SU", "U"]:
+	require isogenyType in [ "SO", "O" ]:
 		"Isogeny type must be (O)rthogonal or (S)pecial (O)rthogonal.";
 
 	// Initialize the space of algebraic modular forms.
 	M := New(ModFrmAlg);
 
-        dim := Dimension(L);
-        M`K := K;
-        M`G := G;
-        M`L := L;
+	// The dimension of the ambient quadratic space.
+	dim := Dimension(QuadraticSpace(lat));
+
+	// The Cartan nae of the underlying Lie group.
+	cartan := (dim mod 2 eq 1 select "B" else "D") cat
+		IntegerToString(Floor(dim / 2));
+
+	// Assign the underlying Lie group and standard lattice associated to
+	//  the inner form.
+	M`K := BaseRing(QuadraticSpace(lat));
+	M`G := GroupOfLieType(cartan, M`K);
+	M`L := lat;
 
 	// Assign the isogeny type of the Lie group.
 	M`isogenyType := isogenyType;
@@ -104,29 +150,9 @@ intrinsic AlgebraicModularForms(G::GrpLie,
 	return M;
 end intrinsic;
 
-intrinsic AlgebraicModularForms(G::GrpLie,
-				innerForm::AlgMatElt[Fld]) -> ModFrmAlg
-{ Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by the isometry class of a specific matrix. }
-        K := BaseRing(G);
-        require IsField(K) : "Lie group must be defined over a field";
-	// The integers as a maximal order.
-	R := Integers(K);
-	try
-		// Attempt to coerce the inner form to the maximal order.
-		innerForm := ChangeRing(innerForm, R);
-	catch e
-		require false: "Inner form must be given by an 
-                                 integral matrix.";
-	end try;
 
-        return AlgebraicModularForms(G, innerForm);
-end intrinsic;
-
-// Should replace weight by Map[GrpLie, GrpMat]
-// or something similar
-
-// Should also think how to get the isogeny in general,
-// and how it should affect calculations
+import "../orthogonal/QQ/genus-QQ.m" : computeGenusRepsQQ;
+import "../orthogonal/CN1/genus-CN1.m" : computeGenusRepsCN1;
 
 intrinsic Print(M::ModFrmAlg) {}
 	K := BaseRing(InnerForm(M));
@@ -162,11 +188,7 @@ end intrinsic;
 intrinsic InnerForm(M::ModFrmAlg) -> QuadSpace
 { Returns the ambient quadratic space associated with the space of algebraic
 modular forms. }
-   if IsOrthogonal(M) or IsSpecialOrthogonal(M) then
-     return InnerForm(QuadraticSpace(Module(M)));
-   else
-     return InnerProduct(Module(M)`AmbientSpace);
-   end if;
+	return InnerForm(QuadraticSpace(Module(M)));
 end intrinsic;
 
 intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> QuadSpace
@@ -176,10 +198,11 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> QuadSpace
 	if assigned M`genus then return M`genus; end if;
 
 	// Otherwise, compute the genus and return it.
-	   _ := GenusReps(M : BeCareful := BeCareful, Orbits := Orbits);
-	     
+	_ := GenusReps(M : BeCareful := BeCareful, Orbits := Orbits);
 	return M`genus;
 end intrinsic;
+
+
 
 procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
 	// If the representation space has already been computed, then this
@@ -187,19 +210,13 @@ procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
 	//  without any further computations.
 	if assigned M`W then return; end if;
 
-        if IsOrthogonal(M) or IsSpecialOrthogonal(M) then
-
-	  // Compute genus representatives of the associated inner form.
-	  if Degree(BaseRing(QuadraticSpace(Module(M)))) eq 1 then
+	// Compute genus representatives of the associated inner form.
+	if Degree(BaseRing(QuadraticSpace(Module(M)))) eq 1 then
 		computeGenusRepsQQ(M : BeCareful := BeCareful, Force := Force,
 			Orbits := Orbits);
-	  else
-		computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
-	  end if;
 	else
-	  computeHGenusReps(M : BeCareful := BeCareful, Force := Force,
-			    Orbits := Orbits);
-        end if;
+		computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
+	end if;
 end procedure;
 
 intrinsic Dimension(M::ModFrmAlg) -> RngIntElt

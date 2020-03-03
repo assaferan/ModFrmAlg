@@ -1,13 +1,6 @@
 // Attach the appropriate specification file.
 AttachSpec("spec");
 
-// This is hardly the right thing to do,
-// but I still don't know how to construct O_{n} as a group of Lie type (!?)
-// Instead, we just construct a non-semisimple group of type "B1",
-// using the fact that the code just checks for semisimplicity at the moment.
-
-O5 := GroupOfLieType("B2 T1", Rationals());
-
 // Construct an inner form with discriminant 61.
 innerForm := Matrix([
 	[ 4,-1,1,-1,2 ],
@@ -18,15 +11,15 @@ innerForm := Matrix([
 
 // Construct the space of algebraic modular forms associated to the standard
 //  lattice with respect to the quadratic space with the specified inner form.
-M := AlgebraicModularForms(O5, innerForm);
+M := AlgebraicModularForms(innerForm);
 
 // Compute the genus representatives for M. We don't really need to do this,
 //  since this will automatically get called if we try to compute Hecke
 //  operators.
 printf "Computing genus representatives... ";
-_ := Representatives(Genus(M));
+_ := GenusReps(M);
 print "Done.";
-printf "Found %o genus reps.\n\n", #Representatives(Genus(M));
+printf "Found %o genus reps.\n\n", #GenusReps(M);
 
 // Compute T(2), T(3), and T(5) Hecke operators.
 printf "Computing T(p) Hecke operators... ";

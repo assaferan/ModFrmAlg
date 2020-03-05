@@ -169,57 +169,6 @@ declare attributes QuadSpaceAff:
 	// The quadratic form modulo pR^2.
 	Q_pR2;
 
-declare type ModDedLat;
-declare attributes ModDedLat:
-	// The lattice.
-	Module,
-
-	// The base ring.
-	R,
-
-	// The base field.
-	F,
-
-	// The pseudobasis (only used when not over the rationals).
-	psBasis,
-
-	// The ambient quadratic space.
-	quadSpace,
-
-	// The discriminant ideal.
-	Discriminant,
-
-	// The p-maximal basis is not strictly-speaking a basis for the lattice,
-	//  but instead a basis for the completed lattice at p. This is used to
-	//  compute the affine quadratic space and thereby compute isotropic
-	//  lines, etc.
-	pMaximal,
-
-	// The lattice pushed down to the integers. This is the same as L if
-	//  and only if the base field is the rationals.
-	ZLattice,
-
-	// The automorphism group as a lattice over Z.
-	AutomorphismGroup,
-
-	// The scale of the lattice.
-	Scale,
-
-	// The norm of the lattice.
-	Norm,
-
-	// The level of the lattice.
-	Level,
-
-	// An associative array storing quadratic spaces modulo primes.
-	Vpp,
-
-	// Jordan decomposition of the lattice at a prime.
-	Jordan,
-
-	// The spinor norms as specified prime ideals.
-	SpinorNorm;
-
 declare attributes Lat:
 	// The auxiliary forms associated to this lattice.
 	auxForms,

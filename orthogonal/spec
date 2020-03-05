@@ -1,7 +1,6 @@
 {
 	helper.m
 	quadratic.m
-	lattice.m
 	genus.m
 	isotropic.m
 	stdbasis.m

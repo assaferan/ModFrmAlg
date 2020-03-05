@@ -24,8 +24,8 @@ function HeckeOperatorTrivialWeightQQ(M, p, k
 	//  differs from the one specified.
 	invs := M`genus`RepresentativesAssoc;
 
-	// The dimension of the quadratic space.
-	n := Dimension(QuadraticSpace(Module(M)));
+	// The dimension of the reflexive space.
+	n := Dimension(ReflexiveSpace(Module(M)));
 
 	// TODO: Adapt `NumberOfNeighbors' routine to count isotropic subspaces
 	//  for bad primes.
@@ -159,8 +159,8 @@ function HeckeOperatorTrivialWeightViaOrbits(M, p, k
 	//  differs from the one specified.
 	invs := M`genus`RepresentativesAssoc;
 
-	// The dimension of the quadratic space.
-	n := Dimension(QuadraticSpace(Module(M)));
+	// The dimension of the reflexive space.
+	n := Dimension(ReflexiveSpace(Module(M)));
 
 	for idx in [1..dim] do
 		// The current isometry class under consideration.

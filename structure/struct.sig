@@ -11,8 +11,6 @@ T,QuadSpace,-,0
 A,QuadSpace,13,F,R,deg,classNo,innerForm,V,Q,dim,QuaternionAlgebra,Definite,Diagonal,DiagonalBasis,stdLat
 T,QuadSpaceAff,-,0
 A,QuadSpaceAff,10,V,pR,pElt,F,ch,quot,proj_pR,proj_pR2,quotGram,Q_pR2
-T,ModDedLat,-,0
-A,ModDedLat,15,Module,R,F,psBasis,quadSpace,Discriminant,pMaximal,ZLattice,AutomorphismGroup,Scale,Norm,Level,Vpp,Jordan,SpinorNorm
 A,Lat,4,auxForms,basisR,basisZ,Vpp
 T,NeighborProc,-,0
 A,NeighborProc,12,L,pR,pRnorm,VFF,isoSubspace,k,skew,skewDim,X,X_skew,Z,U

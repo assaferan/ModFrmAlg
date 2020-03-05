@@ -1,6 +1,8 @@
 {
   hecke.m
+  lattice.m
   modfrmalg.m
   modfrmalgelt.m
+  reflexive.m
   struct.m
 }

@@ -8,8 +8,8 @@ import "neighbor-QQ.m" : BuildNeighborProc, BuildNeighbor,
 /* Experimental. */
 intrinsic Mass1(M::ModFrmAlg) -> FldRatElt
 { Computes the mass formula using local data. }
-	require M`L`quadSpace`dim eq 3: "Must be ternary for now...";
-	mat := ChangeRing(M`L`quadSpace`innerForm, Integers());
+	require M`L`rfxSpace`dim eq 3: "Must be ternary for now...";
+	mat := ChangeRing(M`L`rfxSpace`innerForm, Integers());
 	disc := Norm(Discriminant(M`L));
 	ps := PrimeFactors(disc);
 
@@ -26,7 +26,7 @@ end intrinsic;
 /* Experimental. */
 intrinsic Mass2(M::ModFrmAlg) -> FldRatElt
 { Computes the mass formula using local data. }
-	require M`L`quadSpace`dim eq 3: "Must be ternary for now...";
+	require M`L`rfxSpace`dim eq 3: "Must be ternary for now...";
 	_ := GenusReps(M);
 	return 2 * &+[ 1 / #AutomorphismGroup(L) 
 		: L in M`genus`Representatives ];
@@ -45,7 +45,7 @@ function computeGenusRepsViaOrbitsAt(p, isoList, invs, M : BeCareful := true,
 		nProc := BuildNeighborProc(isoList[isoIdx], p, 1
 			: BeCareful := BeCareful);
 
-		// The quadratic space.
+		// The reflexive space.
 		V := nProc`L`Vpp[p]`V;
 
 		// The affine field.
@@ -201,17 +201,17 @@ procedure computeGenusRepsQQ(M : BeCareful := true, Force := false,
 	//  compute genus reps.
 	upTo := 0;
 
-	// The underlying quadratic space.
-	Q := QuadraticSpace(Module(M));
+	// The underlying reflexive space.
+	V := ReflexiveSpace(Module(M));
 
 	// The dimension.
-	dim := Dimension(Q);
+	dim := Dimension(V);
 
 	// The standard basis for the initial lattice.
 	basis := Id(MatrixRing(Rationals(), dim));
 
 	// The inner form.
-	gram := ChangeRing(InnerForm(Q), Rationals());
+	gram := ChangeRing(InnerForm(V), Rationals());
 
 	// The defining lattice as a native Lat.
 	L := ZLattice(Module(M));

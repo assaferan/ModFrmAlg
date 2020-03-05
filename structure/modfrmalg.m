@@ -54,9 +54,10 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         cartanType := CartanName(G)[1];
 
         if cartanType in ["B", "D"] then
-           V := AmbientQuadraticSpace(innerForm);
+		      // V := AmbientQuadraticSpace(innerForm);
+  	   V := AmbientReflexiveSpace(innerForm);
 
-	   // Retrieve the standard lattice for this quadratic space.
+	   // Retrieve the standard lattice for this reflexive space.
 	   L := StandardLattice(V);
            isogenyType := "O";
 	else if cartanType eq "A" then
@@ -109,14 +110,15 @@ intrinsic AlgebraicModularForms(G::GrpLie,
 { Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by the isometry class of a specific matrix. }
         K := BaseRing(G);
         require IsField(K) : "Lie group must be defined over a field";
+
 	// The integers as a maximal order.
 	R := Integers(K);
 	try
 		// Attempt to coerce the inner form to the maximal order.
-		innerForm := ChangeRing(innerForm, R);
+	  innerForm := ChangeRing(Denominator(innerForm)*innerForm, R);
 	catch e
-		require false: "Inner form must be given by an 
-                                 integral matrix.";
+		require false: "Inner form must be given by a matrix over the 
+                                same field as the Lie group";
 	end try;
 
         return AlgebraicModularForms(G, innerForm);
@@ -159,17 +161,16 @@ intrinsic BaseRing(M::ModFrmAlg) -> FldOrd
 	return M`K;
 end intrinsic;
 
-intrinsic InnerForm(M::ModFrmAlg) -> QuadSpace
-{ Returns the ambient quadratic space associated with the space of algebraic
-modular forms. }
+intrinsic InnerForm(M::ModFrmAlg) -> AlgMatElt
+{ Returns the inner form associated with the space of algebraic modular forms.}
    if IsOrthogonal(M) or IsSpecialOrthogonal(M) then
-     return InnerForm(QuadraticSpace(Module(M)));
+     return InnerForm(ReflexiveSpace(Module(M)));
    else
      return InnerProduct(Module(M)`AmbientSpace);
    end if;
 end intrinsic;
 
-intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> QuadSpace
+intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> GenusSym
 { Returns the genus associated to the underlying module used to construct
   this space. }
 	// If already computed, return it.
@@ -190,7 +191,7 @@ procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
         if IsOrthogonal(M) or IsSpecialOrthogonal(M) then
 
 	  // Compute genus representatives of the associated inner form.
-	  if Degree(BaseRing(QuadraticSpace(Module(M)))) eq 1 then
+	  if Degree(BaseRing(ReflexiveSpace(Module(M)))) eq 1 then
 		computeGenusRepsQQ(M : BeCareful := BeCareful, Force := Force,
 			Orbits := Orbits);
 	  else

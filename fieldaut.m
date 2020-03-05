@@ -46,6 +46,11 @@ intrinsic FixedField(alpha::FldAut) -> Fld
   return FixedField(alpha`L, [alpha`map]);
 end intrinsic;
 
+intrinsic Map(alpha::FldAut) -> Map[Fld, Fld]
+{.}
+return alpha`map;
+end intrinsic;
+
 /* arithmetic */
 
 intrinsic '^'(alpha::FldAut, n::RngIntElt) -> FldAut

@@ -75,7 +75,7 @@ end intrinsic;
 intrinsic CriticalPrimes(L::ModDedLat) -> SeqEnum
 { Returns a list of primes which will allow us to enumerate the entire genus. }
 	// The number field.
-	K := BaseRing(QuadraticSpace(L));
+	K := BaseRing(ReflexiveSpace(L));
 
 	// The order.
 	R := BaseRing(L);
@@ -393,7 +393,7 @@ units. }
 		//  one-dimensional.
 
 		// The inner form of the underlying quadratic space.
-		M := InnerForm(QuadraticSpace(L));
+		M := InnerForm(ReflexiveSpace(L));
 
 		// The norm of each one-dimensional constituent.
 		norms := [ (Matrix(con[1]) * M * Transpose(Matrix(con[1])))[1,1]
@@ -567,7 +567,7 @@ intrinsic MakeGoodBONG(L::ModDedLat, P::RngOrdIdl) -> []
 	bases, ords := JordanDecomp(L, P : MaxSplit := true);
 
 	// The inner form.
-	innerForm := InnerForm(QuadraticSpace(L));
+	innerForm := InnerForm(ReflexiveSpace(L));
 
 	// The full basis matrix.
 	JJ := Matrix(&cat bases);

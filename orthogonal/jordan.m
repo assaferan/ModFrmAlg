@@ -210,7 +210,7 @@ intrinsic JordanDecomp(L::ModDedLat, pR::RngOrdIdl : MaxSplit := false)
 	require IsPrime(pR): "Specified ideal must be prime.";
 
 	// The inner form.
-	innerForm := InnerForm(QuadraticSpace(L));
+	innerForm := InnerForm(ReflexiveSpace(L));
 
 	if IsDefined(L`Jordan, pR) then
 		return interpret(L`Jordan[pR], pR, innerForm

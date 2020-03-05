@@ -7,8 +7,8 @@ S,IsSpecialOrthogonal,Determines whether this space is of special orthogonal typ
 S,IsOrthogonal,Determines whether this space is of orthogonal type,0,1,0,0,0,0,0,0,0,ModFrmAlg,,36,-38,-38,-38,-38,-38
 S,Module,Returns the underlying module used to generate this space,0,1,0,0,0,0,0,0,0,ModFrmAlg,,ModDedLat,-38,-38,-38,-38,-38
 S,BaseRing,The base ring of the space of algebraic modular forms,0,1,0,0,0,0,0,0,0,ModFrmAlg,,322,-38,-38,-38,-38,-38
-S,InnerForm,Returns the ambient quadratic space associated with the space of algebraic modular forms,0,1,0,0,0,0,0,0,0,ModFrmAlg,,QuadSpace,-38,-38,-38,-38,-38
-S,Genus,Returns the genus associated to the underlying module used to construct this space,0,1,0,0,0,0,0,0,0,ModFrmAlg,,QuadSpace,-38,-38,-38,-38,-38
+S,InnerForm,Returns the inner form associated with the space of algebraic modular forms,0,1,0,0,0,0,0,0,0,ModFrmAlg,,177,-38,-38,-38,-38,-38
+S,Genus,Returns the genus associated to the underlying module used to construct this space,0,1,0,0,0,0,0,0,0,ModFrmAlg,,GenusSym,-38,-38,-38,-38,-38
 S,Dimension,Returns the dimension of this vector space,0,1,0,0,0,0,0,0,0,ModFrmAlg,,148,-38,-38,-38,-38,-38
 S,HeckeEigenforms,Returns a list of cusp forms associated to this space,0,1,0,0,0,0,0,0,0,ModFrmAlg,,168,-38,-38,-38,-38,-38
 S,CuspidalSubspace,Computes the cuspidal subspace of M,0,1,0,0,0,0,0,0,0,ModFrmAlg,,155,-38,-38,-38,-38,-38

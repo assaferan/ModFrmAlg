@@ -1,3 +1,16 @@
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma                          
+                             Eran Assaf                                 
+                                                                            
+   FILE: quadratic.m (main structure file)
+
+   Implementation file for ambient quadratic space
+
+   03/03/2020 : Added some documentation and this header.
+ 
+ ***************************************************************************/
+
 // Implementation of ambient quadratic spaces.
 
 intrinsic Print(Q::QuadSpace) {}

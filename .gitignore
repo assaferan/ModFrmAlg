@@ -5,3 +5,5 @@ structure/spec~
 orthogonal/spec~
 *.sig
 *.sig
+.DS_Store
+*.sig

@@ -61,6 +61,22 @@ intrinsic HasComplexConjugate(Q::FldRat) -> BoolElt
   return false;
 end intrinsic;
 
+/*
+// This is needed because magma has a bug in HasComplexConjugate
+intrinsic HasComplexConjugate(K::FldCyc) -> BoolElt, UserProgram
+{.}
+  // This is the cyclotomic polynomial
+  KasNum := ext<Rationals() | MinimalPolynomial(K.1)>;
+  _, phi := IsIsomorphic(K, KasNum);
+  _, cc := HasComplexConjugate(KasNum);
+
+  function complex_conjugate(a)
+    return (phi^(-1))(cc(phi(a)));
+  end function;
+
+  return true, complex_conjugate;
+end intrinsic;
+*/
 
 // ******************************************************************************
 // ******************************************************************************
@@ -191,21 +207,16 @@ end intrinsic;
 // ******************************************************************************
 
 
-intrinsic LineReps(Lambda::ModDed, P::RngOrdIdl :
+intrinsic LineReps(Lambda::ModDedLat, P::RngOrdIdl :
 		   UseAutomorphisms := true, BeCareful := true) ->.
   {Computes basis vectors for the lines in L/P*L}
 
   n := Dimension(Lambda);
   pbLambda := PseudoBasis(Lambda);
   coeff_ideals := [x[1] : x in pbLambda];
-  B := Matrix(Basis(Lambda));
-  if UseAutomorphisms then 
-    if assigned Lambda`LatticeAutomorphismGroup then
-      G := Lambda`LatticeAutomorphismGroup;
-    else
-    G := LatticeAutomorphismGroup(Lambda : BeCareful := BeCareful);
-      Lambda`LatticeAutomorphismGroup := G;
-    end if;
+  B := Matrix(Basis(Module(Lambda)));
+  if UseAutomorphisms then
+    G := AutomorphismGroup(Lambda);
   else
     G := sub<GL(n, Integers()) | >;
   end if;
@@ -214,7 +225,9 @@ intrinsic LineReps(Lambda::ModDed, P::RngOrdIdl :
 
   kP,redP := ResidueClassField(P);
   A := [[x : x in Generators(I) | x notin P*I][1] : I in coeff_ideals];
-  C := [Vector(A[i]*B[i]) : i in [1..n]];
+  V := VectorSpace(AmbientSpace(Lambda));
+  C := [V!Vector(A[i]*B[i]) : i in [1..n]];
+  B := ChangeRing(B, BaseField(V));
 
   f := function(v)
     w := Eltseq(v*B^-1);
@@ -283,7 +296,8 @@ intrinsic Lattice(Lambda::ModDed) -> Lat
   end if;
 
   ZZ_L := Integers(BaseRing(Lambda));
-  B := ChangeRing(InnerProductMatrix(V), FieldOfFractions(ZZ_L));
+// B := ChangeRing(InnerProductMatrix(V), FieldOfFractions(ZZ_L));
+  B := InnerProductMatrix(V);
   d := Degree(ZZ_L);
   m := Dimension(Lambda);
   L_abs := AbsoluteField(FieldOfFractions(ZZ_L));
@@ -378,17 +392,18 @@ end intrinsic;
 // ******************************************************************************
 
 
-intrinsic PullUp(g::AlgMatElt, Lambda::ModDed, Pi::ModDed : BeCareful := true) -> AlgMatElt
+intrinsic PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat :
+		 BeCareful := true) -> AlgMatElt
   {Takes an isometry g : Pi -> Lambda and reexpresses it as an L-linear map gV : V -> V.}
 
-  LambdaZZ := Lattice(Lambda);
-  LambdaZZAuxForms := Lambda`LatticeAuxForms;
-  PiZZ := Lattice(Pi);
-  PiZZAuxForms := Pi`LatticeAuxForms;   
-  BL := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Lambda`LatticeZZBasis]);
-  BP := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Pi`LatticeZZBasis]);
+  LambdaZZ := ZLattice(Lambda);
+  LambdaZZAuxForms := AuxForms(Lambda);
+  PiZZ := ZLattice(Pi);
+  PiZZAuxForms := AuxForms(Pi);   
+  BL := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Rows(LambdaZZ`basisZ)]);
+  BP := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Rows(PiZZ`basisZ)]);
   m := Dimension(Lambda);
-  V := Lambda`AmbientSpace;
+  V := VectorSpace(AmbientSpace(Lambda));
   L := BaseField(V);
   d := Degree(L);
   rows := [];

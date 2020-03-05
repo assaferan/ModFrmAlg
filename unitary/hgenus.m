@@ -20,7 +20,7 @@
 // This intrinsic seems to be working
 // If one works over rationals need to use RationalsAsNumberField
 
-intrinsic NeighborVectors(Lambda::ModDed, 
+intrinsic NeighborVectors(Lambda::ModDedLat, 
 			       P::RngOrdIdl,
 			  Pbar ::RngOrdIdl :
 			  UseAutomorphisms := true,
@@ -86,15 +86,17 @@ end intrinsic;
 // ******************************************************************************
 
 
-intrinsic Neighbor(Lambda::ModDed,
+intrinsic Neighbor(Lambda::ModDedLat,
                         P::RngOrdIdl,
                      Pbar::RngOrdIdl,
-                        X::ModTupFldElt) -> ModDed
+                        X::ModTupFldElt) -> ModDedLat
   {Constructs the P-neighbour of Lambda associated to X}
 
   ZZ_L := BaseRing(Lambda);
-  V := Lambda`AmbientSpace;
-  B := InnerProductMatrix(V);
+  FF_ZZ_L := FieldOfFractions(ZZ_L);
+  V := AmbientSpace(Lambda);
+  U := ChangeRing(VectorSpace(V), FF_ZZ_L);
+  B := InnerForm(V);
   pbLambda := PseudoBasis(Lambda);
   n := Dimension(Lambda);
   LocalBasis := [];
@@ -109,8 +111,9 @@ intrinsic Neighbor(Lambda::ModDed,
     end if;
   end for;
   // LocalBasis does not depend on X.
+  LocalBasis := [VectorSpace(V)!v : v in LocalBasis];
 
-  X_conj := V![ComplexConjugate(x) : x in Eltseq(X)];
+  X_conj := VectorSpace(V)![ComplexConjugate(x) : x in Eltseq(X)];
   pairings := [(Matrix(y)*B*Transpose(Matrix(X_conj)))[1,1] : y in LocalBasis];
     // LocalBasis*B does not depend on X.
   kPbar,kPbarMap := ResidueClassField(Pbar);
@@ -118,10 +121,10 @@ intrinsic Neighbor(Lambda::ModDed,
   A := Matrix(kPbar,n,1,[kPbarMap(x) : x in pairings]);
   LiftedNullspaceBasis := [&+[w[i]@@kPbarMap*LocalBasis[i] : i in [1..n]] : w in Basis(Nullspace(A))];
 
-  pbPbarLambda := PseudoBasis(Pbar*Lambda);
+  pbPbarLambda := PseudoBasis(Pbar*Module(Lambda));
     // pbPbarLambda does not depend on X.
   prePi := Module(LiftedNullspaceBasis cat &cat[[x*pb[2] : x in Generators(pb[1])] : pb in pbPbarLambda]);
-  Pi := P^-1*X +prePi;
+  Pi := P^-1*(U!X) +prePi;
   Pi`AmbientSpace := V;
   
 //  ed := ElementaryDivisors(Lambda,Pi);
@@ -129,7 +132,10 @@ intrinsic Neighbor(Lambda::ModDed,
 //  print "P-neighbor associated to", X; 
 //  print "(Check) Correct elementary divisors?", correct; 
 
-  return Pi;
+  psb := PseudoBasis(Pi);
+  idls := [ x[1] : x in psb];
+  basis := [ x[2] : x in psb];
+  return LatticeWithBasis(V, Matrix(basis), idls);
 end intrinsic;
 
 
@@ -157,8 +163,7 @@ procedure computeHGenusReps(M : BeCareful := true, Force := false,
 
   RR := RealField();
   mass := UnitaryMass(BaseRing(M), Dimension(Module(M)));
-tmp_mass := RR!#LatticeAutomorphismGroup(Module(M) :
-					 BeCareful := BeCareful)^(-1);
+  tmp_mass := RR!#AutomorphismGroup(Module(M))^(-1);
 
   eps := RR!10^(-30);
 
@@ -172,11 +177,9 @@ tmp_mass := RR!#LatticeAutomorphismGroup(Module(M) :
     while (ps_idx le #ps) and (Abs(tmp_mass - mass) gt eps) do
       nbd := Neighborhood(Module(M), ps[ps_idx]);
       for lat in nbd do
-		if not (&or[IsIsometric(lat, r :
-			    BeCareful := BeCareful) : r in genList]) then
+		if not (&or[IsIsometric(lat, r) : r in genList]) then
           Append(~genList, lat);
-          tmp_mass +:= 1/(#LatticeAutomorphismGroup(lat :
-						    BeCareful := BeCareful));
+          tmp_mass +:= 1/(#AutomorphismGroup(lat));
         end if; 
       end for;
       ps_idx +:= 1;
@@ -198,7 +201,7 @@ end procedure;
 // This works when Lamda is defined over an extension of a number field.
 // 
 
-intrinsic Neighborhood(Lambda::ModDed, P::RngOrdIdl :
+intrinsic Neighborhood(Lambda::ModDedLat, P::RngOrdIdl :
 		       BeCareful := false) -> SeqEnum[ModDed]
   {Returns a set of representatives for the genus of the defining lattice of M.}
 
@@ -207,7 +210,7 @@ require &and[Valuation(dd,P) eq 0, Valuation(dd,ComplexConjugate(P)) eq 0] : "P 
 
 expanded := [];
 unexpanded := [Lambda];
-if not assigned Lambda`LatticeAuxForms then
+if not assigned Lambda`ZLattice then
        	LambdaZZ := Lattice(Lambda);
 end if;
 
@@ -225,8 +228,8 @@ while #unexpanded gt 0 do
 	for X in ngbr_vectors do
                 a := a+1; if a mod 100 eq 0 then print a, "out of", #ngbr_vectors; end if;
 		Rho := Neighbor(Pi,P,ComplexConjugate(P),X);
-		RhoZZ := Lattice(Rho);	
-   		if not exists(t){Sigma : Sigma in expanded cat unexpanded | IsIsometric(Rho,Sigma : BeCareful := BeCareful)} then
+		RhoZZ := ZLattice(Rho);	
+   		if not exists(t){Sigma : Sigma in expanded cat unexpanded | IsIsometric(Rho,Sigma)} then
 			Append(~unexpanded,Rho);
                         if (BeCareful) then
 			  print Cputime(tm), "seconds:", #expanded+#unexpanded,"classes found so far.";
@@ -254,9 +257,9 @@ function HeckeOperatorTrivialWeightUnitary(M, P : BeCareful := true)
 			  BeCareful := BeCareful, UseAutomorphisms := false);
     for X in ngbr_vectors do
       Rho := Neighbor(genus[gen_idx1],P,Pbar,X);
-      RhoZZ := Lattice(Rho);
+      RhoZZ := ZLattice(Rho);
       for gen_idx2 in [1..d] do
-	if IsIsometric(Rho, genus[gen_idx2] : BeCareful := BeCareful) then
+	if IsIsometric(Rho, genus[gen_idx2]) then
           T[gen_idx2, gen_idx1] +:= 1;
 	end if;
       end for;

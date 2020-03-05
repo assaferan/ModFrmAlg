@@ -1,5 +1,14 @@
 // Attach the appropriate specification file.
+SetDebugOnError(true);
+SetHelpUseExternalBrowser(false);
+
 AttachSpec("spec");
+
+/*
+if not assigned getFieldAutomorphism then
+  import "fieldaut.m" : getFieldAutomorphism;
+end if;
+*/
 
 // This is hardly the right thing to do,
 // but I still don't know how to construct U_{n} as a group of Lie type (!?)
@@ -9,9 +18,8 @@ RSU3 := TwistedRootDatum("A2" : Twist := 2);
 
 // This is Example 7.4 from Matthew and John's paper
 K := CyclotomicField(7);
-gal := AutomorphismGroup(K);
-_ := exists(g){g : g in gal | Order(g) eq 2};
-alpha := FieldAutomorphism(K, g);
+_, cc := HasComplexConjugate(K);
+alpha := FieldAutomorphism(K, cc);
 F := FixedField(alpha);
 
 SU3 := TwistedGroupOfLieType(RSU3, F, K);

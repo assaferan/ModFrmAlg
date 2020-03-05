@@ -54,28 +54,31 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         cartanType := CartanName(G)[1];
 
         if cartanType in ["B", "D"] then
-		      // V := AmbientQuadraticSpace(innerForm);
-  	   V := AmbientReflexiveSpace(innerForm);
-
-	   // Retrieve the standard lattice for this reflexive space.
-	   L := StandardLattice(V);
            isogenyType := "O";
+           V := AmbientReflexiveSpace(innerForm);
 	else if cartanType eq "A" then
 	   require not IsSplit(G) : "Group is not compact.";
            // This has some issues when working on with FldCyc
 	   // _, cc := HasComplexConjugate(K);
-           gal, _, phi := AutomorphismGroup(K,DefRing(G));
-           cc := phi([g : g in gal | Order(g) eq 2][1]);
+           gal, _, _ := AutomorphismGroup(K,DefRing(G));
+           _ := exists(g){g : g in gal | Order(g) eq 2};
+           cc := FieldAutomorphism(K, g);
+/*
            V := UnitarySpace(ChangeRing(innerForm, K), cc);
            // Should change this to be the lattice
            // corresponding to the innerForm
            L := Module(R, Dimension(V));
            L`AmbientSpace := V;
+*/
            isogenyType := "U";
+           V := AmbientReflexiveSpace(innerForm, cc);
         else
 	  error "Groups of type %o are not supported.\n", cartanType;
         end if;
         end if;
+
+	// Retrieve the standard lattice for this reflexive space.
+	L := StandardLattice(V);
 
         if IsSemisimple(G) then
            isogenyType := "S" cat isogenyType;
@@ -163,11 +166,7 @@ end intrinsic;
 
 intrinsic InnerForm(M::ModFrmAlg) -> AlgMatElt
 { Returns the inner form associated with the space of algebraic modular forms.}
-   if IsOrthogonal(M) or IsSpecialOrthogonal(M) then
      return InnerForm(ReflexiveSpace(Module(M)));
-   else
-     return InnerProduct(Module(M)`AmbientSpace);
-   end if;
 end intrinsic;
 
 intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> GenusSym

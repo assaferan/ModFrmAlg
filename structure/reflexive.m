@@ -13,6 +13,16 @@
  
  ***************************************************************************/
 
+// imports
+
+import "../fieldaut.m" : getFieldAutomorphism;
+
+///////////////////////////////////////////////////////////////////
+//                                                               //
+//    RfxSpace: The reflexive space object.                      //
+//                                                               //
+///////////////////////////////////////////////////////////////////
+
 // Implementation of ambient reflexive spaces.
 
 declare type RfxSpace;
@@ -80,6 +90,16 @@ end intrinsic;
 
 // access
 
+intrinsic BaseField(rfxSpace::RfxSpace) -> Fld
+{Returns the field over which the space is defined. }
+  return rfxSpace`F;
+end intrinsic;
+
+intrinsic VectorSpace(rfxSpace::RfxSpace) -> ModTupFld
+{Returns the underlying vector space.}
+  return rfxSpace`V;
+end intrinsic;
+
 intrinsic Dimension(rfxSpace::RfxSpace) -> RngIntElt
 { Returns the dimension of the reflexive space. }
 	return rfxSpace`dim;
@@ -134,6 +154,7 @@ intrinsic Type(rfxSpace::RfxSpace) -> MonStgElt
   return rfxSpace`type;
 end intrinsic;
 
+// Figure out what to really do here.
 intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt :
 				Hermitian := false) -> RfxSpace
 { Builds the ambient bilinear reflexive space data structure. }
@@ -160,16 +181,15 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt :
   // The field of fractions of the maximal order of our number field.
   F := FieldOfFractions(R);
 
-  A := AutomorphismGroup(F);
-
   if Hermitian then
-    inv_exists := exists(a){a : a in A | Order(a) eq 2};
-    require inv_exists : "Base field of form does not admit an involution!";
+    inv_exists, a := HasComplexConjugate(R`ArithmeticField);
+    require inv_exists :
+      "Base field of form does not admit complex conjugation!";
+    alpha := getFieldAutomorphism(F,a);
   else
-    a := A!1;
+    alpha := FieldAutomorphism(F, AutomorphismGroup(F)!1);
   end if;
 
-  alpha := FieldAutomorphism(F, a);
   return AmbientReflexiveSpace(innerForm, alpha);
 end intrinsic;
 
@@ -274,7 +294,7 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
         else if Type(rfxSpace) eq "Alternating" then
           rfxSpace`V := SymplecticSpace(innerForm);
         else if Type(rfxSpace) eq "Hermitian" then
-	  rfxSpace`V := UnitarySpace(innerForm, Map(alpha));
+	  rfxSpace`V := UnitarySpace(innerForm, Automorphism(alpha));
         end if;
         end if;
         end if;

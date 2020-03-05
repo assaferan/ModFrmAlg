@@ -90,6 +90,11 @@ intrinsic ReflexiveSpace(L::ModDedLat) -> RfxSpace
 	return L`rfxSpace;
 end intrinsic;
 
+intrinsic AmbientSpace(L::ModDedLat) -> RfxSpace
+{ Returns the ambient reflexive space of the lattice. }
+        return L`rfxSpace;
+end intrinsic;
+
 intrinsic Module(L::ModDedLat) -> ModDed
 { Returns the underlying module associated to this structure. }
 	return L`Module;
@@ -178,7 +183,7 @@ intrinsic Dimension(L::ModDedLat) -> RngIntElt
 end intrinsic;
 
 intrinsic LatticeWithBasis(
-	rfxSpace::RfxSpace, basis::AlgMatElt[FldOrd], idls::SeqEnum)
+	rfxSpace::RfxSpace, basis::AlgMatElt[Fld], idls::SeqEnum)
 		-> ModDedLat
 { Builds a lattice in an ambient reflexive space with the specified basis and
 coefficient ideals. }
@@ -227,8 +232,10 @@ intrinsic ZLattice(lat::ModDedLat : Standard := false) -> Lat
 	// If we've already computed the ZLattice, return it.
 	if assigned lat`ZLattice then return lat`ZLattice; end if;
 
+        V := VectorSpace(ReflexiveSpace(lat));
+
 	// Construct an R-basis for the lattice as a Z-module.
-	basisR := &cat[ [ x*pb[2] : x in Basis(pb[1]) ]
+        basisR := &cat[ [ V!(x*pb[2]) : x in Basis(pb[1]) ]
 		: pb in PseudoBasis(Module(lat)) ];
 
 	// Construct a Z-basis for the lattice as a Z-module.
@@ -292,7 +299,7 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
 	deg := Degree(BaseRing(V));
 
 	// The inner form of the ambient reflexive space.
-	M := InnerForm(V);
+        M := InnerForm(V);
         alpha := Involution(V);
 
 	// The basis for the lattice over the rationals.
@@ -504,7 +511,8 @@ intrinsic Discriminant(lat::ModDedLat) -> RngOrdFracIdl
         det := Determinant(M) * Determinant(B) * alpha(Determinant(B));
 
 	// Return the discriminant depending on the parity of the dimension.
-	if Dimension(ReflexiveSpace(lat)) mod 2 eq 1 then
+        if IsIdentity(alpha) and
+	   (Dimension(ReflexiveSpace(lat)) mod 2 eq 1) then
 		det /:= 2;
 	end if;
 

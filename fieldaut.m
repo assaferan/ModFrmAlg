@@ -1,4 +1,21 @@
 //freeze;
+/****-*-magma-******a********************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma                          
+                             Eran Assaf                                 
+                                                                            
+   FILE: fieldaut.m
+
+   Implementation file for field autmorphisms.
+   This is basically just a construct to hold both the map and the element of
+   the automorphism group together.
+
+   Maybe should also write a structure for the group itself, 
+   so far it is not eneded.
+
+   03/05/2020 : Added basis documentation.
+ 
+ ***************************************************************************/
 
 declare type FldAut;
 declare attributes FldAut :
@@ -13,7 +30,7 @@ intrinsic FieldAutomorphism(L::Fld, g::GrpPermElt) -> FldAut
 {.}
   alpha := New(FldAut);
   alpha`L := L;
-  gal, aut, psi := AutomorphismGroup(L);
+  gal, _, psi := AutomorphismGroup(L);
   require g in gal :
   "Group element must be in the automorphism group of the field!";
   alpha`elt := g;
@@ -21,6 +38,43 @@ intrinsic FieldAutomorphism(L::Fld, g::GrpPermElt) -> FldAut
   alpha`isom := psi;
 
   return alpha; 
+end intrinsic;
+
+// This is needed because HasComplexConjugate can return a UserProgram
+intrinsic FieldAutomorphism(L::Fld, f::UserProgram) -> FldAut
+//function getFieldAutomorphism(L,f)
+{.}
+   gal, _, psi := AutomorphismGroup(L);
+   gens := Generators(L);
+   require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
+     "Map must be an automorphism of the field!";
+//   assert exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]};
+   return FieldAutomorphism(L, g);
+//end function;
+end intrinsic;
+
+intrinsic FieldAutomorphism(L::Fld, f::Intrinsic) -> FldAut
+//function getFieldAutomorphism(L,f)
+{.}
+   gal, _, psi := AutomorphismGroup(L);
+   gens := Generators(L);
+   require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
+     "Map must be an automorphism of the field!";
+//   assert exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]};
+   return FieldAutomorphism(L, g);
+//end function;
+end intrinsic;
+
+intrinsic FieldAutomorphism(L::Fld, f::Map[Fld,Fld]) -> FldAut
+//function getFieldAutomorphism(L,f)
+{.}
+   gal, _, psi := AutomorphismGroup(L);
+   gens := Generators(L);
+   require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
+     "Map must be an automorphism of the field!";
+//   assert exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]};
+   return FieldAutomorphism(L, g);
+//end function;
 end intrinsic;
 
 /* Printing */
@@ -46,9 +100,9 @@ intrinsic FixedField(alpha::FldAut) -> Fld
   return FixedField(alpha`L, [alpha`map]);
 end intrinsic;
 
-intrinsic Map(alpha::FldAut) -> Map[Fld, Fld]
+intrinsic Automorphism(alpha::FldAut) -> Map[Fld, Fld]
 {.}
-return alpha`map;
+  return alpha`map;
 end intrinsic;
 
 /* arithmetic */

@@ -1,3 +1,6 @@
+SetDebugOnError(true);
+SetHelpUseExternalBrowser(false);
+
 // Attach the appropriate specification file.
 AttachSpec("spec");
 

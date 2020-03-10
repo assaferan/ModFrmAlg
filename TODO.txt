@@ -1,0 +1,10 @@
+Some things that should be done at some order:
+
+1. Add non-trivial weight.
+2. Organize the files.
+3. Apply orbit method in general, and not only for orthogonal over Q.
+4. Compute Hecke eigensystems without computing the entire Hecke operator on the whole space.
+5. Write unit tests.
+6. Incorporate the symplectic case.
+7. Understand how to work with GroupOfLieType (or, if not, devise some other method of describing the reductive group)
+8. Think what should be done in general (other isogeny classes, central tori - how should everything work? maybe use the Tits algebra?)

@@ -3,10 +3,6 @@
 //  expressed as hyperbolic + anisotropic + radical where the hyperbolic
 //  component is antidiagonal. For example, we may have x1*x4 + x2*x3 + x5^2.
 
-function MVM(M, v)
-	return Vector(Transpose(M * Transpose(Matrix(v))));
-end function;
-
 function VerifyMatrix(M)
 	// Get the base ring and its characteristic.
 	F := BaseRing(M);

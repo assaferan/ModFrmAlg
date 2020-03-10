@@ -1,0 +1,15 @@
+{
+  genus.m
+  hecke.m
+  helper.m
+  isotropic.m
+  modfrmalg.m
+  modfrmalgelt.m
+  reflexive.m
+  struct.m
+
+  genus-CN1.m
+  hecke-CN1.m
+  neighbor-CN1.m
+  inv-CN1.m
+}

@@ -4,10 +4,9 @@
                     Algebraic Modular Forms in Magma                          
                              Eran Assaf                                 
                                                                             
-   FILE: stdbasis.m
+   FILE: stdbasis.m (Implementation file for converting hermitian forms defined over finite
+   fields into a standard form)
 
-   Implementation file for converting hermitian forms defined over finite
-   fields into a standard form.
    This means that the hermitian form will be expressed as hyperbolic + 
    anisotropic + radical, where the hyperbolic component is antidiagonal.
 

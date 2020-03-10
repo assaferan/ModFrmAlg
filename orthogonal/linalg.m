@@ -1,6 +1,6 @@
 // Linear algebra!
 
-import "helper.m" : MVM;
+import "../utils/helper.m" : MVM;
 
 function Decompose(T, t)
 	// The characteristic polynomial of this matrix.

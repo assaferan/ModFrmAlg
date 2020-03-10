@@ -7,3 +7,6 @@ orthogonal/spec~
 *.sig
 .DS_Store
 *.sig
+*.sig
+*.sig
+spec~

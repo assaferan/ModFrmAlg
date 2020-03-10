@@ -4,7 +4,7 @@ import "modfrmalg.m" : ModFrmAlgInit;
 import "../orthogonal/QQ/hecke-QQ.m" : HeckeOperatorTrivialWeightQQ,
 	HeckeOperatorTrivialWeightViaOrbits;
 import "../orthogonal/QQ/hecke-fast-QQ.m": HeckeOperatorTrivialWeightFastQQ;
-import "../orthogonal/CN1/hecke-CN1.m" : HeckeOperatorTrivialWeightCN1;
+import "hecke-CN1.m" : HeckeOperatorTrivialWeightCN1;
 import "../unitary/hgenus.m" : HeckeOperatorTrivialWeightUnitary;
 
 intrinsic SetHeckeOperator(
@@ -83,6 +83,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	end if;
 
 	// Choose the appropriate routine for computing Hecke operators.
+/*
 	if Degree(BaseRing(M)) eq 1 then
 		if Orbits then
 			hecke := HeckeOperatorTrivialWeightViaOrbits(M,
@@ -98,6 +99,8 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 					UseLLL := UseLLL);
 		end if;
 	else
+*/
+/*
 	  if IsOrthogonal(M) or IsSpecialOrthogonal(M) then  
 		hecke := HeckeOperatorTrivialWeightCN1(M, pR, k
 			: BeCareful := BeCareful, Estimate := Estimate);
@@ -105,7 +108,11 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
                 hecke := HeckeOperatorTrivialWeightUnitary(M,pR :
 						      BeCareful := BeCareful);
 	  end if;
-	end if;
+*/
+//	end if;
+
+        hecke := HeckeOperatorTrivialWeightCN1(M, pR, k
+			: BeCareful := BeCareful, Estimate := Estimate);
 
 	// Sets the Hecke operator in the internal data structure for this
 	//  algebraic modular form.

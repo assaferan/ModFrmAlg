@@ -1,8 +1,6 @@
 {
 	helper.m
-	quadratic.m
 	genus.m
-	isotropic.m
 	stdbasis.m
 	path.m
 	saveload.m
@@ -23,8 +21,4 @@
 	QQ/genus-QQ.m
 	QQ/inv-QQ.m
 
-	CN1/hecke-CN1.m
-	CN1/genus-CN1.m
-	CN1/neighbor-CN1.m
-	CN1/inv-CN1.m
 }

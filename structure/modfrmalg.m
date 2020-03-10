@@ -16,7 +16,7 @@
 // imports
 
 import "../orthogonal/QQ/genus-QQ.m" : computeGenusRepsQQ;
-import "../orthogonal/CN1/genus-CN1.m" : computeGenusRepsCN1;
+import "genus-CN1.m" : computeGenusRepsCN1;
 import "../unitary/hgenus.m" : computeHGenusReps;
 
 ///////////////////////////////////////////////////////////////////
@@ -56,20 +56,11 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         if cartanType in ["B", "D"] then
            isogenyType := "O";
            V := AmbientReflexiveSpace(innerForm);
+//           V := AmbientQuadraticSpace(innerForm);
 	else if cartanType eq "A" then
 	   require not IsSplit(G) : "Group is not compact.";
-           // This has some issues when working on with FldCyc
-	   // _, cc := HasComplexConjugate(K);
-           gal, _, _ := AutomorphismGroup(K,DefRing(G));
-           _ := exists(g){g : g in gal | Order(g) eq 2};
-           cc := FieldAutomorphism(K, g);
-/*
-           V := UnitarySpace(ChangeRing(innerForm, K), cc);
-           // Should change this to be the lattice
-           // corresponding to the innerForm
-           L := Module(R, Dimension(V));
-           L`AmbientSpace := V;
-*/
+	   _, cc := HasComplexConjugate(K);
+           cc := FieldAutomorphism(K, cc);
            isogenyType := "U";
            V := AmbientReflexiveSpace(innerForm, cc);
         else
@@ -187,9 +178,12 @@ procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
 	//  without any further computations.
 	if assigned M`W then return; end if;
 
+        computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
+/*
         if IsOrthogonal(M) or IsSpecialOrthogonal(M) then
 
 	  // Compute genus representatives of the associated inner form.
+
 	  if Degree(BaseRing(ReflexiveSpace(Module(M)))) eq 1 then
 		computeGenusRepsQQ(M : BeCareful := BeCareful, Force := Force,
 			Orbits := Orbits);
@@ -200,6 +194,7 @@ procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
 	  computeHGenusReps(M : BeCareful := BeCareful, Force := Force,
 			    Orbits := Orbits);
         end if;
+*/
 end procedure;
 
 intrinsic Dimension(M::ModFrmAlg) -> RngIntElt

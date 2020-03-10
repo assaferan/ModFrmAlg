@@ -16,6 +16,7 @@
 // imports
 
 import "../fieldaut.m" : getFieldAutomorphism;
+import "../unitary/stdbasis.m" : ReflexiveForm, OrthogonalizeForm;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -72,6 +73,44 @@ declare attributes RfxSpace:
 
 	// The standard lattice for this reflexive space.
 	stdLat;
+
+declare type RfxSpaceAff;
+declare attributes RfxSpaceAff:
+	// The reflexive space.
+	V,
+
+	// The prime ideal.
+	pR,
+
+	// A uniformizing element of pR.
+	pElt,
+
+	// The finite field.
+	F,
+
+	// The characteristic.
+	ch,
+  
+	// The quotient modulo pR^2.
+	quot,
+
+	// The projection map modulo pR.
+	proj_pR,
+
+        // The involution induced on pR
+        inv_pR,
+
+	// The projection map modulo pR^2.
+	proj_pR2,
+
+        // The involution induced on pR2
+        inv_pR2,
+
+	// Gram matrix modulo pR^2.
+	quotGram,
+
+	// The form modulo pR^2.
+	Q_pR2;
 
 // printing
 
@@ -130,7 +169,7 @@ intrinsic Involution(rfxSpace::RfxSpace) -> FldAut
   return rfxSpace`aut;
 end intrinsic;
 
-intrinsic Type(rfxSpace::RfxSpace) -> MonStgElt
+intrinsic SpaceType(rfxSpace::RfxSpace) -> MonStgElt
 {.}
   if not assigned rfxSpace`type then
     alpha := Involution(rfxSpace);
@@ -139,9 +178,9 @@ intrinsic Type(rfxSpace::RfxSpace) -> MonStgElt
       rfxSpace`type := "Hermitian";
     else if IsIdentity(alpha) then
       if Transpose(M) eq M then
-         rfxSpace`type := "symmetric";
+         rfxSpace`type := "Symmetric";
       else if Transpose(M) eq -M then
-         rfxSpace`type := "alternating";
+         rfxSpace`type := "Alternating";
       else
          error "%o does not represent a reflexive form.\n", M;
       end if;
@@ -155,9 +194,22 @@ intrinsic Type(rfxSpace::RfxSpace) -> MonStgElt
 end intrinsic;
 
 // Figure out what to really do here.
-intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt :
-				Hermitian := false) -> RfxSpace
+intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt) -> RfxSpace
 { Builds the ambient bilinear reflexive space data structure. }
+  // The base ring.
+  R := BaseRing(innerForm);
+
+  // The field of fractions of the maximal order of our number field.
+  F := FieldOfFractions(R);
+
+  alpha := FieldAutomorphism(F, AutomorphismGroup(F)!1);
+
+  return AmbientReflexiveSpace(innerForm, alpha);
+end intrinsic;
+
+intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
+{ Builds the ambient reflexive space data structure. }
+
   // The base ring.
   R := BaseRing(innerForm);
 
@@ -170,88 +222,21 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt :
     // Make sure we're dealing with a number field.
     require IsNumberField(R):
       "Base ring must be a number field or number ring.";
-
     // The maximal order of our number field.
     R := Integers(R);
   elif R cmpeq Integers() then
-  // Covnert to a maximal order format.
+  // Convert to a maximal order format.
     R := Integers(RationalsAsNumberField());
   end if;
 
   // The field of fractions of the maximal order of our number field.
   F := FieldOfFractions(R);
 
-  if Hermitian then
-    inv_exists, a := HasComplexConjugate(R`ArithmeticField);
-    require inv_exists :
-      "Base field of form does not admit complex conjugation!";
-    alpha := getFieldAutomorphism(F,a);
-  else
-    alpha := FieldAutomorphism(F, AutomorphismGroup(F)!1);
-  end if;
-
-  return AmbientReflexiveSpace(innerForm, alpha);
-end intrinsic;
-
-function OrthogonalizeForm(M, alpha)
-
-  MS := Parent(M);
-  n := Degree(MS);
-  one := MS!1;
-  T := one;
-
-  for i in [1..n] do
-    if M[i,i] eq 0 then
-      for j in [i+1..n] do
-        if M[i,j] ne 0 then
-          tmp := one;
-          if M[i,j] + M [j,j] eq 0 then
-	    tmp[j,i] := -1;
-          else
-	    tmp[j,i] := 1;
-          end if;
-          T := T * tmp;
-          M := tmp * M * alpha(Transpose(tmp));
-          break;
-	end if;
-      end for;
-    end if;
-
-    tmp := one;
-    for j in [i+1..n] do
-      if M[i,j] ne 0 then
-        tmp[i,j] := -M[i,j] / M[i,i];
-      end if;
-    end for;
-    M := tmp * M * alpha(Transpose(tmp));
-    T := T * tmp;
-  end for;
-  return M,T;
-end function;
-
-function getForm(M, alpha)
-  MS := Parent(M);
-  n := Degree(MS);
-  R := PolynomialRing(BaseRing(M), 2*n);
-  x_names := ["x" cat IntegerToString(i) : i in [1..n]];
-  y_names := ["y" cat IntegerToString(i) : i in [1..n]];
-  if Order(alpha) ne 1 then
-    y_names := [var cat "bar" : var in y_names];
-  end if;
-  names := x_names cat y_names;
-  AssignNames(~R, names);
-  x := Vector([R.i : i in [1..n]]);
-  y := Vector([R.(n+i) : i in [1..n]]);
-  
-  return (x*ChangeRing(M,R), y);
-end function;
-
-intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
-{ Builds the ambient reflexive space data structure. }
 	// Initialize a new reflexive space data structre.
 	rfxSpace := New(RfxSpace);
 
-        F := BaseField(alpha);
+//        F := BaseField(alpha);
+        alpha := FieldAutomorphism(F, Automorphism(alpha));
 
 	// Coerce the inner form into the appropriate field.
 	innerForm := ChangeRing(innerForm, F);
@@ -289,18 +274,24 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 		&and[ IsTotallyPositive(d) : d in rfxSpace`Diagonal ];
 
 	// Assign the reflexive space.
-        if Type(rfxSpace) eq "Symmetric" then
-	  rfxSpace`V := QuadraticSpace(innerForm);
-        else if Type(rfxSpace) eq "Alternating" then
+        if SpaceType(rfxSpace) eq "Symmetric" then
+	  rfxSpace`V := QuadraticSpace(innerForm / 2);
+        else if SpaceType(rfxSpace) eq "Alternating" then
           rfxSpace`V := SymplecticSpace(innerForm);
-        else if Type(rfxSpace) eq "Hermitian" then
+        else if SpaceType(rfxSpace) eq "Hermitian" then
 	  rfxSpace`V := UnitarySpace(innerForm, Automorphism(alpha));
+        else
+	  require false : "Form is not reflexive";
         end if;
         end if;
         end if;
 
 	// Assign the reflexive form.
-        rfxSpace`Q := getForm(innerForm, alpha);
+        rfxSpace`Q := ReflexiveForm(innerForm, alpha);
+
+        if SpaceType(rfxSpace) eq "Symmetric" then
+           rfxSpace`Q := QuadraticForm(innerForm) / 2;
+        end if;
 
 	// Assign the dimension.
 	rfxSpace`dim := Nrows(innerForm);
@@ -310,4 +301,3 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 
 	return rfxSpace;
 end intrinsic;
-

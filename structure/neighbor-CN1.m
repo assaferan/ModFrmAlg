@@ -1,16 +1,67 @@
 // Implementation of computing neighbor lattices.
 
-import "../lattice.m" : pMaximalGram;
-import "../helper.m" : MVM;
+import "lattice.m" : pMaximalGram;
+
+declare type NeighborProc;
+declare attributes NeighborProc:
+	// The lattice.
+	L,
+
+ 	// The prime ideal.
+	pR,
+
+	// The norm of this prime.
+	pRnorm,
+
+        // The involution of the underlying reflexive space
+        inv_R,
+  
+	// The quadratic space over the residue class field.
+	VFF,
+
+	// The current isotropic subspace.
+	isoSubspace,
+
+	// The dimension of the isotropic subspaces.
+	k,
+
+	// Skew vector. This is used to "twist" the isotropic lifts when
+	//  computing neighbor lattices when k gt 1.
+	skew,
+
+	// Skew dimension.
+	skewDim,
+
+	// The current (unaltered) p^2-isotropic lift we're looking at.
+	X,
+
+	// The current p^2-isotropic lift we're looking at.
+	X_skew,
+
+	// The current hyperbolic complement of X and X_skew.
+	Z,
+
+	// The space orthogonal to X+Z modulo p^2.
+	U;
+
+function MVM(M, v, alpha)
+  return Vector(Transpose(M * Transpose(alpha(Matrix(v)))));
+end function;
 
 function LiftSubspace(nProc : BeCareful := true)
 	// If we're trying to lift an empty subspace, return trivial entries.
 	if nProc`isoSubspace eq [] then return [], [], []; end if;
 
+	alpha := Involution(ReflexiveSpace(nProc`L));
+	is_split := alpha(nProc`pR) ne nProc`pR;
+	
 	// The local data.
 	Vpp := nProc`L`Vpp[nProc`pR];
 
-	// The standarized basis.
+	pi := Vpp`pElt;
+	pibar := nProc`inv_R(Vpp`pElt);
+	
+	// The standardized basis.
 	basis := Vpp`V`Basis;
 
 	// The requested isotropic dimension.
@@ -20,7 +71,7 @@ function LiftSubspace(nProc : BeCareful := true)
 	sp := nProc`isoSubspace;
 
 	// The dimension.
-	dim := Dimension(QuadraticSpace(nProc`L));
+	dim := Dimension(ReflexiveSpace(nProc`L));
 
 	// The hyperbolic dimension.
 	hDim := 2 * Vpp`V`WittIndex;
@@ -43,37 +94,58 @@ function LiftSubspace(nProc : BeCareful := true)
 		AddColumn(~basis, sp[i][j], j, pivots[i]);
 	end for;
 
-	// Extract our target isotropic subspace modulo pR.
-	X := [ MVM(basis, V.i) : i in pivots ];
+        alpha := Vpp`inv_pR;
 
-	// Extract the hyperbolic complement modulo pR.
-	paired := [ hDim+1-pivots[k+1-i] : i in [1..k] ];
-	Z := [ MVM(basis, V.i) : i in paired ];
+	// Extract our target isotropic subspace modulo pR.
+        X := [ MVM(basis, V.i, alpha) : i in pivots ];
+
+	if is_split then
+	    paired := [ dim+1-pivots[k+1-i] : i in [1..k] ];
+	else	    
+	    // Extract the hyperbolic complement modulo pR.
+	    paired := [ hDim+1-pivots[k+1-i] : i in [1..k] ];
+	end if;
+        Z := [ MVM(basis, V.i, alpha) : i in paired ];
 
 	// Extract the remaining basis vectors.
 	exclude := pivots cat paired;
-	U := [ MVM(basis, V.i) : i in [1..dim] | not i in exclude ];
+        U := [ MVM(basis, V.i, alpha) : i in [1..dim] | not i in exclude ];
 	B := Matrix(X cat Z cat U);
 
 	// Convert to coordinates modulo pR^2.
 	X := [ Vector([ proj(e @@ map) : e in Eltseq(x) ]) : x in X ];
 	Z := [ Vector([ proj(e @@ map) : e in Eltseq(z) ]) : z in Z ];
 	U := [ Vector([ proj(e @@ map) : e in Eltseq(u) ]) : u in U ];
-
+	
 	// Build the coordinate matrix.
 	B := Matrix(X cat Z cat U);
 
+        alpha := Vpp`inv_pR2;
+
 	function __gram(B : quot := true)
-		// In odd characteristic, things are exactly as we expect.
+		// In odd characteristic, things are exactly as we expect
+	        alpha := Vpp`inv_pR2;
+
+                alpha_B := Parent(B)![[alpha(B[i,j]) :
+				  j in [1..Ncols(B)]]
+				  : i in [1..Nrows(B)]];
+
 		if Vpp`ch ne 2 then
-			return B * Vpp`quotGram * Transpose(B);
+		   return B * Vpp`quotGram * Transpose(alpha_B);
 		end if;
 
 		// Promote the basis to the number ring.
 		B := ChangeRing(B, nProc`L`R);
 
+                alpha := nProc`inv_R;
+
+                alpha_B := Parent(B)![[alpha(B[i,j]) :
+				  j in [1..Ncols(B)]]
+				  : i in [1..Nrows(B)]];
+
 		// Compute the Gram matrix.
-		gram := B * nProc`L`pMaximal[nProc`pR][1] * Transpose(B);
+                gram := B * nProc`L`pMaximal[nProc`pR][1] *
+		        Transpose(alpha_B);
 
 		// The dimension.
 		dim := Nrows(B);
@@ -86,13 +158,21 @@ function LiftSubspace(nProc : BeCareful := true)
 		end if;
 	end function;
 
+	if is_split then
+	    X := [pibar * x : x in X];
+	    // At the moment in this case, we only use X
+	    // Check later if we could save ourselves some work
+	    // Z := [pi * z : z in Z];
+	    return X, Z, U;
+	end if;
 	// Compute the Gram matrix of the subspace with respect to the spaces
 	//  we will perform the following computations upon.
 	gram := __gram(Matrix(X cat Z));
 
 	// Lift Z so that it is in a hyperbolic pair with X modulo pR^2.
 	Z := [ Z[i] +
-		&+[ ((i eq j select 1 else 0) - gram[k+1-j,i+k]) * Z[j]
+		&+[ ((i eq j select 1 else 0) -
+		     alpha(gram[k+1-j,i+k])) * Z[j]
 			: j in [1..k] ] : i in [1..k] ];
 
 	// Verify that X and Z form a hyperbolic pair.
@@ -114,7 +194,8 @@ function LiftSubspace(nProc : BeCareful := true)
 
 	// Lift X so that it is isotropic modulo pR^2.
 	X := [ X[i] +
-		&+[ -(gram[i,k+1-j]) / (i+j-1 eq k select 2 else 1) * Z[j]
+		&+[ -(gram[i,k+1-j]) /
+			  (i+j-1 eq k select 2 else 1) * Z[j]
 			: j in [k+1-i..k] ] : i in [1..k] ];
 
 	// Verify that X is isotropic modulo pR^2.
@@ -131,7 +212,8 @@ function LiftSubspace(nProc : BeCareful := true)
 
 	// Lift Z so that it is isotropic modulo pR^2.
 	Z := [ Z[i] -
-		&+[ gram[k+i,2*k+1-j] / (i+j-1 eq k select 2 else 1) * X[j]
+		&+[ alpha(gram[k+i,2*k+1-j]) /
+			 (i+j-1 eq k select 2 else 1) * X[j]
 			: j in [k+1-i..k] ] : i in [1..k] ];
 
 	// Verify that Z is isotropic modulo pR^2.
@@ -152,11 +234,11 @@ function LiftSubspace(nProc : BeCareful := true)
 	// Make U orthogonal to X+Z.
 	for i in [1..k], j in [1..dim-2*k] do
 		// Clear components corresponding to X.
-		scalar := gram[2*k+1-i,2*k+j];
+	        scalar := alpha(gram[2*k+1-i,2*k+j]);
 		U[j] -:= scalar * X[i];
 
 		// Clear components corresponding to Z.
-		scalar := gram[k+1-i,2*k+j];
+                scalar := alpha(gram[k+1-i,2*k+j]);
 		U[j] -:= scalar * Z[i];
 	end for;
 
@@ -176,7 +258,7 @@ function LiftSubspace(nProc : BeCareful := true)
 	return X, Z, U;
 end function;
 
-function BuildNeighborProc(L, pR, k : BeCareful := true, coeffs := [])
+function BuildNeighborProc(L, pR, k : BeCareful := true)
 	// Initialize the neighbor procedure.
 	nProc := New(NeighborProc);
 
@@ -186,17 +268,23 @@ function BuildNeighborProc(L, pR, k : BeCareful := true, coeffs := [])
 	nProc`pRnorm := Norm(pR);
 	nProc`k := k;
 
-	// The quadratic space.
-	Q := QuadraticSpace(L);
+	// The reflexive space.
+	V := ReflexiveSpace(L);
+
+        alpha := Involution(V);
+        K := BaseField(V);
+        R := Integers(K);
+
+        nProc`inv_R := map< R -> R | x :-> R!(alpha(K!x))>;
 
 	// The dimension.
-	dim := Dimension(Q);
+	dim := Dimension(V);
 
 	if not IsDefined(L`Vpp, pR) then
-		// Initialize the affine quadratic space.
-		qAff := New(QuadSpaceAff);
+		// Initialize the affine reflexive space.
+		qAff := New(RfxSpaceAff);
 
-		// The prim ideal.
+		// The prime ideal.
 		qAff`pR := pR;
 
 		// A uniformizing element of pR.
@@ -208,18 +296,19 @@ function BuildNeighborProc(L, pR, k : BeCareful := true, coeffs := [])
 		// The characteristic.
 		qAff`ch := Characteristic(qAff`F);
 
-		// The quotient modulo pR^2.
-		qAff`quot, qAff`proj_pR2 := quo< BaseRing(L) | pR^2 >;
+		// The quotient modulo pR * alpha(pR).
+                qAff`quot, qAff`proj_pR2 := quo< BaseRing(L) | pR *
+                                                 alpha(pR) >;
 
 		// Compute the Gram matrix of a p-maximal basis for L.
-		gram, basis := pMaximalGram(L, pR :
-					    BeCareful := BeCareful,
-					    coeffs := coeffs);
+		gram, basis := pMaximalGram(L, pR : BeCareful := BeCareful);
 
 		// This Gram matrix modulo pR.
 		mat := qAff`proj_pR(gram);
 
-		// The Gram matrix modulo pR^2.
+                mat := MatrixAlgebra(BaseRing(mat), Nrows(mat))!mat;
+
+		// The Gram matrix modulo pR * alpha(pR).
 		qAff`quotGram := Matrix(qAff`quot, dim, dim,
 			[ qAff`proj_pR2(e) : e in Eltseq(gram) ]);
 
@@ -233,14 +322,27 @@ function BuildNeighborProc(L, pR, k : BeCareful := true, coeffs := [])
 			end for;
 		end if;
 
-		// The affine quadratic space.
-		qAff`V := BuildQuadraticSpace(mat);
+                alpha_res := map< qAff`F -> qAff`F |
+		  x :-> qAff`proj_pR(nProc`inv_R(x@@qAff`proj_pR))>;
+
+                alpha_aff := FieldAutomorphism(qAff`F, alpha_res);
+
+		// The affine reflexive space.
+                if (pR eq alpha(pR)) then
+                  qAff`V := BuildReflexiveSpace(mat, alpha_aff);
+                else // split case
+		  qAff`V := BuildTrivialReflexiveSpace(qAff`F, dim);	       end if;   
+
+                qAff`inv_pR := alpha_aff;
+
+                qAff`inv_pR2 := map< qAff`quot -> qAff`quot |
+                    x :-> qAff`proj_pR2(nProc`inv_R(x@@qAff`proj_pR2))>;
 
 		// Add this space to our associative array.
 		L`Vpp[pR] := qAff;
 	end if;
 
-	// Retrive the affine quadratic space we're interested in.
+	// Retrieve the affine reflexive space we're interested in.
 	Vpp := L`Vpp[pR];
 
 	// Build the skew vector.
@@ -252,8 +354,8 @@ function BuildNeighborProc(L, pR, k : BeCareful := true, coeffs := [])
 	// Retrieve the first isotropic subspace of the given dimension.
 	nProc`isoSubspace := FirstIsotropicSubspace(Vpp`V, k);
 
-	// Lift subspace so that X and Z are a hyperbolic pair modulo pR^2 and
-	//  U is the hyperbolic complement to X+Z modulo pR^2.
+	// Lift subspace so that X and Z are a hyperbolic pair modulo pR * alpha(pR) and
+	//  U is the hyperbolic complement to X+Z modulo pR * alpha(pR).
 	nProc`X, nProc`Z, nProc`U :=
 		LiftSubspace(nProc : BeCareful := BeCareful);
 	nProc`X_skew := [ x : x in nProc`X ];
@@ -277,8 +379,8 @@ function BuildNeighbor(nProc : BeCareful := true)
 	// The base ring.
 	R := BaseRing(L);
 
-	// The quadratic space.
-	Q := QuadraticSpace(L);
+	// The reflexive space.
+	Q := ReflexiveSpace(L);
 
 	// The diension.
 	dim := Dimension(Q);
@@ -286,30 +388,67 @@ function BuildNeighbor(nProc : BeCareful := true)
 	// Degree of the field extension over the rationals.
 	deg := Degree(BaseRing(Q));
 
-	// Pull the pR^2-isotropic basis back to the number ring.
+	// Pull the pR*alpha(pR)-isotropic basis back to the number ring.
 	XX := [ Vector([ e @@ proj : e in Eltseq(x) ]) : x in nProc`X_skew ];
 	ZZ := [ Vector([ e @@ proj : e in Eltseq(z) ]) : z in nProc`Z ];
 	UU := [ Vector([ e @@ proj : e in Eltseq(u) ]) : u in nProc`U ];
 	BB := Rows(Id(MatrixRing(R, dim)));
 
 	// Convert the pulled-back basis to an appropriate p-maximal basis.
-	pMaximalBasis := L`pMaximal[nProc`pR][2];
-	XX := [ ChangeRing(x, BaseRing(Q)) * pMaximalBasis : x in XX ];
+        pMaximalBasis :=
+	  ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
+ 
+        XX := [ ChangeRing(x, BaseRing(Q)) * pMaximalBasis : x in XX ];
 	ZZ := [ ChangeRing(z, BaseRing(Q)) * pMaximalBasis : z in ZZ ];
 	UU := [ ChangeRing(u, BaseRing(Q)) * pMaximalBasis : u in UU ];
 
 	// Construct a basis on which to perform HNF.
 	bb := Matrix(Rows(Matrix(XX cat ZZ cat UU)) cat Basis(Module(L)));
 
+        alpha := Involution(Q);
+
+	if alpha(nProc`pR) ne nProc`pR then // the split case
+	    pb := PseudoBasis(L);
+	    local_basis := [];
+	    for i in [1..dim] do
+		I := pb[i,1];
+		Igens := Generators(I);
+		if Igens[1] notin alpha(nProc`pR)*I then
+		    Append(~local_basis, Igens[1]*pb[i,2]);
+		else
+		    Append(~local_basis, Igens[2]*pb[i,2]);
+		end if;		
+	    end for;
+	    X_conj := [alpha(x) : x in XX];
+	    B := InnerForm(Q);
+	    pairings := [(Matrix(y)*B*Transpose(Matrix(X_conj)))[1,1] :
+			 y in local_basis];
+	    kPbar, kPbarMap := ResidueClassField(alpha(nProc`pR));
+	    A := Matrix(kPbar, dim, #XX, [kPbarMap(x) : x in pairings]);
+	    lifted_null_space_basis := [&+[w[i]@@kPbarMap*local_basis[i] :
+					   i in [1..dim]] :
+					w in Basis(Nullspace(A))];
+	    pbPbarLambda := PseudoBasis(alpha(nProc`pR)*Module(L));
+	    prePi := Module(lifted_null_space_basis cat
+			    &cat[[x*pb[2] : x in Generators(pb[1])] :
+				 pb in pbPbarLambda]);
+	    Pi := &+[nProc`pR^-1 * x : x in XX] + prePi;
+	    psb := PseudoBasis(Pi);
+	    idls := [ x[1] : x in psb];
+	    basis := [ x[2] : x in psb];
+	    nLat := LatticeWithBasis(Q, Matrix(basis), idls);
+	else
+	
 	//  order to construct the neighbor lattice.
 	idls := [ nProc`pR^-1 : i in [1..#XX] ] cat
-		[ nProc`pR : i in [1..#ZZ] ] cat
+	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
 		[ 1*R : i in [1..#UU] ] cat
-		[ nProc`pR^2 * pb[1] : pb in PseudoBasis(Module(L)) ];
+	        [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
+		       PseudoBasis(Module(L)) ];
 
 	// Build the neighbor lattice.
 	nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
-
+	end if;
 	if BeCareful then
 		// Compute the intersection lattice.
 		intLat := IntersectionLattice(nLat, L);
@@ -383,7 +522,8 @@ function GetNextNeighbor(nProc : BeCareful := true)
 
 	// If we haven't rolled over, update the skew space and return...
 	if row+col lt k+1 then
-		// Shortcuts for the projection maps modulo pR and pR^2.
+		// Shortcuts for the projection maps modulo pR and
+	        //  pR * alpha(pR).
 		map := Vpp`proj_pR;
 		proj := Vpp`proj_pR2;
 

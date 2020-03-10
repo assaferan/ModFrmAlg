@@ -1,25 +1,3 @@
-//freeze;
-
-/****-*-magma-**************************************************************
-                                                                            
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
-                                                                            
-   FILE: struct.m (main structure file)
-
-   Declaration file for the space of algebraic modular forms.
-
-   02/28/20: started from the orthogonal modular forms structure
- 
- ***************************************************************************/
-
-
-///////////////////////////////////////////////////////////////////
-//                                                               //
-//    ModFrmAlg: The algebraic modular forms object.             //
-//                                                               //
-///////////////////////////////////////////////////////////////////
-
 // Data type for implementation of algebraic modular forms.
 declare type ModFrmAlg;
 declare attributes ModFrmAlg:
@@ -96,6 +74,182 @@ declare attributes GenusSym:
 	// An ordered list of theta series for the genus representatives
 	ThetaSeries;
 
+declare type QuadSpace;
+declare attributes QuadSpace:
+	// The base field.
+	F,
+
+	// The base number ring.
+	R,
+
+	// The degree of the field extension.
+	deg,
+
+	// Class number of the field extension.
+	classNo,
+
+	// The inner form.
+	innerForm,
+
+	// The quadratic space as a vector space.
+	V,
+
+	// The quadratic form as a multinomial.
+	Q,
+
+	// The dimension.
+	dim,
+
+	// The quaternion algebras associated to this space (ternary only).
+	QuaternionAlgebra,
+
+	// Whether the form is definite or not.
+	Definite,
+
+	// The diagonalized Gram matrix over the field of fractions.
+	Diagonal,
+
+	// The basis for the diagonalized Gram matrix.
+	DiagonalBasis,
+
+	// The standard lattice for this quadratic space.
+	stdLat;
+
+declare type QuadSpaceAff;
+declare attributes QuadSpaceAff:
+	// The quadratic space.
+	V,
+
+	// The prime ideal.
+	pR,
+
+	// A uniformizing element of pR.
+	pElt,
+
+	// The finite field.
+	F,
+
+	// The characteristic.
+	ch,
+
+	// The quotient modulo pR^2.
+	quot,
+
+	// The projection map modulo pR.
+	proj_pR,
+
+	// The projection map modulo pR^2.
+	proj_pR2,
+
+	// Gram matrix modulo pR^2.
+	quotGram,
+
+	// The quadratic form modulo pR^2.
+	Q_pR2;
+
+declare type ModDedLat;
+declare attributes ModDedLat:
+	// The lattice.
+	Module,
+
+	// The base ring.
+	R,
+
+	// The base field.
+	F,
+
+	// The pseudobasis (only used when not over the rationals).
+	psBasis,
+
+	// The ambient quadratic space.
+	quadSpace,
+
+	// The discriminant ideal.
+	Discriminant,
+
+	// The p-maximal basis is not strictly-speaking a basis for the lattice,
+	//  but instead a basis for the completed lattice at p. This is used to
+	//  compute the affine quadratic space and thereby compute isotropic
+	//  lines, etc.
+	pMaximal,
+
+	// The lattice pushed down to the integers. This is the same as L if
+	//  and only if the base field is the rationals.
+	ZLattice,
+
+	// The automorphism group as a lattice over Z.
+	AutomorphismGroup,
+
+	// The scale of the lattice.
+	Scale,
+
+	// The norm of the lattice.
+	Norm,
+
+	// The level of the lattice.
+	Level,
+
+	// An associative array storing quadratic spaces modulo primes.
+	Vpp,
+
+	// Jordan decomposition of the lattice at a prime.
+	Jordan,
+
+	// The spinor norms as specified prime ideals.
+	SpinorNorm;
+
+declare attributes Lat:
+	// The auxiliary forms associated to this lattice.
+	auxForms,
+
+	// The basis of the lattice with coefficients in R.
+	basisR,
+
+	// The basis of the lattice with coefficients in Z.
+	basisZ,
+
+	// An associative array storing quadratic spaces modulo primes
+	Vpp;
+
+declare type NeighborProc;
+declare attributes NeighborProc:
+	// The lattice.
+	L,
+
+	// The prime ideal.
+	pR,
+
+	// The norm of this prime.
+	pRnorm,
+
+	// The quadratic space over the residue class field.
+	VFF,
+
+	// The current isotropic subspace.
+	isoSubspace,
+
+	// The dimension of the isotropic subspaces.
+	k,
+
+	// Skew vector. This is used to "twist" the isotropic lifts when
+	//  computing neighbor lattices when k gt 1.
+	skew,
+
+	// Skew dimension.
+	skewDim,
+
+	// The current (unaltered) p^2-isotropic lift we're looking at.
+	X,
+
+	// The current p^2-isotropic lift we're looking at.
+	X_skew,
+
+	// The current hyperbolic complement of X and X_skew.
+	Z,
+
+	// The space orthogonal to X+Z modulo p^2.
+	U;
+
 declare attributes ModTupFld:
 	// The Witt index of the form. This is defined to be the number of
 	//  hyperbolic planes in the Witt decomposition of the quadratic form.
@@ -163,77 +317,3 @@ declare attributes IsoParam:
 	//  subspaces.
 	IsotropicParam;
 
-// for backward compatiblity
-
-declare type QuadSpaceAff;
-declare attributes QuadSpaceAff:
-	// The quadratic space.
-	V,
-
-	// The prime ideal.
-	pR,
-
-	// A uniformizing element of pR.
-	pElt,
-
-	// The finite field.
-	F,
-
-	// The characteristic.
-	ch,
-
-	// The quotient modulo pR^2.
-	quot,
-
-	// The projection map modulo pR.
-	proj_pR,
-
-	// The projection map modulo pR^2.
-	proj_pR2,
-
-	// Gram matrix modulo pR^2.
-	quotGram,
-
-	// The quadratic form modulo pR^2.
-	Q_pR2;
-
-declare type QuadSpace;
-declare attributes QuadSpace:
-	// The base field.
-	F,
-
-	// The base number ring.
-	R,
-
-	// The degree of the field extension.
-	deg,
-
-	// Class number of the field extension.
-	classNo,
-
-	// The inner form.
-	innerForm,
-
-	// The quadratic space as a vector space.
-	V,
-
-	// The quadratic form as a multinomial.
-	Q,
-
-	// The dimension.
-	dim,
-
-	// The quaternion algebras associated to this space (ternary only).
-	QuaternionAlgebra,
-
-	// Whether the form is definite or not.
-	Definite,
-
-	// The diagonalized Gram matrix over the field of fractions.
-	Diagonal,
-
-	// The basis for the diagonalized Gram matrix.
-	DiagonalBasis,
-
-	// The standard lattice for this quadratic space.
-	stdLat;

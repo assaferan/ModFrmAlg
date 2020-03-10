@@ -67,7 +67,24 @@ declare attributes ModDedLat:
 	// The spinor norms as specified prime ideals.
 	SpinorNorm;
 
+declare attributes Lat:
+	// The auxiliary forms associated to this lattice.
+	auxForms,
+
+	// The basis of the lattice with coefficients in R.
+	basisR,
+
+	// The basis of the lattice with coefficients in Z.
+	basisZ,
+
+	// An associative array storing quadratic spaces modulo primes
+	Vpp;
+
 // Implementation of lattice routines.
+
+intrinsic Parent(lat::ModDedLat) {}
+  PowerStructure(ModDedLat);
+end intrinsic;
 
 // print
 
@@ -350,7 +367,7 @@ function pMaximalGram(L, pR : BeCareful := true)
 		L`pMaximal := AssociativeArray();
 	end if;
 
-	// The coefficient ideals for this lattice.
+        // The coefficient ideals for this lattice.
 	idls := [ pb[1] : pb in PseudoBasis(Module(L)) ];
 
 	// The pseudobasis vectors.
@@ -358,14 +375,17 @@ function pMaximalGram(L, pR : BeCareful := true)
 
 	// Find a p-maximal basis.
 	vecs := [];
+   
 	for i in [1..#idls] do
 		// The generators of the coefficient ideal.
 		gens := Generators(idls[i]);
 
 		// Randomly choose a p-maximal vector.
 		repeat
-			vec := &+[ g * (Random(11) - 5)
-				: g in gens ] * basis[i];
+                       coeffs := [Random(11) - 5 : g in gens];
+
+                        vec := &+[ gens[j] * coeffs[j] :
+					 j in [1..#gens]] * basis[i];
 		until not vec in pR * Module(L);
 
 		// Verify that the vectors were chosen properly.
@@ -377,7 +397,7 @@ function pMaximalGram(L, pR : BeCareful := true)
 		Append(~vecs, vec);
 	end for;
 
-        gram := GramMatrix(L);
+        gram := GramMatrix(L, vecs);
 
 	// Store the p-maximal basis for future use.
 	L`pMaximal[pR] := < ChangeRing(gram, BaseRing(L)), Matrix(vecs) >;
@@ -394,7 +414,7 @@ intrinsic Level(lat::ModDedLat) -> RngOrdFracIdl
 	// The coefficient ideals of the dual.
 	idls := [ pb[1]^-1 : pb in PseudoBasis(Module(lat)) ];
 
-        gram := GramMatrix(lat)^(-1);
+        gram := GramMatrix(lat, Basis(Module(lat)))^(-1);
 
 	// The dimension.
 	dim := Nrows(gram);
@@ -419,7 +439,7 @@ intrinsic Divisor(lat::ModDedLat) -> RngOrdFracIdl
 	// This is only implemented for ternary lattices.
 	require dim eq 3: "Only implemented for ternary lattices.";
 
-	gram := GramMatrix(lat);
+        gram := GramMatrix(lat, Basis(Module(lat)));
 
 	// Values of the Gram matrix for easy reference.
 	a := gram[1,1] / 2; b := gram[2,2] / 2; c := gram[3,3] / 2;
@@ -445,7 +465,7 @@ intrinsic Norm(lat::ModDedLat) -> RngOrdFracIdl
 	// The coefficient ideals.
 	idls := [ pb[1] : pb in PseudoBasis(Module(lat)) ];
 
-        gram := GramMatrix(lat);
+        gram := GramMatrix(lat, Basis(Module(lat)));
 
 	// The dimension.
 	dim := Nrows(gram);
@@ -458,16 +478,21 @@ intrinsic Norm(lat::ModDedLat) -> RngOrdFracIdl
 	return lat`Norm;
 end intrinsic;
 
-intrinsic GramMatrix(lat::ModDedLat) -> AlgMatElt
+intrinsic GramMatrix(lat::ModDedLat, vecs::SeqEnum[ModTupFldElt]) -> AlgMatElt
 {.}
   // The underlying basis for lattice.
-  basis := Matrix(Basis(Module(lat)));
+  basis := Matrix(vecs);
 
   // The involution of the reflexive space
   alpha := Involution(ReflexiveSpace(lat));
 
+  F := BaseField(alpha);
+
+  basis := ChangeRing(basis, F);
+
   // The Gram matrix for the underlying basis.
-  gram := basis * InnerForm(ReflexiveSpace(lat)) * Transpose(alpha(basis));
+  gram := basis * InnerForm(ReflexiveSpace(lat)) *
+    Transpose(alpha(basis));
 
   return gram;
 end intrinsic;
@@ -480,7 +505,7 @@ intrinsic Scale(lat::ModDedLat) -> RngOrdFracIdl
 	// Extract the coefficient ideals.
 	idls := [ pb[1] : pb in PseudoBasis(Module(lat)) ];
 
-	gram := GramMatrix(lat);
+        gram := GramMatrix(lat, Basis(Module(lat)));
 
 	// The dimension of the vector space.
 	dim := Nrows(gram);
@@ -540,6 +565,15 @@ intrinsic Index(lat1::ModDedLat, lat2::ModDedLat) -> RngOrdFracIdl
 	require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
 		"Both lattices must belong to the same reflexive space.";
 
+        index :=  &*ElementaryDivisors(Module(lat1), Module(lat2));
+
+        // Make sure this is an integral ideal
+        assert Denominator(index) eq 1;
+
+        return index;
+
+        // old code - good for orthogonal case only
+
 	// Compute discriminants.
 	disc1 := Discriminant(lat1);
 	disc2 := Discriminant(lat2);
@@ -549,6 +583,10 @@ intrinsic Index(lat1::ModDedLat, lat2::ModDedLat) -> RngOrdFracIdl
 
 	// Make sure this is an integral ideal.
 	assert Denominator(quo) eq 1;
+
+        // Problem - quo is a square only in the quadratic case.
+        // In the unitary case, it is of the form I * alpha(I)
+        // and one cannot use only quo to determine I
 
 	// Compute the square root.
 	sq, root := IsSquare(quo);

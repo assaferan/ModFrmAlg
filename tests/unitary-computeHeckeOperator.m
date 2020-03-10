@@ -4,12 +4,6 @@ SetHelpUseExternalBrowser(false);
 
 AttachSpec("spec");
 
-/*
-if not assigned getFieldAutomorphism then
-  import "fieldaut.m" : getFieldAutomorphism;
-end if;
-*/
-
 // This is hardly the right thing to do,
 // but I still don't know how to construct U_{n} as a group of Lie type (!?)
 // Instead, we just construct SU_3,

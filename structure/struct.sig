@@ -7,13 +7,10 @@ T,ModHecke,-,0
 A,ModHecke,3,Ts,Eigenforms,EisensteinSeries
 T,GenusSym,-,0
 A,GenusSym,4,Representative,Representatives,RepresentativesAssoc,ThetaSeries
-T,QuadSpace,-,0
-A,QuadSpace,13,F,R,deg,classNo,innerForm,V,Q,dim,QuaternionAlgebra,Definite,Diagonal,DiagonalBasis,stdLat
-T,QuadSpaceAff,-,0
-A,QuadSpaceAff,10,V,pR,pElt,F,ch,quot,proj_pR,proj_pR2,quotGram,Q_pR2
-A,Lat,4,auxForms,basisR,basisZ,Vpp
-T,NeighborProc,-,0
-A,NeighborProc,12,L,pR,pRnorm,VFF,isoSubspace,k,skew,skewDim,X,X_skew,Z,U
 A,ModTupFld,12,WittIndex,GramMatrix,GramMatrixStd,Basis,Q,QStd,AnisoDim,RadDim,ParamArray,S,Symbolic,PrimitiveElement
 T,IsoParam,-,0
 A,IsoParam,5,Pivots,PivotPtr,FreeVars,Params,IsotropicParam
+T,QuadSpaceAff,-,0
+A,QuadSpaceAff,10,V,pR,pElt,F,ch,quot,proj_pR,proj_pR2,quotGram,Q_pR2
+T,QuadSpace,-,0
+A,QuadSpace,13,F,R,deg,classNo,innerForm,V,Q,dim,QuaternionAlgebra,Definite,Diagonal,DiagonalBasis,stdLat

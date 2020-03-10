@@ -255,7 +255,7 @@ intrinsic Discriminant(lat::Lat) -> RngInt
 	return ideal< Integers() | det / factor >;
 end intrinsic;
 
-function pMaximalGram(L, pR : BeCareful := true)
+function pMaximalGram(L, pR : BeCareful := true, coeffs := [])
 	if assigned L`pMaximal then
 		// If the p-maximal data has been assigned, return it.
 		if IsDefined(L`pMaximal, pR) then
@@ -280,7 +280,10 @@ function pMaximalGram(L, pR : BeCareful := true)
 
 		// Randomly choose a p-maximal vector.
 		repeat
-			vec := &+[ g * (Random(11) - 5)
+		         if IsEmpty(coeffs) then
+			   coeffs := [Random(11)-5 : g in gens];
+                         end if;
+		         vec := &+[ g * coeffs[i] // (Random(11) - 5)
 				: g in gens ] * basis[i];
 		until not vec in pR * Module(L);
 

@@ -26,11 +26,32 @@ declare attributes FldAut :
 
 /* constructors */
 
+function fullAutomorphismGroup(L)
+   assert IsField(L);
+   char := Characteristic(L);
+   if (char eq 0) then
+      gal, aut, phi := AutomorphismGroup(L);
+   else
+      baseField := FiniteField(char);
+
+      // This special case is needed because AutomorphismGroup(L,L)
+      // fails for finite fields !!!!
+      if IsFinite(L) and #L eq char then
+        gal := GaloisGroup(L,L);
+        aut := [ hom<L->L|> ];
+        phi := map<gal->aut| <gal!1, aut[1]> >;
+      else
+        gal, aut, phi := AutomorphismGroup(L, baseField);
+      end if;
+   end if;
+   return gal, aut, phi;
+end function;
+
 intrinsic FieldAutomorphism(L::Fld, g::GrpPermElt) -> FldAut
 {.}
   alpha := New(FldAut);
   alpha`L := L;
-  gal, _, psi := AutomorphismGroup(L);
+  gal, _, psi := fullAutomorphismGroup(L);
   require g in gal :
   "Group element must be in the automorphism group of the field!";
   alpha`elt := g;
@@ -42,39 +63,43 @@ end intrinsic;
 
 // This is needed because HasComplexConjugate can return a UserProgram
 intrinsic FieldAutomorphism(L::Fld, f::UserProgram) -> FldAut
-//function getFieldAutomorphism(L,f)
 {.}
-   gal, _, psi := AutomorphismGroup(L);
-   gens := Generators(L);
+//   gal, _, psi := AutomorphismGroup(L);
+   gal, _, psi := fullAutomorphismGroup(L);
+   if IsFinite(L) then
+     gens := [L.1];
+   else
+     gens := Generators(L);
+   end if;
    require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
      "Map must be an automorphism of the field!";
-//   assert exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]};
    return FieldAutomorphism(L, g);
-//end function;
 end intrinsic;
 
 intrinsic FieldAutomorphism(L::Fld, f::Intrinsic) -> FldAut
-//function getFieldAutomorphism(L,f)
 {.}
-   gal, _, psi := AutomorphismGroup(L);
-   gens := Generators(L);
+   gal, _, psi := fullAutomorphismGroup(L);
+   if IsFinite(L) then
+     gens := [L.1];
+   else
+     gens := Generators(L);
+   end if;
    require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
      "Map must be an automorphism of the field!";
-//   assert exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]};
    return FieldAutomorphism(L, g);
-//end function;
 end intrinsic;
 
 intrinsic FieldAutomorphism(L::Fld, f::Map[Fld,Fld]) -> FldAut
-//function getFieldAutomorphism(L,f)
 {.}
-   gal, _, psi := AutomorphismGroup(L);
-   gens := Generators(L);
+   gal, _, psi := fullAutomorphismGroup(L);
+   if IsFinite(L) then
+     gens := [L.1];
+   else
+     gens := Generators(L);
+   end if;
    require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
      "Map must be an automorphism of the field!";
-//   assert exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]};
    return FieldAutomorphism(L, g);
-//end function;
 end intrinsic;
 
 /* Printing */
@@ -97,6 +122,9 @@ end intrinsic;
 
 intrinsic FixedField(alpha::FldAut) -> Fld
 {.}
+  if IsFinite(alpha`L) then
+    return sub<alpha`L|[x : x in alpha`L | alpha(x) eq x]>;
+  end if;
   return FixedField(alpha`L, [alpha`map]);
 end intrinsic;
 
@@ -167,6 +195,14 @@ intrinsic '@'(a::AlgMatElt[Fld], alpha::FldAut) -> AlgMatElt[Fld]
   require BaseRing(A) eq BaseField(alpha) : "map must be defined on elements!";
   return A![[alpha(a[i,j]) : j in [1..Degree(A)]]
 				  : i in [1..Degree(A)]];
+end intrinsic;
+
+intrinsic '@'(a::ModMatFldElt[Fld], alpha::FldAut) -> ModMatFldElt[Fld]
+{.}
+  A := Parent(a);
+  require BaseRing(A) eq BaseField(alpha) : "map must be defined on elements!";
+  return A![[alpha(a[i,j]) : j in [1..Ncols(a)]]
+				  : i in [1..Nrows(a)]];
 end intrinsic;
 
 intrinsic '@'(I::RngOrdFracIdl[FldOrd], alpha::FldAut) -> RngOrdFracIdl[FldOrd]

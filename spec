@@ -17,6 +17,8 @@
   orthogonal/linalg.m
   orthogonal/stdbasis.m
 
+  tests/unitary-tests.m
+  
   unitary/fieldaut.m
   unitary/stdbasis.m
 

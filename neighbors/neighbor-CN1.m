@@ -343,7 +343,7 @@ function BuildNeighborProc(L, pR, k : BeCareful := true)
 			[ qAff`proj_pR2(e) : e in Eltseq(gram) ]);
 
 		// Make some adjustments when we're in characteristic 2.
-		if qAff`ch eq 2 then
+                if qAff`ch eq 2 and SpaceType(V) eq "Symmetric" then
 			// Adjust the diagonal entries accordingly.
 			for i in [1..dim] do
 				value := gram[i,i] / 2;

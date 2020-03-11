@@ -9,6 +9,8 @@
 
    Implementation file for the space of algebraic modular forms.
 
+   03/11/20: Added constructor for Unitary Modular Forms from an inner form
+
    03/10/20: Discarded irrelevant imports.
              Moved here the type declaration.
 	     Modified to use always the reflexive space implementation.
@@ -70,6 +72,7 @@ intrinsic AlgebraicModularForms(G::GrpLie,
 
         K := BaseRing(G);
         require IsField(K) : "Lie group must be defined over a field";
+        K := AbsoluteField(K);
         if Type(K) eq FldRat then
            K := RationalsAsNumberField();
         end if;
@@ -147,6 +150,30 @@ intrinsic AlgebraicModularForms(G::GrpLie,
 	end try;
 
         return AlgebraicModularForms(G, innerForm);
+end intrinsic;
+
+intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
+{.}
+  K := BaseRing(innerForm);
+  _, cc := HasComplexConjugate(K);
+  alpha := FieldAutomorphism(K, cc);
+  F := FixedField(alpha);
+
+  SL3 := GroupOfLieType("A2", K);
+  A := AutomorphismGroup(SL3);
+  AGRP := GammaGroup(F, A);
+  grph_auts := [GraphAutomorphism(SL3, x) : x in [Sym(2) | 1, (1,2)]];
+  ngens := NumberOfGenerators(AGRP`Gamma);
+  c := OneCocycle( AGRP, [grph_auts[Order(AGRP`Gamma.i)] : i in [1..ngens]]);
+
+  SU3 := TwistedGroupOfLieType(c);
+
+  // This is hardly the right thing to do,
+  // but I still don't know how to construct U_{n} as a group of Lie type (!?)
+  // Instead, we just construct SU_3,
+  // using the fact that the code at the moment does the same for both.
+
+  return AlgebraicModularForms(SU3, innerForm);
 end intrinsic;
 
 // Should replace weight by Map[GrpLie, GrpMat]

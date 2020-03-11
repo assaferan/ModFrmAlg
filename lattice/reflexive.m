@@ -255,7 +255,7 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 	rfxSpace`F := F;
         rfxSpace`R := Integers(F);
 	rfxSpace`deg := Degree(F);
-	rfxSpace`classNo := ClassNumber(F);
+        rfxSpace`classNo := ClassNumber(AbsoluteField(F));
 
         // Assign automorphism
         rfxSpace`aut := alpha;

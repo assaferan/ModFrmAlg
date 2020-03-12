@@ -29,8 +29,10 @@ UnitaryExample_7_2 := rec<UnitaryExampleRF |
 // TODO : This one is slightly different than the other two -
 // Should make appropriate modifications in the test function
 
+F<root13> := QuadraticField(13);
+R<x> := PolynomialRing(F);
 UnitaryExample_7_3 := rec<UnitaryExampleRF |
-			 field := ext<QuadraticField(13) | >,
+			 field := ext< F | x^2 + 13 + 2*root13 >,
 			 genus := 9,
 			 norm_p := [29, 53, 61, 79, 107, 113, 131, 139,
 				    157, 191, 211],

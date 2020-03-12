@@ -11,6 +11,8 @@
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   03/11/20: Modified to use the orbit method.
+
    03/10/20: started from the orthogonal modular forms structure
  
  ***************************************************************************/
@@ -77,8 +79,12 @@ end intrinsic;
 // get (computation) methods
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
-	: BeCareful := true, Force := false, Estimate := false, UseLLL := true,
-		Fast := false, Orbits := false) -> AlgMatElt
+			: BeCareful := true,
+			  Force := false,
+			  Estimate := false,
+			  UseLLL := true,
+			  Fast := false,
+			  Orbits := false) -> AlgMatElt
 { Computes the requested Hecke operator. }
 	// Initialize the space of algebraic modular forms, if needed.
 	ModFrmAlgInit(M : Orbits := Orbits);
@@ -117,7 +123,9 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	// function.
 
         hecke := HeckeOperatorTrivialWeightCN1(M, pR, k
-			: BeCareful := BeCareful, Estimate := Estimate);
+			: BeCareful := BeCareful,
+			  Estimate := Estimate,
+			  Orbits := Orbits);
 
 	// Sets the Hecke operator in the internal data structure for this
 	//  algebraic modular form.
@@ -128,55 +136,95 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl
-	: BeCareful := true, Force := false, Estimate := false, UseLLL := true,
-		Fast := false, Orbits := false) -> AlgMatElt
+			: BeCareful := true,
+			  Force := false,
+			  Estimate := false,
+			  UseLLL := true,
+			  Fast := false,
+			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator with isotropic dimension 1. }
 	return HeckeOperator(M, pR, 1
-		: BeCareful := BeCareful, Force := Force, Estimate := Estimate,
-			UseLLL := UseLLL, Fast := Fast, Orbits := Orbits);
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Fast := Fast,
+			       Orbits := Orbits);
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt
-	: BeCareful := true, Force := false, Estimate := false, UseLLL := true,
-		Fast := false, Orbits := false) -> AlgMatElt
+			: BeCareful := true,
+			  Force := false,
+			  Estimate := false,
+			  UseLLL := true,
+			  Fast := false,
+			  Orbits := false) -> AlgMatElt
 { Computes the requested Hecke operator, under the assumption that the base
 number field is the rationals. }
 	// Make sure that the base ring of the number field is the rationals.
 	require Degree(BaseRing(M)) eq 1: "Base ring must be the rationals.";
 
 	return HeckeOperator(M, ideal< BaseRing(Module(M)) | Norm(pR) >, k
-		: BeCareful := BeCareful, Force := Force, Estimate := Estimate,
-			UseLLL := UseLLL, Fast := Fast, Orbits := Orbits);
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Fast := Fast,
+			       Orbits := Orbits);
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
-	: BeCareful := true, Force := false, Estimate := false, UseLLL := true,
-		Fast := false, Orbits := false) -> AlgMatElt
+			: BeCareful := true,
+			  Force := false,
+			  Estimate := false,
+			  UseLLL := true,
+			  Fast := false,
+			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator with isotropic dimension 1, under the
 assumption that the base number field is the rationals. }
 	return HeckeOperator(M, ideal< BaseRing(Module(M)) | Norm(pR) >, 1
-		: BeCareful := BeCareful, Force := Force, Estimate := Estimate,
-			UseLLL := UseLLL, Fast := Fast, Orbits := Orbits);
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Fast := Fast,
+			       Orbits := Orbits);
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt, k::RngIntElt
-	: BeCareful := true, Force := false, Estimate := false, UseLLL := true,
-		Fast := false, Orbits := false) -> AlgMatElt
+			: BeCareful := true,
+			  Force := false,
+			  Estimate := false,
+			  UseLLL := true,
+			  Fast := false,
+			  Orbits := false) -> AlgMatElt
 { Computes the requested Hecke operator under the assumption that the base
 number field is the rationals. }
 	return HeckeOperator(M, ideal< Integers() | p >, k
-		: BeCareful := BeCareful, Force := Force, Estimate := Estimate,
-			UseLLL := UseLLL, Fast := Fast, Orbits := Orbits);
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Fast := Fast,
+			       Orbits := Orbits);
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt
-	: BeCareful := true, Force := false, Estimate := false, UseLLL := true,
-		Fast := false, Orbits := false) -> AlgMatElt
+			: BeCareful := true,
+			  Force := false,
+			  Estimate := false,
+			  UseLLL := true,
+			  Fast := false,
+			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator with isotropic dimension 1, under the
 assumption that the base number field is the rationals. }
 	return HeckeOperator(M, ideal< Integers() | p >, 1
-		: BeCareful := BeCareful, Force := Force, Estimate := Estimate,
-			UseLLL := UseLLL, Fast := Fast, Orbits := Orbits);
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Fast := Fast,
+			       Orbits := Orbits);
 end intrinsic;
 
 intrinsic HeckeOperators(M::ModFrmAlg, k::RngIntElt) -> SeqEnum, SeqEnum

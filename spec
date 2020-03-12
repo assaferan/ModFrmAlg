@@ -13,6 +13,7 @@
   neighbors/hecke-CN1.m
   neighbors/isotropic.m
   neighbors/neighbor-CN1.m
+  neighbors/orbits.m
 
   orthogonal/linalg.m
   orthogonal/stdbasis.m

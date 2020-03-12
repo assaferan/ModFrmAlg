@@ -430,20 +430,20 @@ intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	list := [];
 
 	while space ne [] do
-		// Retrieve the isotropic subspace in the original coordinates.
-		vec := Vector(Matrix(space[1]) * Transpose(V`Basis));
+	    // Retrieve the isotropic subspace in the original coordinates.
+	    vecs := [Vector(Matrix(x) * Transpose(V`Basis)) : x in space];
+	    
+	    // Normalize the isotropic vector.
+	    // pos := 0;
+	    // repeat pos +:= 1;
+	    // until vec[pos] ne 0;
 
-		// Normalize the isotropic vector.
-		pos := 0;
-		repeat pos +:= 1;
-		until vec[pos] ne 0;
+	    // Add to list.
+	    //Append(~list, vec / vec[pos]);
+	    Append(~list, sub< V | vecs >);
 
-		// Add to list.
-		//Append(~list, vec / vec[pos]);
-		Append(~list, sub< V | vec >);
-
-		// Next subspace.
-		space := NextIsotropicSubspace(V, k);
+	    // Next subspace.
+	    space := NextIsotropicSubspace(V, k);
 	end while;
 
 	return list;

@@ -7,6 +7,9 @@
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 
+   03/11/20: Added the function SkipToNeighbor, from neighbor-QQ in the orthogonal
+             case, in order to use it in the orbit method.
+
    03/10/20: Discarded irrelevant imports.
              Moved here the type declaration.
 	     Modified to use always the reflexive space implementation.
@@ -76,7 +79,7 @@ declare attributes NeighborProc:
 
 // auxiliary function to lift a subspace from mod p
 
-function LiftSubspace(nProc : BeCareful := true)
+function LiftSubspace(nProc : BeCareful := true, Override := false)
 	// If we're trying to lift an empty subspace, return trivial entries.
 	if nProc`isoSubspace eq [] then return [], [], []; end if;
 
@@ -111,11 +114,21 @@ function LiftSubspace(nProc : BeCareful := true)
 	map := Vpp`proj_pR;
 	proj := Vpp`proj_pR2;
 
-	// Parameterization data regarding the affine space.
-	param := V`ParamArray[k];
+        if not Override then
+	    // Parameterization data regarding the affine space.
+	    param := V`ParamArray[k];
 
-	// Get the pivots for the bases of the isotropic subspaces.
-	pivots := param`Pivots[param`PivotPtr];
+	    // Get the pivots for the bases of the isotropic subspaces.
+	    pivots := param`Pivots[param`PivotPtr];
+	else
+	    pivots := [0^^k];
+	    for i in [1..k] do
+		pos := 0;
+		repeat pos +:= 1;
+		until sp[i][pos] ne 0;
+		pivots[i] := pos;
+	    end for;
+	end if;
 
 	// Set up the correct basis vectors.
 	for i in [1..k], j in [pivots[i]+1..dim] do
@@ -361,7 +374,8 @@ function BuildNeighborProc(L, pR, k : BeCareful := true)
                 if (pR eq alpha(pR)) then
                   qAff`V := BuildReflexiveSpace(mat, alpha_aff);
                 else // split case
-		  qAff`V := BuildTrivialReflexiveSpace(qAff`F, dim);	       end if;   
+		    qAff`V := BuildTrivialReflexiveSpace(qAff`F, dim);
+		end if;   
 
                 qAff`inv_pR := alpha_aff;
 
@@ -582,3 +596,11 @@ function GetNextNeighbor(nProc : BeCareful := true)
 	return nProc;
 end function;
 
+function SkipToNeighbor(nProc, space : BeCareful := true)
+    //	nProc`isoSubspace := [ space ];
+        nProc`isoSubspace := space;
+	nProc`X, nProc`Z, nProc`U := LiftSubspace(nProc
+		: BeCareful := BeCareful, Override := true);
+	nProc`X_skew := [ x : x in nProc`X ];
+	return nProc;
+end function;

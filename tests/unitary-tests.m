@@ -6,8 +6,8 @@ intrinsic UnitaryModularFormTests()
 {.}
   // we're cutting down the number of primes until we have
   // a more efficient implementation
-  testUnitaryExample(UnitaryExample_7_2 : num_primes := 5);
-  testUnitaryExample(UnitaryExample_7_4 : num_primes := 3);
+  testUnitaryExample(UnitaryExample_7_2);
+  testUnitaryExample(UnitaryExample_7_4);
 end intrinsic;
 
 intrinsic testUnitaryExample(example::Rec : num_primes := 0)

@@ -786,3 +786,36 @@ intrinsic FreeBasis(L::ModDedLat) -> SeqEnum
 	return basis;
 end intrinsic;
 
+intrinsic PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat :
+		 BeCareful := true) -> AlgMatElt
+  {Takes an isometry g : Pi -> Lambda and reexpresses it as an L-linear map gV : V -> V.}
+
+  LambdaZZ := ZLattice(Lambda);
+  LambdaZZAuxForms := AuxForms(Lambda);
+  PiZZ := ZLattice(Pi);
+  PiZZAuxForms := AuxForms(Pi);   
+  BL := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Rows(LambdaZZ`basisZ)]);
+  BP := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Rows(PiZZ`basisZ)]);
+  m := Dimension(Lambda);
+  V := VectorSpace(AmbientSpace(Lambda));
+  L := BaseField(V);
+  d := Degree(L);
+  rows := [];
+  for i in [1..m] do
+    v := Vector(&cat[Eltseq(x) : x in Eltseq(V.i)]);
+    rowQ := Eltseq(v*BP^-1*(Parent(BL)!g)*BL);
+    rowL := Vector([L!rowQ[j*d+1..(j+1)*d] : j in [0..m-1]]); 
+    Append(~rows,rowL);
+  end for;
+  
+  ans := Matrix(rows);
+  
+  if BeCareful then
+    alpha := Involution(ReflexiveSpace(Lambda));
+    print "gV maps Pi into Lambda?", &and[x*ans in Module(Lambda) :
+					x in PiZZ`basisR];
+    print "gV respects the inner product?", InnerProductMatrix(V) eq ans*InnerProductMatrix(V)*alpha(Transpose(ans));
+  end if;
+  
+  return ans;
+end intrinsic;

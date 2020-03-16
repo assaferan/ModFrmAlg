@@ -68,8 +68,7 @@ intrinsic AlgebraicModularForms(G::GrpLie,
 				innerForm::AlgMatElt[Rng]) -> ModFrmAlg
 { Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by the isometry class of a specific matrix.}
 	// The rationals as a number field.
-       
-
+  
         K := BaseRing(G);
         require IsField(K) : "Lie group must be defined over a field";
         K := AbsoluteField(K);
@@ -159,21 +158,23 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
   alpha := FieldAutomorphism(K, cc);
   F := FixedField(alpha);
 
-  SL3 := GroupOfLieType("A2", K);
-  A := AutomorphismGroup(SL3);
+  n := Nrows(innerForm);
+
+  SL_n := GroupOfLieType("A" cat IntegerToString(n-1), K);
+  A := AutomorphismGroup(SL_n);
   AGRP := GammaGroup(F, A);
-  grph_auts := [GraphAutomorphism(SL3, x) : x in [Sym(2) | 1, (1,2)]];
+  grph_auts := [GraphAutomorphism(SL_n, x) : x in [Sym(2) | 1, (1,2)]];
   ngens := NumberOfGenerators(AGRP`Gamma);
   c := OneCocycle( AGRP, [grph_auts[Order(AGRP`Gamma.i)] : i in [1..ngens]]);
 
-  SU3 := TwistedGroupOfLieType(c);
+  SU_n := TwistedGroupOfLieType(c);
 
   // This is hardly the right thing to do,
   // but I still don't know how to construct U_{n} as a group of Lie type (!?)
-  // Instead, we just construct SU_3,
+  // Instead, we just construct SU_{n},
   // using the fact that the code at the moment does the same for both.
 
-  return AlgebraicModularForms(SU3, innerForm);
+  return AlgebraicModularForms(SU_n, innerForm);
 end intrinsic;
 
 // Should replace weight by Map[GrpLie, GrpMat]

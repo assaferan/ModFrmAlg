@@ -643,20 +643,21 @@ intrinsic IsIsometric(M::ModFrmAlg, lat1::Lat, lat2::Lat) -> BoolElt
 	return iso;
 end intrinsic;
 
-intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat) -> BoolElt
+intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat) -> BoolElt, .
 { Determines whether the two specified lattices are isometric. }
 	// Verify that both lattices reside in the same reflexive space.
 	require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
 		"Both lattices must belong to the same reflexive space.";
 
-	// Retrive the ZLattices for each lattice.
+	// Retrieve the ZLattices for each lattice.
 	L1 := ZLattice(lat1);
 	L2 := ZLattice(lat2);
 
 	// Check for isometry.
-	iso, f := IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
+//	iso, f := IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
 
-	return iso;
+//	return iso;
+        return IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
 end intrinsic;
 
 intrinsic AutomorphismGroup(lat::ModDedLat) -> SeqEnum

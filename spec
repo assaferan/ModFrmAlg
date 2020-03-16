@@ -1,4 +1,4 @@
-{
+{ 
   io/saveload.m
 
   lattice/lattice.m
@@ -18,6 +18,9 @@
   orthogonal/linalg.m
   orthogonal/stdbasis.m
 
+  representation/combfreemod.m
+  representation/representation.m
+  
   tests/unitary-tests.m
   
   unitary/fieldaut.m

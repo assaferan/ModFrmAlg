@@ -33,7 +33,7 @@ procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
     // A specified invariant of the neighbor lattice.
     inv := Invariant(nLat);
 
-    // If this invariaint is defined for the array, we need
+    // If this invariant is defined for the array, we need
     //  to potentially check for isometry.
     if IsDefined(invs, inv) then
        // Retrieve the array for this invariant.

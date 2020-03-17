@@ -59,15 +59,16 @@ declare attributes GrpRepElt :
 
 intrinsic GroupRepresentation(G::Grp, M::CombFreeMod, action::Map) -> GrpRep
 {Constructs a group representation for the group G on the combinatorial free module
-M, such that the action G x M -> M is described by the map action .}
+M, such that the action on basis elements G x Basis(M) -> M is described by the map action .}
 
   V := New(GrpRep);
   V`G := G;
   V`M := M;
   V`action := action;
 
-  require (Domain(action) eq CartesianProduct(G, M)) and (Codomain(action) eq M) :
-	"action should have domain G x M, and codomain M.";
+  require (Domain(action) eq CartesianProduct(G, [1..Dimension(M)])) and
+	  (Codomain(action) eq M) :
+	"action should have domain G x [1..Dimension(M)], and codomain M.";
   V`act_mats := AssociativeArray();
   V`known_grps := [sub<G|1>];
   V`act_mats[G!1] := IdentityMatrix(BaseRing(M), Dimension(M));

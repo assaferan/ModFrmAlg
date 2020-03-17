@@ -86,30 +86,7 @@ function createElementString(coeffs, names)
   return ret;
 end function;
 
-/*
-CombFreeModElt - the element class
-*/
-
-/* constructor */
-
-intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
-					      v::ModRngElt) -> CombFreeModElt
-{Construct an element of CFM whose underlying vector is v.}
-  elt := New(CombFreeModElt);
-  elt`vec := v;
-  elt`parent := CFM;
-  dim := Dimension(CFM`M);
-  elt`name := createElementString(Eltseq(v), CFM`names);
-
-  return elt;
-end intrinsic;
-
-/* access */
-
-intrinsic Parent(elt::CombFreeModElt) -> CombFreeMod
-{.}
-  return elt`parent;
-end intrinsic;
+// access
 
 intrinsic Rank(CFM::CombFreeMod) -> RngIntElt
 {Return the rank of CFM.}
@@ -117,67 +94,8 @@ intrinsic Rank(CFM::CombFreeMod) -> RngIntElt
 end intrinsic;
 
 intrinsic Dimension(CFM::CombFreeMod) -> RngIntElt
-{
-
-function createElementString(coeffs, names)
-  dim := #names;
-  function getCoeffString(coeff : is_first := false)
-      if coeff eq 1 then return is_first select "" else " + "; end if;
-      if coeff eq -1 then return is_first select "-" else " - "; end if;
-      ret := Sprintf("%o*", coeff);
-      if ("+" in ret[2..#ret]) or ("-" in ret[2..#ret]) then
-	  ret := "(" cat ret cat ")";
-      else
-	  if ret[1] eq "-" then
-	      prefix := is_first select "-" else " - "; 
-	      return prefix cat ret[2..#ret];
-	  end if;
-      end if;
-      if (not is_first) then
-	  ret := " + " cat ret;
-      end if;
-      
-      return ret;
-  end function;
-  idxs := [i : i in [1..dim] | coeffs[i] ne 0];
-  if IsEmpty(idxs) then return "0"; end if;
-  coeffs_strs := [getCoeffString(coeffs[idxs[1]] : is_first := true)];
-  coeffs_strs cat:= [getCoeffString(coeffs[idxs[i]]) : i in [2..#idxs]];
-  summands := [Sprintf("%o%o", coeffs_strs[i],
-		       names[idxs[i]]) : i in [1..#idxs]];
-  ret := &cat summands;
-
-  return ret;
-end function;
-
-/*
-CombFreeModElt - the element class
-*/
-
-/* constructor */
-
-intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
-					      v::ModRngElt) -> CombFreeModElt
-{Construct an element of CFM whose underlying vector is v.}
-  elt := New(CombFreeModElt);
-  elt`vec := v;
-  elt`parent := CFM;
-  dim := Dimension(CFM`M);
-  elt`name := createElementString(Eltseq(v), CFM`names);
-
-  return elt;
-end intrinsic;
-
-/* access */
-
-intrinsic Parent(elt::CombFreeModElt) -> CombFreeMod
-{.}
-  return elt`parent;
-end intrinsic;
-
-intrinsic Rank(CFM::CombFreeMod) -> RngIntElt
 {Return the rank of CFM.}
-  return Rank(CFM);
+  return Rank(CFM);	  
 end intrinsic;
 
 intrinsic Basis(CFM::CombFreeMod) -> SeqEnum[CombFreeModElt]
@@ -188,6 +106,31 @@ end intrinsic;
 intrinsic BaseRing(CFM::CombFreeMod) -> Rng
 {return the ring over which CFM is defined.}
   return BaseRing(CFM`M);
+end intrinsic;
+
+/*
+CombFreeModElt - the element class
+*/
+
+/* constructor */
+
+intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
+					      v::ModRngElt) -> CombFreeModElt
+{Construct an element of CFM whose underlying vector is v.}
+  elt := New(CombFreeModElt);
+  elt`vec := v;
+  elt`parent := CFM;
+  dim := Dimension(CFM`M);
+  elt`name := createElementString(Eltseq(v), CFM`names);
+
+  return elt;
+end intrinsic;
+
+/* access */
+
+intrinsic Parent(elt::CombFreeModElt) -> CombFreeMod
+{.}
+  return elt`parent;
 end intrinsic;
 
 /* generators and coercion */
@@ -310,7 +253,7 @@ declare attributes CombFreeModHom :
 	morphism;
 
 /* constructors */
-		   
+	   
 intrinsic Homomorphism(V::CombFreeMod, W::CombFreeMod,
 					  f::UserProgram) -> CombFreeModHom
 {Construct the morphism described by f.}
@@ -392,3 +335,4 @@ intrinsic '@@'(w::CombFreeModElt, phi::CombFreeModHom) -> CombFreeModElt
 
   return V!((W`M!Eltseq(w))@@(phi`morphism));
 end intrinsic;
+

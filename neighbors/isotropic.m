@@ -73,6 +73,9 @@ intrinsic BuildTrivialReflexiveSpace(F::FldFin,
   V`Symbolic := true;
   V`QStd := QuadraticForm(MatrixAlgebra(F,dim)!0);
   V`Basis := BasisMatrix(V);
+  V`GramMatrix := MatrixAlgebra(F,dim)!0;
+  V`GramMatrixStd := MatrixAlgebra(F,dim)!0;
+  
   return V;
 end intrinsic;
 
@@ -111,65 +114,65 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
      // Why ???? an also it says 2 (!) ? 
      require Dimension(V) ge 2: "Dimension must be 3 or greater.";
 
-	// Assign the Gram matrix.
-	V`GramMatrix := M;
-
-	// Decompose the form into a standard form (R + H + A).
-        if spaceType eq "Symmetric" then
- 	  V`GramMatrixStd, V`Basis := Decompose(M);
-        else if spaceType eq "Hermitian" then
-	  V`GramMatrixStd, V`Basis := Decompose(M, alpha);
-	end if;
-        end if;  
-
-	// Count the rows at the end of the matrix which are exactly zero.
-	idx := Dimension(V);
-	while idx ge 1 and V`GramMatrixStd[idx] eq Zero(V) do
-		idx -:= 1;
-	end while;
-
-	// The dimension of the radical.
-	V`RadDim := Dimension(V) - idx;
-
-	// Determine the dimension of the totally hyperbolic subspace.
-	idx := 1;
-	while idx le Dimension(V)-V`RadDim and V`GramMatrixStd[idx,idx] eq 0 do
-		idx +:= 1;
-	end while;
-
-	// Dimension of the anistotropic subspace.
-	V`AnisoDim := Dimension(V) - V`RadDim - idx + 1;
-
-	// The number of hyperbolic planes in the Witt decomposition.
-	V`WittIndex := Integers()!((idx-1)/2);
-
-	// Assign the multinomial of the reflexive form.
-        // Might want to change this one to the
-        // bilinear form in general
-
-        if spaceType eq "Symmetric" then
-	  if Characteristic(BaseRing(M)) ne 2 then
-		V`Q := QuadraticForm(M / 2);
-		V`QStd := QuadraticForm(V`GramMatrixStd / 2);
-	  else
-		V`Q := QF2(M);
-		V`QStd := QF2(V`GramMatrixStd);
+     // Assign the Gram matrix.
+     V`GramMatrix := M;
+     
+     // Decompose the form into a standard form (R + H + A).
+     if spaceType eq "Symmetric" then
+ 	 V`GramMatrixStd, V`Basis := Decompose(M);
+     else if spaceType eq "Hermitian" then
+	      V`GramMatrixStd, V`Basis := Decompose(M, alpha);
 	  end if;
-        end if;
+     end if;  
 
-	// Assign an ordering to the elements of the finite field.
-	V`S := [ 0 ] cat [ x : x in BaseRing(M) | x ne 0 ];
+     // Count the rows at the end of the matrix which are exactly zero.
+     idx := Dimension(V);
+     while idx ge 1 and V`GramMatrixStd[idx] eq Zero(V) do
+	 idx -:= 1;
+     end while;
 
-	// Create an empty parameterization array.
-	V`ParamArray := AssociativeArray();
+     // The dimension of the radical.
+     V`RadDim := Dimension(V) - idx;
 
-	// Set symbolic flag.
-	V`Symbolic := Symbolic;
+     // Determine the dimension of the totally hyperbolic subspace.
+     idx := 1;
+     while idx le Dimension(V)-V`RadDim and V`GramMatrixStd[idx,idx] eq 0 do
+	 idx +:= 1;
+     end while;
 
-	// Assign the cyclic generator of the group of units of the field.
-	V`PrimitiveElement := PrimitiveElement(BaseRing(M));
+     // Dimension of the anistotropic subspace.
+     V`AnisoDim := Dimension(V) - V`RadDim - idx + 1;
 
-	return V;
+     // The number of hyperbolic planes in the Witt decomposition.
+     V`WittIndex := Integers()!((idx-1)/2);
+
+     // Assign the multinomial of the reflexive form.
+     // Might want to change this one to the
+     // bilinear form in general
+
+     if spaceType eq "Symmetric" then
+	 if Characteristic(BaseRing(M)) ne 2 then
+	     V`Q := QuadraticForm(M / 2);
+	     V`QStd := QuadraticForm(V`GramMatrixStd / 2);
+	 else
+	     V`Q := QF2(M);
+	     V`QStd := QF2(V`GramMatrixStd);
+	 end if;
+     end if;
+
+     // Assign an ordering to the elements of the finite field.
+     V`S := [ 0 ] cat [ x : x in FixedField(alpha) | x ne 0 ];
+
+     // Create an empty parameterization array.
+     V`ParamArray := AssociativeArray();
+
+     // Set symbolic flag.
+     V`Symbolic := Symbolic;
+
+     // Assign the cyclic generator of the group of units of the field.
+     V`PrimitiveElement := PrimitiveElement(FixedField(alpha));
+
+     return V;
 end intrinsic;
 
 procedure __initializePivot(V, k)
@@ -182,11 +185,23 @@ procedure __initializePivot(V, k)
 	// The base field.
 	F := BaseRing(V);
 
-	// Multivariant polynomial ring used to determine parameterization.
-	R := PolynomialRing(F, k * Dimension(V));
-
-	// Initialize matrix that will determine parameterization.
-	M := Matrix(R, k, Dimension(V), [ R.i : i in [1..Rank(R)] ]);
+	rank := k * Dimension(V);
+	
+	if IsUnitarySpace(V) then
+	    // Multivariant polynomial ring used to determine parameterization.
+	    R := PolynomialRing(F, 2 * rank);
+	    gens := GeneratorsSequence(R);
+	    alpha := hom<R -> R | V`Involution, gens>;
+	    // Initialize matrix that will determine parameterization.
+	    M := Matrix(R, k, Dimension(V), [ R.i + F.1 * (R.(i+rank)) :
+					      i in [1..rank] ]);
+	else
+	    // Multivariant polynomial ring used to determine parameterization.
+	    R := PolynomialRing(F, rank);
+	    alpha := hom<R -> R | IdentityFieldMorphism(F), GeneratorsSequence(R)>;
+	    // Initialize matrix that will determine parameterization.
+	    M := Matrix(R, k, Dimension(V), [ R.i : i in [1..rank] ]);
+	end if;
 
 	// Keep a list of non-free variables from which we will determine the
 	//  free variables when we are done.
@@ -232,7 +247,10 @@ procedure __initializePivot(V, k)
 		vec := i eq j select M[i] else M[i]+M[j];
 
 		// Multinomial corresponding to the i-th basis vector.
-		f := Evaluate(V`QStd, Eltseq(vec));
+		//	f := Evaluate(V`QStd, Eltseq(vec));
+
+		vec_bar := Vector([alpha(x) : x in Eltseq(vec)]);
+		f := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
 
 		// Check each term of the resulting multinomial.
 		for term in Terms(f) do
@@ -241,12 +259,14 @@ procedure __initializePivot(V, k)
 				mat[row][cols] -:= term;
 			else
 				// Otherwise we have a linear term.
-				val, mono := Contpp(term);
-				coord := &+[ mono eq R.n select n else 0
-					: n in [1..Rank(R)] ];
+			    // val, mono := Contpp(term);
+			    vals, monos := CoefficientsAndMonomials(term);
+			    val := vals[1]; mono := monos[1];
+			    coord := &+[ mono eq R.n select n else 0
+					 : n in [1..Rank(R)] ];
 
-				// And so fill in the matrix accordingly.
-				mat[row,coord] := val;
+			    // And so fill in the matrix accordingly.
+			    mat[row,coord] := val;
 			end if;
 		end for;
 
@@ -269,7 +289,7 @@ procedure __initializePivot(V, k)
 		// Add this pivot to the list of non-free variables.
 		Append(~remove, c);
 
-		// If the pivot is equal to Rank(R)+1, we have a problem.
+		// If the pivot is equal to rank+1, we have a problem.
 		assert c ne Rank(R)+1;
 
 		// If the row is entirely zero, skip it.
@@ -284,15 +304,27 @@ procedure __initializePivot(V, k)
 	end for;
 
 	// The matrix whose rows parameterize all isotropic subspaces.
+	
 	M := Evaluate(M, [ l : l in list ]);
 
 	// Verify that we didn't screw up somewhere along the line.
 	for i in [1..k], j in [i..k] do
 		vec := i eq j select M[i] else M[i]+M[j];
-		assert Evaluate(V`QStd, Eltseq(vec)) eq 0;
+		//		assert Evaluate(V`QStd, Eltseq(vec)) eq 0;
+		vec_bar := ChangeRing(Vector([alpha(x) : x in Eltseq(vec)]),
+				      BaseRing(vec));
+		assert (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)),
+			vec_bar) eq 0;
 	end for;
 
 	// Determine the free variables.
+	// Note that in the unitary case, they are taken from the fixed field
+	// of the involution
+
+	remove cat:= [n : n in [1..Rank(R)] |
+		      &and [ Degree(R!M[i,j],n) le 0 : i in [1..k],
+						       j in [1..Dimension(V)] ]];
+	
 	data`FreeVars := [ n : n in [1..Rank(R)] | not n in remove ];
 
 	// The parameterization vector for this pivot.
@@ -363,6 +395,10 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 
 	// The list of evaluation values.
 	evalList := [* 0 : i in [1..Dimension(V)*k] *];
+
+	if IsUnitarySpace(V) then
+	    evalList := [* 0 : i in [1..Dimension(V) * k * 2] *];
+	end if;
 
 	// Produce the isotropic subspace corresponding to the current
 	//  parameters.

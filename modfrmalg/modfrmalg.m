@@ -160,6 +160,8 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
 
   n := Nrows(innerForm);
 
+  // This is actually PGL_n. check nothing goes wrong when
+  // putting in Isogeny := "SC"
   SL_n := GroupOfLieType("A" cat IntegerToString(n-1), K);
   A := AutomorphismGroup(SL_n);
   AGRP := GammaGroup(F, A);

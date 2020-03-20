@@ -227,8 +227,8 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 
 	// calculating gamma_i_j, for i = idx, j the index of the
 	// p-neighbor (nLat), and j* = space_idx 
-	g_pulled := PullUp(Matrix(g), nLat, array[j][1] :
-			   BeCareful := BeCareful);
+	g_pulled := Transpose(PullUp(Matrix(g), nLat, array[j][1] :
+			   BeCareful := BeCareful));
 	gg := W`G!ChangeRing(g_pulled, BaseRing(W));
 
 	space_idx := array[j][2];
@@ -238,6 +238,7 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 	    found := true;
 	    iota := H[space_idx]`embedding;
 	    // iota := H[idx]`embedding;
+	    // Append(~isom[idx][space_idx], gg);
 	    for vec_idx in [1..Dimension(H[space_idx])] do
 	    	vec := gg * (iota(H[space_idx].vec_idx));
 	    //for vec_idx in [1..Dimension(H[idx])] do
@@ -268,14 +269,17 @@ function HeckeOperatorCN1(M, pR, k, W
 
     gamma_reps := [AutomorphismGroup(r) : r in reps];
 
-    gammas := [sub<W`G| [PullUp(Matrix(g), reps[i], reps[i] :
-				BeCareful := BeCareful) :
+    gammas := [sub<W`G| [Transpose(PullUp(Matrix(g), reps[i], reps[i] :
+				BeCareful := BeCareful)) :
 		       g in Generators(gamma_reps[i])]> : i in [1..#reps]];
     
     H := [FixedSubspace(gamma, W) : gamma in gammas];
 
     hecke := [ [ [* W!0 : hh in H*] : vec_idx in [1..Dimension(h)]] :
 	       h in H];
+
+    // Keeping track of the gamma_i_j
+  //  isom := [ [[] : h1 in H] : h2 in H ];
 
     // An associative array indexed by a specified invariant of an isometry
     //  class. This data structure allows us to bypass a number of isometry
@@ -338,17 +342,23 @@ function HeckeOperatorCN1(M, pR, k, W
     end for;
 
     iota := [h`embedding : h in H];
-    /*
-    // problem - at the moment get something in the image of iota
-    // only when space_idx eq idx
-    mats := [[*Matrix([Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
-		      vec_idx in [1..Dimension(H[space_idx])]]) :
-	      space_idx in [1..#H]*] : idx in [1..#H]];
+   
+    mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
+		      vec_idx in [1..Dimension(H[space_idx])]] :
+	      space_idx in [1..#H]] : idx in [1..#H]];
+
+    vert_blocks := [&cat mat : mat in mats];
+
+    vert_mats := [* Matrix(blk) : blk in vert_blocks |
+		  not IsEmpty(blk[1]) *];
+
+    if IsEmpty(vert_mats) then return []; end if;
+
+    // would have done a one liner, but there are universe issues
+    ret := vert_mats[1];
+    for idx in [2..#vert_mats] do
+	ret := HorizontalJoin(ret, vert_mats[idx]);
+    end for;
     
-    // That's not really working, because BlockMatrix wants all
-    // matrices to be of the same dimensions.
-    // figure out later how to slice and rebuild it
-    // return BlockMatrix(#H, #H, mats);
-   */
-    return hecke;
+    return ret;
 end function;

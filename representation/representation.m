@@ -269,7 +269,7 @@ function getActionHom(V, grp)
     GL_V := GL(Dimension(V), BaseRing(V));
     verifyKnownGroups(V); // this is in case there was some interrupt
     return hom< grp -> GL_V |
-		  [V`act_mats[grp.i] : i in [1..Ngens(grp)]]>;
+		  [Transpose(V`act_mats[grp.i]) : i in [1..Ngens(grp)]]>;
 end function;
 
 // At the moment, every time we compute the complete image of g in GL_V
@@ -320,7 +320,7 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
 
   if HasFiniteOrder(g) then
       act_hom := getActionHom(V, grp);
-      return act_hom(g);
+      return Transpose(act_hom(g));
   else
       return V`act_mats[g];
   end if;

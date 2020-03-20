@@ -485,15 +485,15 @@ function BuildNeighbor(nProc : BeCareful := true)
 	    nLat := LatticeWithBasis(Q, Matrix(basis), idls);
 	else
 	
-	//  order to construct the neighbor lattice.
-	idls := [ nProc`pR^-1 : i in [1..#XX] ] cat
-	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
-		[ 1*R : i in [1..#UU] ] cat
-	        [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
-		       PseudoBasis(Module(L)) ];
+	    //  order to construct the neighbor lattice.
+	    idls := [ nProc`pR^-1 : i in [1..#XX] ] cat
+	            [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
+		    [ 1*R : i in [1..#UU] ] cat
+	            [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
+							   PseudoBasis(Module(L)) ];
 
-	// Build the neighbor lattice.
-	nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
+	    // Build the neighbor lattice.
+	    nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
 	end if;
 	if BeCareful then
 		// Compute the intersection lattice.

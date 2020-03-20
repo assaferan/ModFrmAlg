@@ -60,20 +60,21 @@ function createElementString(coeffs, names)
   function getCoeffString(coeff : is_first := false)
       if coeff eq 1 then return is_first select "" else " + "; end if;
       if coeff eq -1 then return is_first select "-" else " - "; end if;
-      ret := Sprintf("%o*", coeff);
+      ret := Sprintf("%o", coeff);
       if ("+" in ret[2..#ret]) or ("-" in ret[2..#ret]) then
 	  ret := "(" cat ret cat ")";
       else
 	  if ret[1] eq "-" then
 	      prefix := is_first select "-" else " - "; 
-	      return prefix cat ret[2..#ret];
+	      ret := prefix cat ret[2..#ret];
+	      is_first := true;
 	  end if;
       end if;
       if (not is_first) then
 	  ret := " + " cat ret;
       end if;
       
-      return ret;
+      return ret cat "*";
   end function;
   idxs := [i : i in [1..dim] | coeffs[i] ne 0];
   if IsEmpty(idxs) then return "0"; end if;

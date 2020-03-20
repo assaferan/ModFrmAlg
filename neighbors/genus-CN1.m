@@ -48,7 +48,7 @@ procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
          // Skip ahead if an isometry is found.
 	 if iso then
 	    found := true;
-	    continue;
+	    break;
 	 end if;
        end for;
 

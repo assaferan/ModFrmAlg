@@ -2318,25 +2318,41 @@ function getNewSpaceStages(level, weight, char_order : prec := 100)
     prec := Min(prec, NextPrime(997) - 1);
     chi := MakeCharacter(level, char_order);
     SetVerbose("ModularSymbols", 2);
-    M := ModularSymbols(chi, weight);
+    
     M_name := Sprintf("full_modsym_%o_%o_%o.dat",
 		      level, weight, char_order);
-    Save(M, M_name : Overwrite := true);
-    M := LoadModSym(M_name);
-    S := CuspidalSubspace(M);
+
+    if FileExists(M_name) then
+	M := LoadModSym(M_name);
+    else
+	M := ModularSymbols(chi, weight);
+	Save(M, M_name);
+    end if;
+    
     S_name := Sprintf("cuspidal_modsym_%o_%o_%o.dat",
 		      level, weight, char_order);
-    Save(S, S_name : Overwrite := true);
-    S := LoadModSym(S_name);
-    Snew := NewSubspace(S);
+
+    if FileExists(S_name) then
+	S := LoadModSym(S_name);
+    else
+	S := CuspidalSubspace(M);
+	Save(S, S_name);
+    end if;
+    
     Snew_name := Sprintf("new_modsym_%o_%o_%o.dat",
 			 level, weight, char_order);
-    Save(Snew, Snew_name : Overwrite := true);
-    Snew := LoadModSym(Snew_name);
-    D := NewformDecomposition(Snew);
-    Save(Snew, Snew_name : Overwrite := true);
-    Snew := LoadModSym(Snew_name);
-    ret := [* qEigenform(d, prec) : d in D *];
-    Save(Snew, Snew_name : Overwrite := true);
+    if FileExists(Snew_name) then
+	Snew := LoadModSym(Snew_name);
+    else
+	Snew := NewSubspace(S);
+	Save(Snew, Snew_name);
+	D := NewformDecomposition(Snew);
+	// in case newform decomposition was not performed before
+	Save(Snew, Snew_name : Overwrite := true);
+	Snew := LoadModSym(Snew_name);
+	ret := [* qEigenform(d, prec) : d in D *];
+	// in case eigenform computation was not performed before
+	Save(Snew, Snew_name : Overwrite := true);
+    end if;
     return ret;
 end function;

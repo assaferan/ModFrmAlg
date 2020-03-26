@@ -28,4 +28,6 @@
 
   utils/helper.m
   utils/struct.m
+
+  verbose.m
 }

@@ -134,7 +134,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	    use_orbits := Orbits;
 	end if;
 	
-        hecke := HeckeOperatorCN1(M, pR, k, M`W
+        hecke := HeckeOperatorCN1(M, pR, k
 			: BeCareful := BeCareful,
 			  Estimate := Estimate,
 			  Orbits := use_orbits);

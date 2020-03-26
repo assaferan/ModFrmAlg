@@ -9,6 +9,13 @@
 
    Implementation file for the space of algebraic modular forms.
 
+   03/26/20: modified initialization to calculate the space once and for
+             all. Also added the space as the attribute M`H.
+             Fixed the function dimension to return the actual dimension,
+             and not just the dimension in the trivial weight case.
+             Added creation from pullback - to handle weights over finite
+             fields.
+
    03/21/20: Changed ModFrmAlgInit to not assume the object has been 
    	     initialized if M`W is assigned.
 
@@ -52,6 +59,9 @@ declare attributes ModFrmAlg:
 
 	// The level.
 	K,
+
+	// The vector space (as a sequence of vector spaces)
+	H,
 
 	// Isogeny type.
 	isogenyType,
@@ -273,15 +283,47 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> GenusSym
 	return M`genus;
 end intrinsic;
 
-procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
-    // What is the meaning of this comment?? maybe originally only had weights
-    // and had to compute the representation
-	// If the representation space has already been computed, then this
-	//  object has already been initialized, and we can simply return
-	//  without any further computations.
-//	if assigned M`W then return; end if;
+procedure ModFrmAlgInit(M : BeCareful := false,
+			    Force := false,
+			    Orbits := false)
+    
+    // If the representation space has already been computed, then this
+    //  object has already been initialized, and we can simply return
+    //  without any further computations.
 
-        computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
+    if not assigned M`H then
+	computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    print "Calculating the automorphism groups Gamma_i...";
+	end if;
+
+	reps := Representatives(Genus(M));
+	
+	gamma_reps := [AutomorphismGroup(r) : r in reps];
+	
+	gammas := [sub<M`W`G|
+		      [Transpose(PullUp(Matrix(g), reps[i], reps[i] :
+					BeCareful := BeCareful)) :
+		       g in Generators(gamma_reps[i])]> :
+		   i in [1..#reps]];
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "The sizes of the automorphism groups are %o.\n",
+		   [#x : x in gammas];
+	    printf "Computing the fixed subspaces ";
+	    print "(space of algebraic modular forms)";
+	    t0 := Cputime();
+	end if;
+    
+	M`H := [FixedSubspace(gamma, M`W) : gamma in gammas];
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then	
+	    printf "Obtained spaces of dimensions %o.\n",
+		   [Dimension(h) : h in M`H];
+	    printf "\t\t\t\t (%o seconds)\n", Cputime() - t0;
+	end if;
+    end if;
 
 end procedure;
 
@@ -290,7 +332,7 @@ intrinsic Dimension(M::ModFrmAlg) -> RngIntElt
 	// Initialize this space of modular forms.
 	ModFrmAlgInit(M);
 
-	return #Representatives(Genus(M));
+	return &+[Dimension(h) : h in M`H];
 end intrinsic;
 
 intrinsic HeckeEigenforms(M::ModFrmAlg) -> List

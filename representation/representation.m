@@ -6,6 +6,9 @@
                                                                             
    FILE: representation.m (class for group representations)
 
+   03/26/20: Modified FixedSubspace to handle representation over any
+             coefficient ring.
+
    03/25/20: Fixed the (horrible!) bug in getActionHom by transposing the 
              matrices(!!!)
 
@@ -50,6 +53,10 @@ declare attributes GrpRep :
 	// in this case we can compute the action matrix easily by computing the
 	// tensor product of the matrices.
 	tensor_product,
+	// This is assigned only if our representation is a pullback
+	// in this case we can compute the action matrix by computing it
+	// for the space we are pulling back from
+	pullback,
 	// In case this is a subrepresentation, its ambient representation
 	ambient,
 	// In case this is a subrepresentation, the embedding into its ambient.
@@ -168,11 +175,39 @@ intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
       vecs := [Vector(Eltseq(g*n)) : n in M`names[m]];
       return M!(TensorProduct(vecs[1], vecs[2]));
   end function;
-  a := map< CartesianProduct(V`G, [1..Dimension(M)]) -> M | x :-> action(x[1], x[2]) >;
+  a := map< CartesianProduct(V`G, [1..Dimension(M)]) -> M |
+	  x :-> action(x[1], x[2]) >;
   ret := GroupRepresentation(V`G, M, a);
   ret`tensor_product := [V,W];
   return ret;
 end intrinsic;
+
+intrinsic Pullback(V::GrpRep, f::Map[Grp, Grp]) -> GrpRep
+{Constructs the pullback of the representation V along the
+group homomorphism f. Does not verify that f is a group homomorphism}
+  M := V`M;
+  G := Domain(f);
+  action := map< CartesianProduct(G, [1..Dimension(M)]) -> M |
+	       x :-> V`action(f(x[1]), x[2]) >;
+  ret := GroupRepresentation(G, M, action);
+  ret`pullback := < V, f >;
+  return ret;
+end intrinsic;
+
+// since magma doesn't support localization in arbitrary number fields
+// we make a small patch for that
+function projLocalization(g, proj)
+    denom := Parent(g)!ScalarMatrix(Degree(g),Denominator(g));
+    numerator := denom*g;
+    f := hom< MatrixAlgebra(Domain(proj),Degree(g)) ->
+			  MatrixAlgebra(Codomain(proj),Degree(g)) | proj >;
+    f_gl := hom< GL(Degree(g), Domain(proj)) ->
+		   GL(Degree(g), Codomain(proj)) | x :-> f(Matrix(x)) >;
+    return f_gl(numerator) * f_gl(denom)^(-1);
+end function;
+// Then one can pullback via something like
+// f := map< GL(3,K) -> GL(3,F7) | x :-> projLocalization(x, mod_root_7)>;
+// even though f is not defined on all GL(3,K), but only on a localization
 
 /* access and properties */
 
@@ -308,6 +343,12 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
 	      grp_idx := #V`known_grps;
 	  end if;
 	  grp := V`known_grps[grp_idx];
+      end if;
+      // !!! check - is this even helpful ?
+      if assigned V`pullback then
+	  W := V`pullback[1];
+	  f := V`pullback[2];
+	  V`act_mats[g] := getMatrixAction(W, f(g));
       end if;
       if assigned V`tensor_product then
 	  V1, V2 := Explode(V`tensor_product);
@@ -589,15 +630,17 @@ end intrinsic;
 
 intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
 {Return the fixed subspace of V under the group gamma.}
-  require IsFinite(gamma) :
-		"At the moment this is only supported for finite groups";
-  char := Characteristic(BaseRing(V));
-  require (char eq 0) or (GCD(#gamma, char) eq 1) :
-    "At the moment this only works when characteristic is prime to the group size";
+//  require IsFinite(gamma) :
+//		"At the moment this is only supported for finite groups";
+//  char := Characteristic(BaseRing(V));
+//  require (char eq 0) or (GCD(#gamma, char) eq 1) :
+//    "At the moment this only works when characteristic is prime to the gro// up size";
   gamma_gens := Generators(gamma);
   gamma_actions := [getMatrixAction(V, g) : g in gamma_gens];
-  GL_V := GL(Dimension(V), BaseRing(V));
-  gamma_image := sub<GL_V | gamma_actions>;
-  trace := &+[Matrix(g) : g in gamma_image];
-  return Subrepresentation(V, Basis(Image(trace)));
+  X := HorizontalJoin([Matrix(g) - 1 : g in gamma_actions]);
+//  GL_V := GL(Dimension(V), BaseRing(V));
+//  gamma_image := sub<GL_V | gamma_actions>;
+//  trace := &+[Matrix(g) : g in gamma_image];
+//  return Subrepresentation(V, Basis(Image(trace)));
+  return Subrepresentation(V, Basis(Nullspace(X)));
 end intrinsic;

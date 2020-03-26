@@ -9,6 +9,15 @@
 
    Implementation file for the space of algebraic modular forms.
 
+   03/21/20: Changed ModFrmAlgInit to not assume the object has been 
+   	     initialized if M`W is assigned.
+
+   03/20/20: Added a constructor for algebraic modular forms of arbitrary
+             weight. Right now, weight is given as an object of type GrpRep,
+             which is my construction of a group representation.  
+
+   03/16/20: Added a constructor for orthogonal modular forms.
+
    03/11/20: Added constructor for Unitary Modular Forms from an inner form
 
    03/10/20: Discarded irrelevant imports.
@@ -65,7 +74,8 @@ declare attributes ModFrmAlg:
 // matrix. However, there seems to be no reason for that.
 
 intrinsic AlgebraicModularForms(G::GrpLie,
-				innerForm::AlgMatElt[Rng]) -> ModFrmAlg
+				innerForm::AlgMatElt[Rng],
+			        weight::GrpRep) -> ModFrmAlg
 { Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by the isometry class of a specific matrix.}
 	// The rationals as a number field.
   
@@ -121,6 +131,7 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         M`K := K;
         M`G := G;
         M`L := L;
+	M`W := weight;
 
 	// Assign the isogeny type of the Lie group.
 	M`isogenyType := isogenyType;
@@ -130,6 +141,15 @@ intrinsic AlgebraicModularForms(G::GrpLie,
 	M`Hecke`Ts := AssociativeArray();
 
 	return M;
+end intrinsic;
+
+intrinsic AlgebraicModularForms(G::GrpLie,
+				innerForm::AlgMatElt[Rng]) -> ModFrmAlg
+{.}
+  K := BaseRing(G); // want G to be a subgroup of GL(n,K)
+  n := Nrows(innerForm);
+  weight := TrivialRepresentation(GL(n, K), K);
+  return AlgebraicModularForms(G, innerForm, weight);
 end intrinsic;
 
 intrinsic AlgebraicModularForms(G::GrpLie,
@@ -151,8 +171,19 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         return AlgebraicModularForms(G, innerForm);
 end intrinsic;
 
-intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
-{.}
+intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
+{Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
+  K := BaseRing(innerForm);
+  n := Nrows(innerForm);
+  cartan_type := (n mod 2 eq 1) select "B" cat IntegerToString((n-1) div 2) else
+		 "D" cat IntegerToString(n div 2);
+  O_n := GroupOfLieType(cartan_type + " T1", K);
+  return AlgebraicModularForms(O_n, innerForm);
+end intrinsic;
+
+intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld],
+			      weight::GrpRep) -> ModFrmAlg
+{Create the space of modular forms with respect to the unitary group stabilizing the Hermitian form given by innerForm.}
   K := BaseRing(innerForm);
   _, cc := HasComplexConjugate(K);
   alpha := FieldAutomorphism(K, cc);
@@ -176,7 +207,15 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
   // Instead, we just construct SU_{n},
   // using the fact that the code at the moment does the same for both.
 
-  return AlgebraicModularForms(SU_n, innerForm);
+  return AlgebraicModularForms(SU_n, innerForm, weight);
+end intrinsic;
+
+intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
+{.}
+  K := BaseRing(innerForm);
+  n := Nrows(innerForm);
+  weight := TrivialRepresentation(GL(n, K), K);
+  return UnitaryModularForms(innerForm, weight);
 end intrinsic;
 
 // Should replace weight by Map[GrpLie, GrpMat]
@@ -188,7 +227,8 @@ end intrinsic;
 intrinsic Print(M::ModFrmAlg) {}
 	K := BaseRing(InnerForm(M));
 	printf "Space of algebraic modular forms over %o.\n", M`G;
-	printf "Inner form:\n%o", InnerForm(M);
+	printf "Inner form:\n%o\n", InnerForm(M);
+	printf "of weight %o", M`W;
 end intrinsic;
 
 intrinsic IsogenyType(M::ModFrmAlg) -> MonStgElt
@@ -234,10 +274,12 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := true, Orbits := false) -> GenusSym
 end intrinsic;
 
 procedure ModFrmAlgInit(M : BeCareful := true, Force := false, Orbits := false)
+    // What is the meaning of this comment?? maybe originally only had weights
+    // and had to compute the representation
 	// If the representation space has already been computed, then this
 	//  object has already been initialized, and we can simply return
 	//  without any further computations.
-	if assigned M`W then return; end if;
+//	if assigned M`W then return; end if;
 
         computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
 

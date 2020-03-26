@@ -6,6 +6,12 @@
                                                                             
    FILE: representation.m (class for group representations)
 
+   03/25/20: Fixed the (horrible!) bug in getActionHom by transposing the 
+             matrices(!!!)
+
+   03/23/20: Changed getGL3HighestWeightRep to work also when either
+             a or b are zero.
+
    03/16/20: Added basic documentation
    	     Added operator @@ (preimage) 
 
@@ -530,6 +536,7 @@ end intrinsic;
 // should change it to just specify what it does on basis vectors, that's enough
 
 function getGL3ContractionMap(a,b,K)
+    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
     W_ab := getGL3Rep(a,b,K);
     W_minus := getGL3Rep(a-1, b-1,K);
     pure_tensor := W_ab`M`names[1];
@@ -574,9 +581,11 @@ end function;
 // of highest weight (a,b,0)
 // (at this point we do not consider the twist by the determinant)
 
-function getGL3HighestWeightRep(a,b,K)
+intrinsic getGL3HighestWeightRep(a::RngIntElt,b::RngIntElt,K::Rng) -> GrpRep
+{.}
+    if (a eq 0) or (b eq 0) then return getGL3Rep(a,b,K); end if;
     return Kernel(getGL3ContractionMap(a,b,K));
-end function;
+end intrinsic;
 
 intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
 {Return the fixed subspace of V under the group gamma.}

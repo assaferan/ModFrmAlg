@@ -1,20 +1,64 @@
-// testing an example as in unitary-examples.m
+//freeze;
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma                          
+                            Eran Assaf                                 
+                                                                            
+   FILE: unitary-tests.m (functions for testing examples)
 
-import "unitary-examples.m" : UnitaryExample_7_2, UnitaryExample_7_4;
+   03/26/20: added documentation
 
-intrinsic UnitaryModularFormTests()
+   03/26/20: fixed the testing of eigenvalues to handle the case when 
+             the fields of definition are different.
+
+   03/26/20: added the example for weight (3,3)
+
+   03/22/20: Added weights to the testing
+
+   03/21/20: Changed testUnitaryExample to be a local procedure,
+             and wrote UnitaryModularFormTests to run all examples.
+
+   03/16/20: Added timing data into the testing.
+
+ 
+ ***************************************************************************/
+
+import "unitary-examples.m" :
+			    UnitaryExample_7_2,
+       UnitaryExample_7_2_W_2_0,
+       UnitaryExample_7_2_W_2_2,
+       UnitaryExample_7_2_W_3_1,
+       UnitaryExample_7_2_W_3_3,
+       UnitaryExample_7_2_W_4_0,
+       UnitaryExample_7_4;
+
+forward testUnitaryExample;
+
+intrinsic UnitaryModularFormTests() -> ModFrmAlg
 {.}
+  M := [];
   // we're cutting down the number of primes until we have
-  // a more efficient implementation
-  testUnitaryExample(UnitaryExample_7_2);
-  testUnitaryExample(UnitaryExample_7_4);
+// a more efficient implementation
+
+  testUnitaryExample(~M, UnitaryExample_7_2 : num_primes := 3);
+  testUnitaryExample(~M, UnitaryExample_7_2_W_2_0 : num_primes := 3);
+  testUnitaryExample(~M, UnitaryExample_7_2_W_2_2 : num_primes := 3);
+  testUnitaryExample(~M, UnitaryExample_7_2_W_3_1 : num_primes := 3);
+  testUnitaryExample(~M, UnitaryExample_7_2_W_3_3 : num_primes := 3);
+  testUnitaryExample(~M, UnitaryExample_7_2_W_4_0 : num_primes := 3);
+  testUnitaryExample(~M, UnitaryExample_7_4 : num_primes := 3);
+
+  return M;
 end intrinsic;
 
-intrinsic testUnitaryExample(example::Rec : num_primes := 0)
-{.}
+procedure testUnitaryExample(~answers, example : num_primes := 0) 
     K := example`field;
     innerForm := IdentityMatrix(K,3);
-    M := UnitaryModularForms(innerForm);
+    a, b := Explode(example`weight);
+    W := getGL3HighestWeightRep(a,b,K);
+    M := UnitaryModularForms(innerForm, W);
+
+    printf "Testing example of %o\n", M;
     
     printf "Computing genus representatives... ";
     _ := Representatives(Genus(M));
@@ -42,8 +86,10 @@ intrinsic testUnitaryExample(example::Rec : num_primes := 0)
 	Append(~Ts1, HeckeOperator(M, p : BeCareful := false));
 	timing := Cputime() - t;
 	printf "took %o seconds.\n", timing;
-	ratio := example`timing[i] / timing;
-	printf "this should take %o times the time.\n", ratio;
+	if (#example`timing ge i) then
+	    ratio := example`timing[i] / timing;
+	    printf "this should take %o times the time.\n", ratio;
+	end if;
     end for;
     print "Done.";
 
@@ -65,11 +111,28 @@ intrinsic testUnitaryExample(example::Rec : num_primes := 0)
 
     evs := [[HeckeEigensystem(f, dim) : dim in keys] : f in eigenforms];  
 
-    assert evs eq [[example`a[1..N]],[example`b[1..N]]];
+    for i in [1..#evs] do
+	ev_calc := evs[i][1];
+	ev := example`evs[i][1..N];
+	// the field of definition might be different,
+	// so we check if there is some embedding under which
+	// all the eigenvalues coincide
+	F := AbsoluteField(Parent(ev_calc[1]));
+	L := Compositum(AbsoluteField(FieldOfFractions(Parent(ev[1]))), F);
+	zeta := PrimitiveElement(F);
+	roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+	embs := [hom<Parent(ev_calc[1]) -> L | r> : r in roots];
+	assert exists(emb){emb : emb in embs |
+			   [emb(x) : x in ev_calc] eq [x : x in ev]};
+    end for;
+//    assert evs eq [[ev[1..N]] : ev in example`evs];
 
+    Append(~answers, M);
+    
     print "\nYou can save the data we just computed using the Save intrinsic.";
-    print "\tFor example -->\tSave(M, \"savefile\");\n";
+    printf "\tFor example -->\tSave(M[%o], \"savefile\")\n", #answers;
+    
     print "You can then load this data from disk using the Load intrinsic.";
     print "\tFor example -->\tM := Load(\"savefile\");";
-
-end intrinsic;
+    
+end procedure;

@@ -1,4 +1,22 @@
-// Linear algebra!
+//freeze;
+
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma                          
+                            Eran Assaf                                 
+                                                                            
+   FILE: linalg.m (Linear Algbera)
+
+   Implementation file for useful linear algebra functions.
+
+   !!! TODO : move to the utils folder
+
+   03/26/20 : Added documentation to this file.
+
+   03/26/20 : Fixed bug in Decompose - Optimized Representation only eats 
+              absolute fields. (over the rationals)
+ 
+ ***************************************************************************/
 
 import "../utils/helper.m" : MVM;
 
@@ -30,7 +48,7 @@ function Decompose(T, t)
 		//  long as the degree of the field isn't too large.
 		if Category(K) ne FldRat and Degree(K) le 8 then
 			// Optimize the number field.
-			K, map := OptimizedRepresentation(K);
+			K, map := OptimizedRepresentation(AbsoluteField(K));
 
 			// The eigenvalue in the new field.
 			eig := map(eig);

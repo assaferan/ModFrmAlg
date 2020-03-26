@@ -11,6 +11,9 @@
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   03/26/20: Modified to use the orbit method only for one-dimensional
+             representations, until we get it to work in higher dimensions.
+
    03/11/20: Modified to use the orbit method.
 
    03/10/20: started from the orthogonal modular forms structure
@@ -20,7 +23,7 @@
 //imports
 
 import "modfrmalg.m" : ModFrmAlgInit;
-import "../neighbors/hecke-CN1.m" : HeckeOperatorTrivialWeightCN1;
+import "../neighbors/hecke-CN1.m" : HeckeOperatorCN1;
 
 // Data structure
 
@@ -122,10 +125,19 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	// Right now, in this version, we do not choose, but use always the same
 	// function.
 
-        hecke := HeckeOperatorTrivialWeightCN1(M, pR, k
+	// !!! Right now, when the weight is non-trivial, the orbit method
+	// fails - have to check why. Meanwhile this is our temporary fix
+
+	if (Dimension(M`W) gt 1) then
+	    use_orbits := false;
+	else
+	    use_orbits := Orbits;
+	end if;
+	
+        hecke := HeckeOperatorCN1(M, pR, k, M`W
 			: BeCareful := BeCareful,
 			  Estimate := Estimate,
-			  Orbits := Orbits);
+			  Orbits := use_orbits);
 
 	// Sets the Hecke operator in the internal data structure for this
 	//  algebraic modular form.

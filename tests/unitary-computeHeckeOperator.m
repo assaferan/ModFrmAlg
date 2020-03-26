@@ -4,6 +4,6 @@ SetHelpUseExternalBrowser(false);
 
 AttachSpec("spec");
 
-UnitaryModularFormTests();
+M := UnitaryModularFormTests();
 
 

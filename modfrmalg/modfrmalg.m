@@ -9,6 +9,15 @@
 
    Implementation file for the space of algebraic modular forms.
 
+   04/01/20: Changed ModFrmAlgInit to compute the weight space, added
+             verbose.
+
+   03/31/20: Added constructors for UnitaryModularForms from weight
+             given by a tuple and a characteristic
+
+   03/29/20: Added (commented out) code that is supposed to consrtuct 
+             the Lie group for U_n in UnitaryModularForms
+
    03/26/20: modified initialization to calculate the space once and for
              all. Also added the space as the attribute M`H.
              Fixed the function dimension to return the actual dimension,
@@ -41,6 +50,7 @@
 // imports
 
 import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
+import "../representation/representation.m" : projLocalization;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -201,21 +211,29 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld],
 
   n := Nrows(innerForm);
 
-  // This is actually PGL_n. check nothing goes wrong when
-  // putting in Isogeny := "SC"
-  SL_n := GroupOfLieType("A" cat IntegerToString(n-1), K);
+  /* This is what should be done,
+     However, Magma does not support twisting of non semisimple root data
+
+  GL_n := GroupOfLieType(StandardRootDatum("A", n-1), K);
+  A := AutomorphismGroup(GL_n);
+  AGRP := GammaGroup(F, A);
+  grph_auts := [GraphAutomorphism(GL_n, x) : x in [Sym(2) | 1, (1,2)]];
+  ngens := NumberOfGenerators(AGRP`Gamma);
+  c := OneCocycle(AGRP, [grph_auts[Order(AGRP`Gamma.i)] : i in [1..ngens]]);
+
+  U_n := TwistedGroupOfLieType(c);
+
+  return AlgebraicModularForms(U_n, innerForm, weight);
+ */
+
+  SL_n := GroupOfLieType("A" cat IntegerToString(n-1), K : Isogeny:= "SC");
   A := AutomorphismGroup(SL_n);
   AGRP := GammaGroup(F, A);
   grph_auts := [GraphAutomorphism(SL_n, x) : x in [Sym(2) | 1, (1,2)]];
   ngens := NumberOfGenerators(AGRP`Gamma);
-  c := OneCocycle( AGRP, [grph_auts[Order(AGRP`Gamma.i)] : i in [1..ngens]]);
+  c := OneCocycle(AGRP, [grph_auts[Order(AGRP`Gamma.i)] : i in [1..ngens]]);
 
   SU_n := TwistedGroupOfLieType(c);
-
-  // This is hardly the right thing to do,
-  // but I still don't know how to construct U_{n} as a group of Lie type (!?)
-  // Instead, we just construct SU_{n},
-  // using the fact that the code at the moment does the same for both.
 
   return AlgebraicModularForms(SU_n, innerForm, weight);
 end intrinsic;
@@ -228,8 +246,45 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
   return UnitaryModularForms(innerForm, weight);
 end intrinsic;
 
-// Should replace weight by Map[GrpLie, GrpMat]
-// or something similar
+intrinsic UnitaryModularForms(F::Fld, n::RngIntElt,
+					 weight::GrpRep) ->ModFrmAlg
+{.}
+  innerForm := IdentityMatrix(F,n);
+  return UnitaryModularForms(innerForm, weight);
+end intrinsic;
+
+intrinsic UnitaryModularForms(F::Fld, n::RngIntElt) ->ModFrmAlg
+{.}
+  return UnitaryModularForms(IdentityMatrix(F, n));
+end intrinsic;
+
+intrinsic UnitaryModularForms(F::Fld,
+				 n::RngIntElt,
+				    weight::SeqEnum[RngIntElt],
+					    char::RngIntElt) -> ModFrmAlg
+{.}
+  if char ne 0 then	  
+      pR := Factorization(ideal<Integers(F)|char>)[1][1];
+      Fq, mod_q := ResidueClassField(pR);
+      GL_n_q := GroupOfLieType(StandardRootDatum("A",n-1), Fq);
+      V := GroupRepresentation(GL_n_q, weight);
+      f := map< GL(n,F) -> GL(n,Fq) |
+	      x :-> projLocalization(x, mod_q)>;
+      W := Pullback(V,f);
+  else
+      // we would love to do that but Magma does not support that...
+      /*
+      GL_n := GroupOfLieType(StandardRootDatum("A",n-1), F);
+      W := GroupRepresentation(GL_n, weight);
+     */
+      if n eq 3 then
+	  W := getGL3HighestWeightRep(weight[1], weight[2], F);
+      else
+	  error "at the moment we have not implemented highest weight representations of this type";
+      end if;
+  end if;
+  return UnitaryModularForms(F, n, W);
+end intrinsic;
 
 // Should also think how to get the isogeny in general,
 // and how it should affect calculations
@@ -292,13 +347,18 @@ procedure ModFrmAlgInit(M : BeCareful := false,
     //  without any further computations.
 
     if not assigned M`H then
-	computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
+	// computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
 
 	if GetVerbose("AlgebraicModularForms") ge 2 then
-	    print "Calculating the automorphism groups Gamma_i...";
+	    print "Computing genus representatives...";
 	end if;
 
 	reps := Representatives(Genus(M));
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "Found %o genus representatives.\n", #reps;
+	    print "Calculating the automorphism groups Gamma_i...";
+	end if;
 	
 	gamma_reps := [AutomorphismGroup(r) : r in reps];
 	

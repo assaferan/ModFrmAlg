@@ -10,6 +10,11 @@
    Implementation file for elements belong to the space of algebraic modular
    forms. the space of algebraic modular forms.
 
+   04/02/20: In HeckeEigensystem - verified that the base ring of the 
+             Hecke operators is a subfield of the base ring of the 
+             eigensystem. That makes it work even when loading from disk.
+             (otherwise, Magma does not record the map)
+
    03/10/20: started editing this file to add Unitary forms
  
  ***************************************************************************/
@@ -175,6 +180,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
 		if IsDefined(f`Eigenvalues[k], Ps[i]) then continue; end if;
 
 		// Promote the Hecke matrix to the base ring of the eigenform.
+		_ := IsSubfield(BaseRing(Ts[i]), BaseRing(f`vec));
 		T := ChangeRing(Ts[i], BaseRing(f`vec));
 
 		// Get the pivot of the eigenform.

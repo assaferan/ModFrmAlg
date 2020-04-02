@@ -11,3 +11,7 @@ orthogonal/spec~
 *.sig
 spec~
 *.dat
+*.m#
+*.m#
+tests/.#unitary-examples.m
+*.m#

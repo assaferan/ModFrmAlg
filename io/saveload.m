@@ -1,10 +1,27 @@
-// Routines used for saving and loading data to/from disk.
+//freeze;
+
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma                          
+                            Eran Assaf                                 
+                                                                            
+   FILE: saveload.m (Routines used for saving and loading data to/from disk.)
+
+   04/02/20: Added documentation
+
+   04/01/20: Added reading and writing of the group and the weight
+
+   03/31/20: Changed references to quadSpace to the more general rfxSpace
+ 
+ ***************************************************************************/
+
+// imports
+
 
 // TODO: Update this script to accommodate for the updated accessor functions
 //  by removing direct access via the ` substructure symbol.
 
 import "path.m" : path;
-// import "QQ/genus-QQ.m" : sortGenusQQ;
 import "../neighbors/genus-CN1.m" : sortGenusCN1;
 
 intrinsic FileExists(filename::MonStgElt : ShowErrors := true) -> BoolElt
@@ -47,8 +64,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		return;
 	end if;
 
-	// The inner form associated to the ambient quadratic space.
-	innerForm := ChangeRing(M`L`quadSpace`innerForm, M`L`R);
+	// The inner form associated to the ambient reflexive space.
+	innerForm := ChangeRing(M`L`rfxSpace`innerForm, M`L`R);
 
 	// The defining polynomial of the number field.
 	f := DefiningPolynomial(BaseRing(innerForm));
@@ -60,7 +77,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			// Shortcut to the current genus representative.
 			L := M`genus`Representatives[idx];
 
-			if M`L`quadSpace`deg eq 1 then
+			if M`L`rfxSpace`deg eq 1 then
 				// If we're over the rationals, we simply
 				//  choose the basis of L.
 				basis := Basis(L);
@@ -109,8 +126,28 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		end for;
 	end if;
 
+	group_data := [* *];
+	Append(~group_data, < "IS_TWISTED", IsTwisted(M`G)>);
+	if IsTwisted(M`G) then
+	    base_group := M`G`c`A`A`G;
+	    root_datum := RootDatum(base_group);
+	    base_field := BaseRing(base_group);
+	    fixed_field := M`G`c`A`k;
+	    coc_images := [img`Data`g : img in M`G`c`imgs];
+	    
+	    Append(~group_data, < "ROOT_DATUM", root_datum >);
+	    Append(~group_data, < "BASE_FIELD", base_field >);
+	    Append(~group_data, < "FIXED_FIELD", fixed_field >);
+	    Append(~group_data, < "COCYCLE_IMAGES", coc_images>);
+	else
+	    Append(~group_data, < "ROOT_DATUM", RootDatum(M`G) >);
+	    Append(~base_field, < "BASE_FIELD", BaseRing(M`G) >);
+	end if;
+
 	// Build the data structure that will be saved to file.
 	data := [*
+		< "GROUP", group_data >,
+		< "WEIGHT", M`W>,
 		< "POLY", f >,
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
@@ -160,10 +197,6 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 	//  bit more elegantly.
 
 	// Build the number field we're working over.
-	//K := NumberField(array["POLY"]);
-
-//	if Degree(K) ne 1 then
-	// The base ring of the inner form.
 	K := BaseRing(array["INNER"]);
 
 	// Assign the inner form.
@@ -173,9 +206,6 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 		K := NumberField(array["POLY"]);
 		innerForm := ChangeRing(innerForm, K);
 	end if;
-		// If we're over the rationals, coerce base ring to K.
-//		innerForm := ChangeRing(array["INNER"], K);
-//	end if;
 
 	// Assign the isogeny type.
 	isogenyType := array["ISOGENY"];
@@ -183,7 +213,33 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 	// Build the space of algebraic modular forms.
 	// TODO: Refine the parameters to construct this appropriate space with
 	//  specified weight and isogeny type.
-	M := AlgebraicModularForms(innerForm);
+
+	group_data := array["GROUP"];
+	// An associative array which stores the appropriate meta data.
+	group_array := AssociativeArray();
+
+	// Store meta data.
+	for entry in group_data do group_array[entry[1]] := entry[2]; end for;
+
+	if (group_array["IS_TWISTED"]) then
+	    root_datum := group_array["ROOT_DATUM"];
+	    base_field := group_array["BASE_FIELD"];
+	    base_group := GroupOfLieType(root_datum, base_field);
+	    A := AutomorphismGroup(base_group);
+	    fixed_field := group_array["FIXED_FIELD"];
+	    AGRP := GammaGroup(fixed_field, A);
+	    grph_auts := [GraphAutomorphism(base_group, x) : x in group_array["COCYCLE_IMAGES"]];
+	    c := OneCocycle(AGRP, grph_auts);
+	    G := TwistedGroupOfLieType(c);
+	else
+	    root_datum := group_array["ROOT_DATUM"];
+	    base_field := group_array["BASE_FIELD"];
+	    G := GroupOfLieType(root_datum, base_field);
+	end if;
+	
+	W := array["WEIGHT"];
+	
+	M := AlgebraicModularForms(G, innerForm, W);
 
 	// Assign genus representatives.
 	if IsDefined(array, "GENUS") and #array["GENUS"] ne 0 then
@@ -194,7 +250,7 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 		genus := New(GenusSym);
 		genus`Representatives := [];
 
-		if M`L`quadSpace`deg eq 1 then
+		if M`L`rfxSpace`deg eq 1 then
 			// Handle the rationals separately.
 			for i in [1..#reps] do
 				// Retrieve the basis for this genus rep and
@@ -213,7 +269,7 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 				// List of coefficient ideals.
 				idls := [* *];
 
-				// A basis of the ambient quadratic space.
+				// A basis of the ambient reflexive space.
 				basis := [];
 
 				// Retrive the coefficient ideals and bases.
@@ -239,7 +295,7 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 
 				// Build genus representative.
 				L := LatticeWithBasis(
-					M`L`quadSpace, Matrix(basis), idls);
+					M`L`rfxSpace, Matrix(basis), idls);
 
 				// Add lattice to the list of genus reps.
 				Append(~genus`Representatives, L);
@@ -251,18 +307,9 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 
 		// Construct an associative array indexed by an invariant of
 		//  the isometry classes.
-/*
-		if M`L`quadSpace`deg eq 1 then
-			genus := sortGenusQQ(genus);
-		else
-*/
-//		elif M`L`quadSpace`classNo eq 1 then
-			genus := sortGenusCN1(genus);
-//		else
-//			print "ERROR: Class number 2+ not implemented.";
-//			return false;
-//		end if;
 
+		genus := sortGenusCN1(genus);
+		
 		// Assign genus symbol to the space of modular forms.
 		M`genus := genus;
 	end if;

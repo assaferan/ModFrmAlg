@@ -6,6 +6,14 @@
                                                                             
    FILE: combfreemod.m (class for combinatorial free modules)
 
+   04/02/20: Fixed bugs in intrinsic 'eq' to handle several different cases of names
+
+   04/01/20: Added the intrinsics 'in' and Ngens, added params to the constructor,
+             so we would be able to record the names in the universe of the underlying set.
+
+   03/31/20: Added Magma level printing for serialization (pickling), changed Homomorphism to handle
+             reading and writing from disk.
+
    03/16/20: Added basic documentation
              Fixed bug in constructor of Homomorphism, when no images are
              given - to construct the zero morphism.
@@ -13,7 +21,7 @@
    03/13/20: Added handling of homomorphisms
    	     Created this file from representation.m
 
-   ***************************************************************************/
+******************************************************************************/
 
 // This should have been done using GModule
 // But for some reason, it's really terrible, so we are doing our own
@@ -37,7 +45,7 @@ declare attributes CombFreeModElt :
 /* constructors */
 
 intrinsic CombinatorialFreeModule(R::Rng,
-				  names::SeqEnum[MonStgElt]) -> CombFreeMod
+				  names::SeqEnum[MonStgElt] : params := [* *]) -> CombFreeMod
 {Construct a combinatorial free module over the ring R with basis given by names.}
   CFM := New(CombFreeMod);
   CFM`names := names;
@@ -45,10 +53,21 @@ intrinsic CombinatorialFreeModule(R::Rng,
   return CFM;
 end intrinsic;
 
-intrinsic CombinatorialFreeModule(R::Rng, S::SetIndx) -> CombFreeMod
+intrinsic CombinatorialFreeModule(R::Rng, S::SetIndx : params := [* *]) -> CombFreeMod
 {Construct a combinatorial free module over the ring R with basis given by names.}
   CFM := New(CombFreeMod);
+
+  // An associative array which stores the appropriate meta data.
+  param_array := AssociativeArray();
+
+  // Store meta data.
+  for entry in params do param_array[entry[1]] := entry[2]; end for;
   CFM`names := S;
+  U := Universe(CFM`names);
+  if IsDefined(param_array, "NAMES") then
+      AssignNames(~U, param_array["NAMES"]);
+  end if;
+  
   CFM`M := RModule(R, #S);
   return CFM;
 end intrinsic;
@@ -95,6 +114,11 @@ intrinsic Rank(CFM::CombFreeMod) -> RngIntElt
 end intrinsic;
 
 intrinsic Dimension(CFM::CombFreeMod) -> RngIntElt
+{Return the rank of CFM.}
+  return Rank(CFM);	  
+end intrinsic;
+
+intrinsic Ngens(CFM::CombFreeMod) -> RngIntElt
 {Return the rank of CFM.}
   return Rank(CFM);	  
 end intrinsic;
@@ -152,12 +176,36 @@ intrinsic IsCoercible(CFM::CombFreeMod, x::Any) -> BoolElt, .
   end if;
 end intrinsic;
 
+intrinsic 'in'(elt::CombFreeModElt, V::CombFreeMod) -> BoolElt
+{.}
+  return Parent(elt) eq V;
+end intrinsic;
+
 /* booleans, equality and hashing */
 
 intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
 {.}
-  return BaseRing(M1) eq BaseRing(M2) and Dimension(M1) eq Dimension(M2) and
-       M1`M eq M2`M and M1`names eq M2`names;
+  if not (BaseRing(M1) eq BaseRing(M2) and Dimension(M1) eq Dimension(M2)) then
+      return false;
+  end if;
+  if IsEmpty(M1`names) then
+      return IsEmpty(M2`names);
+  end if;
+  if Type(Universe(M1`names)) ne Type(Universe(M2`names)) then
+    return false;
+  end if;
+  if Type(Universe(M1`names)) eq RngMPol then  
+      U1 := Universe(M1`names);
+      U2 := Universe(M2`names);
+      if BaseRing(U1) ne BaseRing(U2) or Ngens(U1) ne Ngens(U2) then
+	  return false;
+      end if;
+      phi := hom< U1 -> U2 | [U2.i : i in [1..Ngens(U2)]]>;
+      return &and[phi(M1`names[i]) eq M2`names[i] : i in [1..#M1`names]];
+  else
+      if #M1`names ne #M2`names then return false; end if;
+      return &and[M1`names[i] eq M2`names[i] : i in [1..#M1`names]];
+  end if;
 end intrinsic;
 
 intrinsic Hash(CFM::CombFreeMod) -> RngIntElt
@@ -170,6 +218,25 @@ end intrinsic;
 
 intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 {.}
+    if (level eq "Magma") then
+	params := [* *];
+	if Type(Universe(CFM`names)) eq RngMPol then
+	  // For the moment we assume all names are monomials
+	  // for simplicity
+	  S := CFM`names;
+	  R_X := Universe(S);
+	  prefix_str := Sprintf("{@ %m |\n", R_X);
+	  mon_strs := [Sprintf("Monomial(%m, %m)", R_X, [Degree(s,i) : i in [1..Ngens(R_X)]]) : s in S];
+	  all_mon_str := ["\t" cat m_str cat ",\n" : m_str in mon_strs[1..#mon_strs-1]];
+	  Append(~all_mon_str, "\t" cat mon_strs[#mon_strs] cat "\n@}\n");
+	  names_str := prefix_str cat (&cat all_mon_str);
+	  Append(~params, <"NAMES", Names(R_X)>);
+	else
+	  names_str := Sprintf("%m", CFM`names);
+	end if;
+	printf "CombinatorialFreeModule(%m, %o : params := %m)", BaseRing(CFM`M), names_str, params;  
+	return;
+  end if;
   desc := Sprintf("Free module of rank %o over %o",
 		  Dimension(CFM`M), BaseRing(CFM`M));
   if (level eq "Minimal") then printf "%o", desc; return; end if; 
@@ -212,8 +279,12 @@ intrinsic Hash(elt::CombFreeModElt) -> RngIntElt
   return Hash(<elt`vec, elt`parent>);
 end intrinsic;
 
-intrinsic Print(elt::CombFreeModElt)
+intrinsic Print(elt::CombFreeModElt, level::MonStgElt)
 {.}
+  if level eq "Magma" then
+      printf "%m ! %m", Parent(elt), Eltseq(elt);
+      return;
+  end if;
   printf elt`name;		   
 end intrinsic;
 
@@ -288,8 +359,7 @@ intrinsic Homomorphism(V::CombFreeMod, W::CombFreeMod,
 
   require IsEmpty(basis_images) or (Universe(basis_images) eq W) :
 	"images should be in the codomain module"; 
-  phi`morphism := hom<V`M -> W`M | [v`vec : v in basis_images]>;
-
+  phi`morphism := hom<V`M -> W`M | [Eltseq(v) : v in basis_images]>;
   return phi;
 end intrinsic;
 
@@ -307,8 +377,13 @@ end intrinsic;
 
 /* printing */
 
-intrinsic Print(phi::CombFreeModHom)
+intrinsic Print(phi::CombFreeModHom, level::MonStgElt)
 {.}
+  if level eq "Magma" then
+      images := [phi(Domain(phi).i) : i in [1..Dimension(Domain(phi))]];
+      printf "Homomorphism(%m, %m, %m)", Domain(phi), Codomain(phi), images;
+      return;
+  end if;
   printf "Homorphism from %o to %o", Domain(phi), Codomain(phi);
 end intrinsic;
 

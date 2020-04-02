@@ -7,13 +7,17 @@
                                                                             
    FILE: genus.m (class for all genus related data and computations)
 
+   04/01/20: Removed call to ModFrmAlgInit from genus - 
+             no need to construct the space to compute the genus.
+             Added direct call to computeGenusRepsCN1
+
    03/10/20: started from the orthogonal modular forms structure
  
  ***************************************************************************/
 
 // imports
 
-import "modfrmalg.m" : ModFrmAlgInit;
+import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -47,11 +51,16 @@ end intrinsic;
 intrinsic GenusReps(M::ModFrmAlg
 	: BeCareful := true, Force := false, Orbits := false) -> SeqEnum
 { Computes the genus representatives of the inner form associated to the
-space of algebraic modular forms provided. }
+	   space of algebraic modular forms provided. }
+// This was here before - but we don't need to initialize the space for the genus representatives
+// That's overworking.
+/*
 	// Initialize the space of algebraic modular forms so we can query the
 	//  genus representatives.
 	ModFrmAlgInit(M
 		: BeCareful := BeCareful, Force := Force, Orbits := Orbits);
+*/
+        computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
 
 	return M`genus`Representatives;
 end intrinsic;

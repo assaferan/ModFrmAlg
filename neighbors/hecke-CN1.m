@@ -282,35 +282,10 @@ function HeckeOperatorCN1(M, pR, k
 			  : BeCareful := true,
 			    Estimate := false,
 			    Orbits := false)
-    /*
+    
     // The genus representatives.
     reps := Representatives(Genus(M));
 
-    if GetVerbose("AlgebraicModularForms") ge 2 then
-	print "Calculating the automorphism groups Gamma_i...";
-    end if;
-    gamma_reps := [AutomorphismGroup(r) : r in reps];
-
-    gammas := [sub<W`G| [Transpose(PullUp(Matrix(g), reps[i], reps[i] :
-				BeCareful := BeCareful)) :
-		       g in Generators(gamma_reps[i])]> : i in [1..#reps]];
-
-    if GetVerbose("AlgebraicModularForms") ge 2 then
-	printf "The sizes of the automorphism groups are %o.\n",
-	       [#x : x in gammas];
-	printf "Computing the fixed subspaces ";
-	print "(space of algebraic modular forms)";
-    end if;
-
-    // !!! TODO : This should only be computed once.
-    
-    H := [FixedSubspace(gamma, W) : gamma in gammas];
-
-    if GetVerbose("AlgebraicModularForms") ge 2 then	
-	printf "Obtained spaces of dimensions %o.\n",
-	       [Dimension(h) : h in H];
-    end if;
-*/
     hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] :
 	       h in M`H];
 
@@ -327,7 +302,7 @@ function HeckeOperatorCN1(M, pR, k
     n := Dimension(Q);
 
     for idx in [1..#M`H] do
-	if GetVerbose("AlgebraicModularForms") ge 2 then	
+	if GetVerbose("AlgebraicModularForms") ge 1 then	
 	    printf "Going over p-neighbors of genus rep. no. %o...\n",
 		   idx;
 	end if;

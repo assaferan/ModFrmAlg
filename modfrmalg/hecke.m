@@ -11,6 +11,10 @@
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   03/29/20: Fixed a bug in HeckeOperator - when needed to identify base
+             rings of ideal and ModFrmAlg, the resulting ideal was not prime
+             Now uses Generators(pR) instead of Basis(pR)
+
    03/26/20: Modified to use the orbit method only for one-dimensional
              representations, until we get it to work in higher dimensions.
 
@@ -99,19 +103,20 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	//  are isomorphic. If so, convert the ideal passed as an argument to
 	//  an ideal in terms of the number ring given by the appropriate ring.
 	if Order(pR) ne BaseRing(Module(M)) then
-		// Assign fields of fractions.
-		K1 := FieldOfFractions(Order(pR));
-		K2 := FieldOfFractions(BaseRing(Module(M)));
+	    
+	    // Assign fields of fractions.
+	    K1 := FieldOfFractions(Order(pR));
+	    K2 := FieldOfFractions(BaseRing(Module(M)));
+	    
+	    // Check for isomorphism.
+	    isom, map := IsIsomorphic(K1, K2);
 
-		// Check for isomorphism.
-		isom, map := IsIsomorphic(K1, K2);
+	    // If they are isomorphic, reassign the provided prime ideal.
+	    require isom: "Incompatible base rings.";
 
-		// If they are isomorphic, reassign the provided prime ideal.
-		require isom: "Incompatible base rings.";
-
-		// Assign the new prime ideal.
-		pR := ideal< BaseRing(Module(M))
-			| [ map(x) : x in Basis(pR) ] >;
+	    // Assign the new prime ideal.
+	    pR := ideal< BaseRing(Module(M))
+		       | [ map(x) : x in Generators(pR) ] >;
 	end if;
 
 	// Look for the requested Hecke operator.

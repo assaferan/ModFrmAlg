@@ -6,6 +6,8 @@
                                                                             
    FILE: unitary-examples.m (data for examples to test on)
 
+   03/31/20: Changed weight to be a sequence, added arbitrary characteristic
+
    03/26/20: added documentation
 
    03/26/20: fixed the bug in the construction of characters chi 
@@ -18,18 +20,20 @@
 
 
 UnitaryExampleRF := recformat< field : Fld,
+			       coeff_char : RngIntElt,
 			       genus : RngIntElt,
-			       weight : Tup,
+			       weight : SeqEnum,
 			       norm_p : SeqEnum,
 			       timing : SeqEnum,
 		               evs : SeqEnum>;
 
 UnitaryExample_7_2 := rec<UnitaryExampleRF |
 			 field := QuadraticField(-7),
+			 coeff_char := 0,
 			 genus := 2,
-			 weight := <0,0>,
+			 weight := [0,0],
 			 norm_p := [2, 11, 23, 29, 37, 43, 53, 67, 71,
-				    79, 107, 109, 113, 127, 137, 149,
+					79, 107, 109, 113, 127, 137, 149,
 				    151, 163, 179, 191, 193, 197],
 			 timing := [0.02, 0.07, 0.18, 0.28, 0.42,
 				    0.57, 0.82, 1.35, 1.46, 1.86,
@@ -133,40 +137,45 @@ function createExamples_7_2()
     
     UnitaryExample_7_2_W_2_0 := rec<UnitaryExampleRF |
 			 field := QuadraticField(-7),
+			 coeff_char := 0,
 			 genus := 2,
-			 weight := <2,0>,
+			 weight := [2,0],
 			 norm_p := norm_p,
 			 timing := [],
 			 evs := evs_2_0>;
 
     UnitaryExample_7_2_W_3_1 := rec<UnitaryExampleRF |
 			 field := QuadraticField(-7),
+			 coeff_char := 0,
 			 genus := 2,
-			 weight := <3,1>,
+			 weight := [3,1],
 			 norm_p := norm_p,
 			 timing := [],
 			 evs := evs_3_1>;
 
     UnitaryExample_7_2_W_3_3 := rec<UnitaryExampleRF |
 			 field := QuadraticField(-7),
+			 coeff_char := 0,
 			 genus := 2,
-			 weight := <3,3>,
+			 weight := [3,3],
 			 norm_p := norm_p,
 			 timing := [],
 			 evs := evs_3_3>;
 
     UnitaryExample_7_2_W_4_0 := rec<UnitaryExampleRF |
 			       field := QuadraticField(-7),
+			       coeff_char := 0,
 			       genus := 2,
-			       weight := <4,0>,
+			       weight := [4,0],
 			       norm_p := norm_p,
 			       timing := [],
 			       evs := evs_4_0>;
 
     UnitaryExample_7_2_W_2_2 := rec<UnitaryExampleRF |
 			       field := QuadraticField(-7),
+			       coeff_char := 0,
 			       genus := 2,
-			       weight := <2,2>,
+			       weight := [2,2],
 			       norm_p := norm_p,
 			       timing := [],
 			       evs := evs_2_2>;
@@ -192,8 +201,9 @@ F<root13> := QuadraticField(13);
 R<x> := PolynomialRing(F);
 UnitaryExample_7_3 := rec<UnitaryExampleRF |
 			 field := ext< F | x^2 + 13 + 2*root13 >,
+			 coeff_char := 13,
 			 genus := 9,
-			 weight := <0,0>,
+			 weight := [0,0],
 			 norm_p := [29, 53, 61, 79, 107, 113, 131, 139,
 				    157, 191, 211],
 			 timing := [15.15, 51.73, 70.35, 123.21, 216.82,
@@ -204,8 +214,9 @@ UnitaryExample_7_3 := rec<UnitaryExampleRF |
     
 UnitaryExample_7_4 := rec<UnitaryExampleRF |
 			     field := CyclotomicField(7),
+			     coeff_char := 0,
 			     genus := 2,
-			     weight := <0,0>,
+			     weight := [0,0],
 			     norm_p := [29, 43, 71, 113, 127, 197, 211,
 					239, 281],
 			     timing := [2.16, 2.85, 6.77, 16.43, 21.35,

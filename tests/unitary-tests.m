@@ -6,6 +6,9 @@
                                                                             
    FILE: unitary-tests.m (functions for testing examples)
 
+   04/02/20: Replaced the construction in the test by the new
+             UnitaryModularForms constructor.
+
    03/26/20: added documentation
 
    03/26/20: fixed the testing of eigenvalues to handle the case when 
@@ -30,6 +33,7 @@ import "unitary-examples.m" :
        UnitaryExample_7_2_W_3_1,
        UnitaryExample_7_2_W_3_3,
        UnitaryExample_7_2_W_4_0,
+       UnitaryExample_7_3,
        UnitaryExample_7_4;
 
 forward testUnitaryExample;
@@ -52,12 +56,8 @@ intrinsic UnitaryModularFormTests() -> ModFrmAlg
 end intrinsic;
 
 procedure testUnitaryExample(~answers, example : num_primes := 0) 
-    K := example`field;
-    innerForm := IdentityMatrix(K,3);
-    a, b := Explode(example`weight);
-    W := getGL3HighestWeightRep(a,b,K);
-    M := UnitaryModularForms(innerForm, W);
-
+    M := UnitaryModularForms(example`field, 3,
+                             example`weight, example`coeff_char);
     printf "Testing example of %o\n", M;
     
     printf "Computing genus representatives... ";

@@ -6,6 +6,9 @@
                                                                             
    FILE: combfreemod.m (class for combinatorial free modules)
 
+   04/03/20: Added ChangeRing Intrinsic, added some coercions, changed construction of homomorphisms
+             to support loading from files
+
    04/02/20: Fixed bugs in intrinsic 'eq' to handle several different cases of names
 
    04/01/20: Added the intrinsics 'in' and Ngens, added params to the constructor,
@@ -133,6 +136,15 @@ intrinsic BaseRing(CFM::CombFreeMod) -> Rng
   return BaseRing(CFM`M);
 end intrinsic;
 
+intrinsic ChangeRing(CFM::CombFreeMod, R::Rng) -> CombFreeMod
+{return the CFM with base ring changed to R.}
+  params := [* *];
+  if Type(Universe(CFM`names)) eq RngMPol then
+      Append(~params, [* <"NAMES", Names(Universe(CFM`Names))> *]);
+  end if;
+  return CombinatorialFreeModule(R, CFM`names : params := params);
+end intrinsic;
+
 /*
 CombFreeModElt - the element class
 */
@@ -168,7 +180,11 @@ end intrinsic;
 intrinsic IsCoercible(CFM::CombFreeMod, x::Any) -> BoolElt, .
 {.}
   if Type(x) eq CombFreeModElt and Parent(x) eq CFM then return true, x; end if;
-  is_coercible, v := IsCoercible(CFM`M, x);
+  if Type(x) eq CombFreeModElt then
+      is_coercible, v := IsCoercible(CFM`M, x`vec);
+  else
+      is_coercible, v := IsCoercible(CFM`M, x);
+  end if;
   if is_coercible then
       return true, CombinatorialFreeModuleElement(CFM, v);
   else
@@ -315,6 +331,11 @@ intrinsic Eltseq(elt::CombFreeModElt) -> SeqEnum
   return Eltseq(elt`vec);
 end intrinsic;
 
+intrinsic ChangeRing(elt::CombFreeModElt, R::Rng) -> CombFreeModElt
+{.}
+  return ChangeRing(Parent(elt),R)!(Vector(ChangeRing(elt`vec, R)));
+end intrinsic;
+
 /* morphisms */
 // for some reason, just havin map<V->W|f> doesn't work. no idea why
 
@@ -329,6 +350,9 @@ declare attributes CombFreeModHom :
 intrinsic Homomorphism(V::CombFreeMod, W::CombFreeMod,
 					  f::UserProgram) -> CombFreeModHom
 {Construct the morphism described by f.}
+  require BaseRing(V) eq BaseRing(W) : "To define a homomorphism, 
+  	  	      	 modules should be defined over the same ring";
+
   phi := New(CombFreeModHom);
   phi`domain := V;
   phi`codomain := W;
@@ -339,6 +363,9 @@ end intrinsic;
 
 intrinsic Homomorphism(V::CombFreeMod, W::CombFreeMod, f::Map) -> CombFreeModHom
 {Construct the morphism described by f.}
+  require BaseRing(V) eq BaseRing(W) : "To define a homomorphism, 
+  	  	      	 modules should be defined over the same ring";
+
   phi := New(CombFreeModHom);
   phi`domain := V;
   phi`codomain := W;
@@ -351,15 +378,25 @@ intrinsic Homomorphism(V::CombFreeMod, W::CombFreeMod, f::Map) -> CombFreeModHom
 end intrinsic;
 
 intrinsic Homomorphism(V::CombFreeMod, W::CombFreeMod,
-					  basis_images::SeqEnum) -> CombFreeModHom
+					  basis_images::SeqEnum
+		      : FromFile := false) -> CombFreeModHom
 {Construct the morphism sending the basis of V to basis_images.}
+/*  require BaseRing(V) eq BaseRing(W) : "To define a homomorphism, 
+  	  	      	 modules should be defined over the same ring";
+*/
   phi := New(CombFreeModHom);
   phi`domain := V;
+  if FromFile then
+      W := ChangeRing(W, BaseRing(V));
+  else
+      require BaseRing(V) eq BaseRing(W) : "To define a homomorphism, 
+  	  	      	 modules should be defined over the same ring";
+  end if;
   phi`codomain := W;
 
-  require IsEmpty(basis_images) or (Universe(basis_images) eq W) :
+  require IsEmpty(basis_images) or IsCoercible(W,basis_images[1]) :
 	"images should be in the codomain module"; 
-  phi`morphism := hom<V`M -> W`M | [Eltseq(v) : v in basis_images]>;
+  phi`morphism := hom<V`M -> W`M | [Eltseq(W!v) : v in basis_images]>;
   return phi;
 end intrinsic;
 
@@ -380,8 +417,8 @@ end intrinsic;
 intrinsic Print(phi::CombFreeModHom, level::MonStgElt)
 {.}
   if level eq "Magma" then
-      images := [phi(Domain(phi).i) : i in [1..Dimension(Domain(phi))]];
-      printf "Homomorphism(%m, %m, %m)", Domain(phi), Codomain(phi), images;
+      images := [Eltseq(phi(Domain(phi).i)) : i in [1..Dimension(Domain(phi))]];
+      printf "Homomorphism(%m, %m, %m : FromFile := true)", Domain(phi), Codomain(phi), images;
       return;
   end if;
   printf "Homorphism from %o to %o", Domain(phi), Codomain(phi);

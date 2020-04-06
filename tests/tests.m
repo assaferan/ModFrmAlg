@@ -4,61 +4,58 @@
                     Algebraic Modular Forms in Magma                          
                             Eran Assaf                                 
                                                                             
-   FILE: unitary-tests.m (functions for testing examples)
+   FILE: tests.m (functions for testing examples)
 
-   04/02/20: Replaced the construction in the test by the new
-             UnitaryModularForms constructor.
-
-   03/26/20: added documentation
-
-   03/26/20: fixed the testing of eigenvalues to handle the case when 
-             the fields of definition are different.
-
-   03/26/20: added the example for weight (3,3)
-
-   03/22/20: Added weights to the testing
-
-   03/21/20: Changed testUnitaryExample to be a local procedure,
-             and wrote UnitaryModularFormTests to run all examples.
-
-   03/16/20: Added timing data into the testing.
-
+   04/03/20: renamed from unitary-tests.m
  
  ***************************************************************************/
 
-import "unitary-examples.m" :
-			    UnitaryExample_7_2,
-       UnitaryExample_7_2_W_2_0,
-       UnitaryExample_7_2_W_2_2,
-       UnitaryExample_7_2_W_3_1,
-       UnitaryExample_7_2_W_3_3,
-       UnitaryExample_7_2_W_4_0,
-       UnitaryExample_7_3,
-       UnitaryExample_7_4;
+import "examples.m" :
+		    Example_7_4,
+       Example_7_4_W_2_0,
+       Example_7_4_W_2_2,
+       Example_7_4_W_3_1,
+       Example_7_4_W_3_3,
+       Example_7_4_W_4_0,
+       Example_7_5,
+       Example_7_6;
 
-forward testUnitaryExample;
+forward testExample;
 
-intrinsic UnitaryModularFormTests() -> ModFrmAlg
+intrinsic ModularFormTests() -> ModFrmAlg
 {.}
   M := [];
   // we're cutting down the number of primes until we have
 // a more efficient implementation
+  // ??? Maybe move this construction to examples.m and assign names to
+  // examples (in the record structure)
+  examples := [Example_7_4,
+	     Example_7_4_W_2_0,
+	     Example_7_4_W_2_2,
+	     Example_7_4_W_3_1,
+	     Example_7_4_W_3_3,
+	     Example_7_4_W_4_0,
+	     Example_7_5,
+	     Example_7_6];
 
-  testUnitaryExample(~M, UnitaryExample_7_2 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_2_W_2_0 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_2_W_2_2 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_2_W_3_1 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_2_W_3_3 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_2_W_4_0 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_3 : num_primes := 3);
-  testUnitaryExample(~M, UnitaryExample_7_4 : num_primes := 3);
+  for example in examples do
+      testExample(~M, example : num_primes := 3);
+  end for;
 
   return M;
 end intrinsic;
 
-procedure testUnitaryExample(~answers, example : num_primes := 0) 
-    M := UnitaryModularForms(example`field, 3,
-                             example`weight, example`coeff_char);
+procedure testExample(~answers, example : num_primes := 0)
+    if example`group eq "Unitary" then
+	// !!! TODO : change to take into account inner_form
+	M := UnitaryModularForms(example`field, 3,
+				 example`weight, example`coeff_char);
+    elif example`group eq "Orthogonal" then
+	M := OrthogonalModularForms(example`field, example`inner_form,
+				    example`weight, example`coeff_char);
+    else
+	error "The group type %o is currently not supported!";
+    end if;
     printf "Testing example of %o\n", M;
     
     printf "Computing genus representatives... ";
@@ -77,7 +74,7 @@ procedure testUnitaryExample(~answers, example : num_primes := 0)
     printf "Computing T(p) Hecke operators... ";
     
     ps := [Factorization(ideal<Integers(BaseRing(M))|n>)[1][1] :
-		      n in example`norm_p];
+		      n in example`norm_p];:
     Ts1 := [];
     
     for i in [1..N] do

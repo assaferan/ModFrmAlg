@@ -101,16 +101,18 @@ intrinsic AlgebraicModularForms(G::GrpLie,
   
         K := BaseRing(G);
         require IsField(K) : "Lie group must be defined over a field";
-        K := AbsoluteField(K);
+// Should add more input checks when having erros
+	/*       K := AbsoluteField(K);
         if Type(K) eq FldRat then
            K := RationalsAsNumberField();
         end if;
 	// The integers as a maximal order.
 	R := Integers(K);
+	// K := FieldOfFractions(R);
 
 	// Coerce the inner form into coefficients of the maximal order.
 	innerForm := ChangeRing(innerForm, R);
-
+*/
         if " " in CartanName(G) then
 	  error "Groups of type %o are not supported.\n", CartanName(G);
         end if;
@@ -191,14 +193,17 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         return AlgebraicModularForms(G, innerForm);
 end intrinsic;
 
-intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
+intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng]) -> ModFrmAlg
 {Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
-  K := BaseRing(innerForm);
+  K := AbsoluteField(FieldOfFractions(BaseRing(innerForm)));
+  if Type(K) eq FldRat then
+      K := RationalsAsNumberField();
+  end if;
   n := Nrows(innerForm);
   cartan_type := (n mod 2 eq 1) select "B" cat IntegerToString((n-1) div 2) else
 		 "D" cat IntegerToString(n div 2);
-  O_n := GroupOfLieType(cartan_type + " T1", K);
-  return AlgebraicModularForms(O_n, innerForm);
+  O_n := GroupOfLieType(cartan_type cat " T1", K);
+  return AlgebraicModularForms(O_n, ChangeRing(innerForm,K));
 end intrinsic;
 
 intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld],
@@ -263,14 +268,25 @@ intrinsic UnitaryModularForms(F::Fld,
 				    weight::SeqEnum[RngIntElt],
 					    char::RngIntElt) -> ModFrmAlg
 {.}
-  if char ne 0 then	  
+  F := AbsoluteField(F);
+  if char ne 0 then
       pR := Factorization(ideal<Integers(F)|char>)[1][1];
       Fq, mod_q := ResidueClassField(pR);
       GL_n_q := GroupOfLieType(StandardRootDatum("A",n-1), Fq);
       V := GroupRepresentation(GL_n_q, weight);
-      f := map< GL(n,F) -> GL(n,Fq) |
+      f_desc := Sprintf("
+      function foo(H)
+      F := BaseRing(H);
+      n := %m; 
+      pR := Factorization(ideal<Integers(F)|%m>)[1][1];
+      Fq, mod_q := ResidueClassField(pR);
+      f := map< H -> GL(n,Fq) |
 	      x :-> projLocalization(x, mod_q)>;
-      W := Pullback(V,f);
+      return f;
+      end function;
+      return foo;
+      ", n, char);
+      W := Pullback(V,f_desc, GL(n, F));
   else
       // we would love to do that but Magma does not support that...
       /*

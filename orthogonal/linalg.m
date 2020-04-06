@@ -68,17 +68,17 @@ function Decompose(T, t)
 	//  on whether this eigenspace is irreducible.
 	// !!! Problem - over finite field we might have generalized eigenspaces.
 	// probably have to replace by another decomposition function...
-	/*
+	
 	if Characteristic(K) eq 0 then
 	    fa := data[1];
 	else
 	    fa := data[1]^data[2];
 	end if;
 	fT := Evaluate(fa, tt);
-*/
+
 	Append(~spaces,
-	       	       < Nullspace(Transpose(tt)-eig*id), data[2] eq 1 >);
-	       //< Nullspace(fT), data[2] eq 1 >);
+//	       	       < Nullspace(Transpose(tt)-eig*id), data[2] eq 1 >);
+	       < Nullspace(fT), data[2] eq 1 >);
     end for;
     
     return spaces;
@@ -132,7 +132,7 @@ intrinsic EigenspaceDecomposition(array::Assoc : Warning := true)
 	  
 	  // Dimension of this space.
 	  dim := Dimension(space);
-	  
+/*	  
 	  // The basis of this space.
 	  basis := Basis(space);
 	  
@@ -154,13 +154,13 @@ intrinsic EigenspaceDecomposition(array::Assoc : Warning := true)
 	  
 	  // Extract the submatrix associated to this subspace.
 	  T := Submatrix(T, pivots, [1..dim]);
-
-	  /*
+*/
+	  
 
 	  B := BasisMatrix(space);
-	  T := Matrix(B*Ts[idx]*Transpose(B)*(B * Transpose(B))^(-1));
-	 
-	  */
+	  tempT := ChangeRing(Ts[idx], BaseRing(space));
+	  T := Matrix(B*tempT*Transpose(B)*(B * Transpose(B))^(-1));
+	  
 	  
 	  // Compute the eigenspaces associated to T.
 	  newSpaces := Decompose(T, Ts[idx]);

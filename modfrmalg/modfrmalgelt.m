@@ -189,7 +189,8 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
 		until f`vec[pivot] ne 0;
 
 		// Assign eigenvalue at the specified prime.
-		f`Eigenvalues[k][Ps[i]] := MVM(T, f`vec)[pivot];
+		// f`Eigenvalues[k][Ps[i]] := MVM(T, f`vec)[pivot];
+		f`Eigenvalues[k][Ps[i]] := (f`vec * T)[pivot];
 	end for;
 
 	return [* f`Eigenvalues[k][P] : P in Ps *], [ P : P in Ps ];

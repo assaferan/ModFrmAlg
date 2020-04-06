@@ -59,6 +59,8 @@
  
  ***************************************************************************/
 
+forward projLocalization;
+
 // This should have been done using GModule
 // But for some reason, it's really terrible, so we are doing our own
 // This is currently built on top of combinatorial free modules
@@ -326,11 +328,11 @@ intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
 end intrinsic;
 
 intrinsic Pullback(V::GrpRep, /* f::Map[Grp, Grp] */
-		      f_desc::MonStgElt) -> GrpRep
+		      f_desc::MonStgElt, H::Grp) -> GrpRep
 {Constructs the pullback of the representation V along the
 group homomorphism f. Does not verify that f is a group homomorphism}
   M := V`M;
-  f := eval f_desc;
+  f := (eval f_desc)(H);
   G := Domain(f);
 /*  action := map< CartesianProduct(G, [1..Dimension(M)]) -> M |
 	       x :-> V`action(f(x[1]), x[2]) >;*/
@@ -338,7 +340,7 @@ group homomorphism f. Does not verify that f is a group homomorphism}
   f := eval %m;
   V_action := eval %m;
   function action(g,m,V)
-    return V_action(f(x[1]), x[2]);
+    return V_action(f(g), m);
   end function;
   return action;
   ", f_desc, V`action_desc);

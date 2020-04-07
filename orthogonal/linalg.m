@@ -69,12 +69,14 @@ function Decompose(T, t)
 	// !!! Problem - over finite field we might have generalized eigenspaces.
 	// probably have to replace by another decomposition function...
 	
-	if Characteristic(K) eq 0 then
-	    fa := data[1];
+	if Characteristic(BaseRing(T)) eq 0 then
+	    // fa := data[1];
+	    fT := tt-eig*id;
 	else
-	    fa := data[1]^data[2];
+	    //	    fa := data[1]^data[2];
+	    fT := (tt-eig*id)^data[2];
 	end if;
-	fT := Evaluate(fa, tt);
+//	fT := Evaluate(fa, tt);
 
 	Append(~spaces,
 //	       	       < Nullspace(Transpose(tt)-eig*id), data[2] eq 1 >);
@@ -188,7 +190,7 @@ intrinsic EigenspaceDecomposition(array::Assoc : Warning := true)
       sp := [* sp[i] : i in [1..#sp] | not i in delList *];
       
       assert &+[ Dimension(s[1]) * Degree(BaseRing(s[1])) : s in sp ]
-	     eq Nrows(Ts[1]);
+	     eq Nrows(Ts[1]) * Degree(BaseRing(Ts[1]));
   end for;
 
   // Determine whether this decomposition is stll decomposable.

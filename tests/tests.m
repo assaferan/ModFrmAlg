@@ -83,7 +83,7 @@ function testExample(example : num_primes := 0)
     
 	for i in [1..N] do
 	    p := ps[i];
-	    printf "Computing T(p, %o), (N(p) = %o) ...\n", k, Norm(p);
+	    printf "Computing T(p,%o), (N(p) = %o) ...\n", k, Norm(p);
 	    t := Cputime();
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
 				       Orbits := (k eq 1)));

@@ -77,7 +77,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			// Shortcut to the current genus representative.
 			L := M`genus`Representatives[idx];
 
-			if M`L`rfxSpace`deg eq 1 then
+			// if M`L`rfxSpace`deg eq 1 then
+			if Type(BaseRing(M`L)) eq FldRat then
 				// If we're over the rationals, we simply
 				//  choose the basis of L.
 				basis := Basis(L);
@@ -141,7 +142,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	    Append(~group_data, < "COCYCLE_IMAGES", coc_images>);
 	else
 	    Append(~group_data, < "ROOT_DATUM", RootDatum(M`G) >);
-	    Append(~base_field, < "BASE_FIELD", BaseRing(M`G) >);
+	    Append(~group_data, < "BASE_FIELD", BaseRing(M`G) >);
 	end if;
 
 	// Build the data structure that will be saved to file.
@@ -250,7 +251,8 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 		genus := New(GenusSym);
 		genus`Representatives := [];
 
-		if M`L`rfxSpace`deg eq 1 then
+		//		if M`L`rfxSpace`deg eq 1 then
+		if Type(BaseRing(M`L)) eq FldRat then
 			// Handle the rationals separately.
 			for i in [1..#reps] do
 				// Retrieve the basis for this genus rep and

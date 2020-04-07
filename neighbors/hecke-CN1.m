@@ -364,10 +364,15 @@ function HeckeOperatorCN1(M, pR, k
 
     vert_blocks := [&cat mat : mat in mats];
 
+    empty_operator := MatrixAlgebra(BaseRing(M),0)![];
+    
+    if IsEmpty(vert_blocks) then return empty_operator; end if;
+    if IsEmpty(vert_blocks[1]) then return empty_operator; end if;
+    
     vert_mats := [* Matrix(blk) : blk in vert_blocks |
 		  not IsEmpty(blk[1]) *];
 
-    if IsEmpty(vert_mats) then return []; end if;
+    if IsEmpty(vert_mats) then return empty_operator; end if;
 
     // would have done a one liner, but there are universe issues
     ret := vert_mats[1];

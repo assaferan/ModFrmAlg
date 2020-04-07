@@ -372,7 +372,7 @@ function BuildNeighborProc(L, pR, k : BeCareful := true)
 
 		// The affine reflexive space.
                 if (pR eq alpha(pR)) then
-                  qAff`V := BuildReflexiveSpace(mat, alpha_aff);
+                    qAff`V := BuildReflexiveSpace(mat, alpha_aff);
                 else // split case
 		    qAff`V := BuildTrivialReflexiveSpace(qAff`F, dim);
 		end if;   

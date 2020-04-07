@@ -180,7 +180,10 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
 		if IsDefined(f`Eigenvalues[k], Ps[i]) then continue; end if;
 
 		// Promote the Hecke matrix to the base ring of the eigenform.
-		_ := IsSubfield(BaseRing(Ts[i]), BaseRing(f`vec));
+		// Magma doesn't do IsSubfield(QQ,QQ)
+		if Type(BaseRing(Ts[i])) ne FldRat then
+		    _ := IsSubfield(BaseRing(Ts[i]), BaseRing(f`vec));
+		end if;
 		T := ChangeRing(Ts[i], BaseRing(f`vec));
 
 		// Get the pivot of the eigenform.

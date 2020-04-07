@@ -22,7 +22,39 @@ ExampleRF := recformat< group : MonStgElt,
 			timing : SeqEnum,
 		        evs : SeqEnum>;
 
-Example_7_4 := rec< ExampleRF | group : "Unitary",
+inner_form_7_2 := Matrix([[2,0,1],[0,2,0],[1,0,6]]);
+ps_7_2 := PrimesUpTo(100);
+eis_7_2 := [[* p eq 11 select 0 else p+1 : p in ps_7_2 *]];
+cusp_7_2 := 
+    [[* p eq 11 select 0 else
+     Coefficient(Newforms(ModularForms(11))[1][1], p) : p in ps_7_2 *]];
+Example_7_2 := rec< ExampleRF | group := "Orthogonal",
+					field := Rationals(),
+					inner_form := inner_form_7_2,
+					coeff_char := 0,
+					genus := 2,
+					weight := [0,0],
+					norm_p := ps_7_2,
+					timing := [],
+					evs := [eis_7_2, cusp_7_2] >;
+
+inner_form_7_3 := Matrix([[2,0,0,1],[0,2,1,0],[0,1,6,0],[1,0,0,6]]);
+eis_7_3 := [[* x^2 : x in eis_7_2[1] *], [* 2*x*(x-1) : x in eis_7_2[1] *]];
+a_7_3 := [[* x^2 : x in cusp_7_2[1] *],
+	  [* 2*(cusp_7_2[1][i]^2 - ps_7_2[i] -1) : i in [1..#ps_7_2] *]];
+b_7_3 := [[* cusp_7_2[1][i] * eis_7_2[1][i] : i in [1..#ps_7_2] *],
+	  [* cusp_7_2[1][i]^2 + ps_7_2[i]^2 - 1 : i in [1..#ps_7_2]  *] ];
+Example_7_3 := rec< ExampleRF | group := "Orthogonal",
+				field := Rationals(),
+				inner_form := inner_form_7_3,
+				coeff_char := 0,
+				genus := 3,
+				weight := [0,0],
+				norm_p := ps_7_2,
+				timing := [],
+				evs := [eis_7_3, a_7_3, b_7_3] >;
+
+Example_7_4 := rec< ExampleRF | group := "Unitary",
 		  field := QuadraticField(-7),
 		  inner_form := IdentityMatrix(QuadraticField(-7), 3),
 		  coeff_char := 0,
@@ -36,13 +68,13 @@ Example_7_4 := rec< ExampleRF | group : "Unitary",
 			     3.73, 4.18, 4.59, 5.85, 7.08,
 			     8.56, 9.04, 10.88, 13.78, 16.92,
 			     17.22, 17.29],
-		  evs := [[* 7, 133, 553, 871, 1407, 1893, 2863,
+		  evs := [[[* 7, 133, 553, 871, 1407, 1893, 2863,
 			   4557, 5113, 6321, 11557, 11991, 12883,
 			   16257, 18907, 22351, 22953, 26733,
-			   32221, 36673, 37443, 39007 *],
-			  [* -1, 5, 41, -25, -1, 101, 47, -51, 185,
+			   32221, 36673, 37443, 39007 *]],
+			  [[* -1, 5, 41, -25, -1, 101, 47, -51, 185,
 			   -15, 293, 215, -109, 129, -37, 335,
-			   425, 237, -163, -127, 131, 479 *] ]>;
+			   425, 237, -163, -127, 131, 479 *]] ]>;
 
 // This example is from David Loeffler's
 // Explicit Calculations of Automorphic Forms for
@@ -70,11 +102,11 @@ function createExamples_7_4()
     _, cc := HasComplexConjugate(K);
     alpha := FieldAutomorphism(K, cc);
     alpha_R := hom< R -> R | x :-> alpha(K!x) >;
-    evs_2_0 := [[* *]];
-    evs_3_1 := [[* *]];
-    evs_2_2 := [[* *],[* *]];
-    evs_3_3 := [[* *],[* *]];
-    evs_4_0 := [[* *],[* *],[* *]];
+    evs_2_0 := [[[* *]]];
+    evs_3_1 := [[[* *]]];
+    evs_2_2 := [[[* *]],[[* *]]];
+    evs_3_3 := [[[* *]],[[* *]]];
+    evs_4_0 := [[[* *]],[[* *]],[[* *]]];
 
     norm_p := [2, 11, 23, 29, 37, 43, 53, 67, 71,
 	   79, 107, 109, 113, 127, 137, 149,
@@ -118,18 +150,18 @@ function createExamples_7_4()
 			+ K!(chi(1,1,p,alpha_R));
 	val_2_2_b := K!(chi(4,-2,p,alpha_R) + chi(1,1,p,alpha_R) +
 			chi(-2,4,p,alpha_R));
-	Append(~evs_2_0[1], val_2_0);
-	Append(~evs_3_1[1], val_3_1);
-	Append(~evs_3_3[1], val_3_3);
-	Append(~evs_2_2[1], val_2_2_a);
-	Append(~evs_2_2[2], val_2_2_b);
-	Append(~evs_4_0[1], val_4_0_a);
-	Append(~evs_4_0[2], val_4_0_b);
-	Append(~evs_4_0[3], val_4_0_c);
+	Append(~evs_2_0[1][1], val_2_0);
+	Append(~evs_3_1[1][1], val_3_1);
+	Append(~evs_3_3[1][1], val_3_3);
+	Append(~evs_2_2[1][1], val_2_2_a);
+	Append(~evs_2_2[2][1], val_2_2_b);
+	Append(~evs_4_0[1][1], val_4_0_a);
+	Append(~evs_4_0[2][1], val_4_0_b);
+	Append(~evs_4_0[3][1], val_4_0_c);
     end for;
 
     F<alpha> := QuadraticField(-259);
-    evs_3_3[2] := [* (alpha - 7) / 8, (244*alpha - 7441) / 1331,
+    evs_3_3[1][2] := [* (alpha - 7) / 8, (244*alpha - 7441) / 1331,
 		   (-21940 * alpha - 162337) / 12167 *];
     
     Example_7_4_W_2_0 := rec<ExampleRF | group := "Unitary",
@@ -190,11 +222,11 @@ function createExamples_7_4()
     return ret;
 end function;
 
-UnitaryExample_7_4_W_2_0,
-UnitaryExample_7_4_W_2_2,
-UnitaryExample_7_4_W_3_1,
-UnitaryExample_7_4_W_3_3,
-UnitaryExample_7_4_W_4_0 := Explode(createExamples_7_4());
+Example_7_4_W_2_0,
+Example_7_4_W_2_2,
+Example_7_4_W_3_1,
+Example_7_4_W_3_3,
+Example_7_4_W_4_0 := Explode(createExamples_7_4());
 
 // TODO : This one is slightly different than the other two -
 // Should make appropriate modifications in the test function
@@ -205,7 +237,7 @@ K := ext< F | x^2 + 13 + 2*root13 >;
 
 Example_7_5 := rec<ExampleRF | group := "Unitary",
 			 field := K,
-			 inner_form := IdentityMatrix(K,3);	      
+			 inner_form := IdentityMatrix(K,3),
 			 coeff_char := 13,
 			 genus := 9,
 			 weight := [0,0],
@@ -214,12 +246,12 @@ Example_7_5 := rec<ExampleRF | group := "Unitary",
 			 timing := [15.15, 51.73, 70.35, 123.21, 216.82,
 				    242.20, 339.50, 378.81, 486.22, 727.81,
 				    943.89],
-			 evs := [[* 4, 11, 12, 5, 5, 3, 6,
-				  10, 1, 11, 2 *]]>;
+			 evs := [[[* 4, 11, 12, 5, 5, 3, 6,
+				  10, 1, 11, 2 *]]]>;
 K := CyclotomicField(7);
 Example_7_6 := rec<ExampleRF | group := "Unitary",
 			       field := K,
-			       inner_form := IdentityMatrix(K,3);
+			       inner_form := IdentityMatrix(K,3),
 			       coeff_char := 0,
 			       genus := 2,
 			       weight := [0,0],
@@ -227,7 +259,7 @@ Example_7_6 := rec<ExampleRF | group := "Unitary",
 					  239, 281],
 			       timing := [2.16, 2.85, 6.77, 16.43, 21.35,
 					  51.14, 53.58, 73.05, 101.84],
-			       evs := [[* 871, 1893, 5113, 12883, 16257,
-					39007, 44733, 57361, 79243 *],
-				       [* -25, 101, 185, -109, 129, 479,
-					-67, 17, 395 *]]>;
+			       evs := [[[* 871, 1893, 5113, 12883, 16257,
+					39007, 44733, 57361, 79243 *]],
+				       [[* -25, 101, 185, -109, 129, 479,
+					-67, 17, 395 *]]]>;

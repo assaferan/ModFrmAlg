@@ -364,7 +364,7 @@ intrinsic Discriminant(lat::Lat) -> RngInt
 	return ideal< Integers() | det / factor >;
 end intrinsic;
 
-function pMaximalGram(L, pR : BeCareful := true)
+function pMaximalGram(L, pR : BeCareful := true, given_coeffs := [])
 	if assigned L`pMaximal then
 		// If the p-maximal data has been assigned, return it.
 		if IsDefined(L`pMaximal, pR) then
@@ -390,12 +390,19 @@ function pMaximalGram(L, pR : BeCareful := true)
 
 		// Randomly choose a p-maximal vector.
 		repeat
-                       coeffs := [Random(11) - 5 : g in gens];
+		    if IsEmpty(given_coeffs) then
+			coeffs := [Random(11) - 5 : g in gens];
+		    else
+			coeffs := given_coeffs[i];
+		    end if;
 
                         vec := &+[ gens[j] * coeffs[j] :
 					 j in [1..#gens]] * basis[i];
 		until not vec in pR * Module(L);
-
+		// for debugging
+		if GetVerbose("AlgebraicModularForms") ge 3 then
+		    printf "coeffs = %o\n", coeffs;
+		end if;
 		// Verify that the vectors were chosen properly.
 		if BeCareful then
 			assert vec in Module(L) and not vec in pR * Module(L);

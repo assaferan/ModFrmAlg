@@ -158,6 +158,17 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
 	     V`Q := QF2(M);
 	     V`QStd := QF2(V`GramMatrixStd);
 	 end if;
+     elif spaceType eq "Hermitian" then
+	 F := BaseRing(V);
+	 R := PolynomialRing(F, 2 * Dimension(V));
+	 gens := GeneratorsSequence(R);
+	 alpha := hom<R -> R | V`Involution, gens>;
+	 // Initialize matrix that will determine parameterization.
+	 vec := Vector([ R.i + F.1 * (R.(i+Dimension(V))) :
+			 i in [1..Dimension(V)] ]);
+	 vec_bar := Vector([alpha(x) : x in Eltseq(vec)]);
+	 V`Q := (vec * ChangeRing(M, BaseRing(vec)), vec_bar);
+	 V`QStd := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
      end if;
 
      // Assign an ordering to the elements of the finite field.
@@ -247,10 +258,14 @@ procedure __initializePivot(V, k)
 		vec := i eq j select M[i] else M[i]+M[j];
 
 		// Multinomial corresponding to the i-th basis vector.
-		//	f := Evaluate(V`QStd, Eltseq(vec));
+		f := Evaluate(V`QStd, Eltseq(vec));
 
-		vec_bar := Vector([alpha(x) : x in Eltseq(vec)]);
-		f := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
+		// older - check compatibility
+		if IsUnitarySpace(V) then
+		    vec_bar := Vector([alpha(x) : x in Eltseq(vec)]);
+		    f2 := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
+		    assert f eq f2;
+		end if;
 
 		// Check each term of the resulting multinomial.
 		for term in Terms(f) do
@@ -310,11 +325,14 @@ procedure __initializePivot(V, k)
 	// Verify that we didn't screw up somewhere along the line.
 	for i in [1..k], j in [i..k] do
 		vec := i eq j select M[i] else M[i]+M[j];
-		//		assert Evaluate(V`QStd, Eltseq(vec)) eq 0;
-		vec_bar := ChangeRing(Vector([alpha(x) : x in Eltseq(vec)]),
+		assert Evaluate(V`QStd, Eltseq(vec)) eq 0;
+		// making sure we are compatible
+		if IsUnitarySpace(V) then
+		    vec_bar := ChangeRing(Vector([alpha(x) : x in Eltseq(vec)]),
 				      BaseRing(vec));
-		assert (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)),
-			vec_bar) eq 0;
+		    assert (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)),
+			    vec_bar) eq 0;
+		end if;
 	end for;
 
 	// Determine the free variables.

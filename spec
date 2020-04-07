@@ -1,4 +1,9 @@
+LieThry
 {
+  +LieThry.spec
+}
+{
+  
   io/saveload.m
 
   lattice/lattice.m

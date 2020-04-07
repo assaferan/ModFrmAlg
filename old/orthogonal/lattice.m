@@ -279,14 +279,15 @@ function pMaximalGram(L, pR : BeCareful := true, coeffs := [])
 		gens := Generators(idls[i]);
 
 		// Randomly choose a p-maximal vector.
+		if IsEmpty(coeffs) then
+		    coeffs := [Random(11)-5 : g in gens];
+                end if;
 		repeat
-		         if IsEmpty(coeffs) then
-			   coeffs := [Random(11)-5 : g in gens];
-                         end if;
-		         vec := &+[ g * coeffs[i] // (Random(11) - 5)
-				: g in gens ] * basis[i];
+		         vec := &+[ g * coeffs[1] // (Random(11) - 5)
+				    : g in gens ] * basis[i];
+			 coeffs := [Random(11)-5 : g in gens];
 		until not vec in pR * Module(L);
-
+		printf "coeffs = %o\n", coeffs;
 		// Verify that the vectors were chosen properly.
 		if BeCareful then
 			assert vec in Module(L) and not vec in pR * Module(L);
@@ -295,7 +296,7 @@ function pMaximalGram(L, pR : BeCareful := true, coeffs := [])
 		// Add this vector to the list.
 		Append(~vecs, vec);
 	end for;
-
+	
 	// The matrix of basis vectors.
 	basis := Matrix(vecs);
 

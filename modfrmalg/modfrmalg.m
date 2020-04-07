@@ -193,17 +193,35 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         return AlgebraicModularForms(G, innerForm);
 end intrinsic;
 
-intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng]) -> ModFrmAlg
+intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Fld],
+				 weight::GrpRep) -> ModFrmAlg
 {Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
+/* K := AbsoluteField(FieldOfFractions(BaseRing(innerForm)));
+  if Type(K) eq FldRat then
+      K := RationalsAsNumberField();
+  end if;
+*/
+  K := BaseRing(innerForm);
+  n := Nrows(innerForm);
+/*
+   cartan_type := (n mod 2 eq 1) select "B" cat IntegerToString((n-1) div 2) else
+		 "D" cat IntegerToString(n div 2);
+  O_n := GroupOfLieType(cartan_type cat " T1", K);
+*/
+  cartan_type := (n mod 2 eq 1) select "B" else "D";
+  O_n := GroupOfLieType(StandardRootDatum(cartan_type, n div 2), K);
+  return AlgebraicModularForms(O_n, innerForm, weight);
+end intrinsic;
+
+intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng]) -> ModFrmAlg
+{.}
   K := AbsoluteField(FieldOfFractions(BaseRing(innerForm)));
   if Type(K) eq FldRat then
       K := RationalsAsNumberField();
   end if;
   n := Nrows(innerForm);
-  cartan_type := (n mod 2 eq 1) select "B" cat IntegerToString((n-1) div 2) else
-		 "D" cat IntegerToString(n div 2);
-  O_n := GroupOfLieType(cartan_type cat " T1", K);
-  return AlgebraicModularForms(O_n, ChangeRing(innerForm,K));
+  W := TrivialRepresentation(GL(n,K),K);
+  return OrthogonalModularForms(ChangeRing(innerForm,K), W);
 end intrinsic;
 
 intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld],
@@ -263,13 +281,12 @@ intrinsic UnitaryModularForms(F::Fld, n::RngIntElt) ->ModFrmAlg
   return UnitaryModularForms(IdentityMatrix(F, n));
 end intrinsic;
 
-intrinsic UnitaryModularForms(F::Fld,
-				 n::RngIntElt,
-				    weight::SeqEnum[RngIntElt],
-					    char::RngIntElt) -> ModFrmAlg
-{.}
-  F := AbsoluteField(F);
-  if char ne 0 then
+function getWeightRep(weight, char, F, n)
+    F := AbsoluteField(F);
+    if Type(F) eq FldRat then
+	F := RationalsAsNumberField();
+    end if;
+    if char ne 0 then
       pR := Factorization(ideal<Integers(F)|char>)[1][1];
       Fq, mod_q := ResidueClassField(pR);
       GL_n_q := GroupOfLieType(StandardRootDatum("A",n-1), Fq);
@@ -287,21 +304,51 @@ intrinsic UnitaryModularForms(F::Fld,
       return foo;
       ", n, char);
       W := Pullback(V,f_desc, GL(n, F));
-  else
+    else
       // we would love to do that but Magma does not support that...
       /*
       GL_n := GroupOfLieType(StandardRootDatum("A",n-1), F);
       W := GroupRepresentation(GL_n, weight);
      */
-      if n eq 3 then
-	  W := getGL3HighestWeightRep(weight[1], weight[2], F);
+      if &and[w eq 0 : w in weight] then
+	  W := TrivialRepresentation(GL(n,F),F);
+      elif n eq 3 then
+	  W := getGL3HighestWeightRep(weight[1], weight[2], F); 
       else
 	  error "at the moment we have not implemented highest weight representations of this type";
       end if;
-  end if;
-  return UnitaryModularForms(F, n, W);
+    end if;
+    return W;
+end function;
+
+intrinsic UnitaryModularForms(F::Fld,
+			n::RngIntElt,
+			weight::SeqEnum[RngIntElt],
+			char::RngIntElt) -> ModFrmAlg
+{.}
+  W := getWeightRep(weight, char, F, n);
+  return UnitaryModularForms(BaseRing(W), n, W);
 end intrinsic;
 
+intrinsic UnitaryModularForms(F::Fld,
+			innerForm::AlgMatElt[Rng],
+			weight::SeqEnum[RngIntElt],
+			char::RngIntElt) -> ModFrmAlg
+{.}
+  n := Degree(Parent(innerForm));
+  W := getWeightRep(weight, char, F, n);
+  return UnitaryModularForms(ChangeRing(innerForm,BaseRing(W)), W);
+end intrinsic;
+
+intrinsic OrthogonalModularForms(F::Fld,
+			innerForm::AlgMatElt[Rng],
+			weight::SeqEnum[RngIntElt],
+			char::RngIntElt) -> ModFrmAlg
+{.}
+  n := Degree(Parent(innerForm));
+  W := getWeightRep(weight, char, F, n);
+  return OrthogonalModularForms(ChangeRing(innerForm,BaseRing(W)), W);
+end intrinsic;
 // Should also think how to get the isogeny in general,
 // and how it should affect calculations
 

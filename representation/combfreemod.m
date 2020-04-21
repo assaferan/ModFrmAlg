@@ -6,6 +6,8 @@ freeze;
                                                                             
    FILE: combfreemod.m (class for combinatorial free modules)
 
+   04/21/20 : Fixed bugs in ChangeRing.
+
    04/20/20 : Modified Print to overcome the difficulty of introducing line 
    	      breaks in printed strings
 
@@ -143,7 +145,7 @@ intrinsic ChangeRing(CFM::CombFreeMod, R::Rng) -> CombFreeMod
 {return the CFM with base ring changed to R.}
   params := [* *];
   if Type(Universe(CFM`names)) eq RngMPol then
-      Append(~params, [* <"NAMES", Names(Universe(CFM`Names))> *]);
+      Append(~params, <"NAMES", Names(Universe(CFM`names))>);
   end if;
   return CombinatorialFreeModule(R, CFM`names : params := params);
 end intrinsic;

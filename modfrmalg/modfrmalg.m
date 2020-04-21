@@ -10,6 +10,7 @@ freeze;
    Implementation file for the space of algebraic modular forms.
 
    04/21/20: Modified 'eq' to fix bugs when over a finite field.
+   	     Modified the OrthogonalMOdularForms constructor to normalize the field.
 
    04/20/20: Added normalizeField, for brevity.
 
@@ -201,16 +202,15 @@ intrinsic AlgebraicModularForms(G::GrpLie,
         return AlgebraicModularForms(G, innerForm);
 end intrinsic;
 
+forward normalizeField;
+
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Fld],
 				 weight::GrpRep) -> ModFrmAlg
 {Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
-/* K := AbsoluteField(FieldOfFractions(BaseRing(innerForm)));
-  if Type(K) eq FldRat then
-      K := RationalsAsNumberField();
-  end if;
-*/
-  K := BaseRing(innerForm);
+
+  K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
+  weight`G := GL(n,K);
 /*
    cartan_type := (n mod 2 eq 1) select "B" cat IntegerToString((n-1) div 2) else
 		 "D" cat IntegerToString(n div 2);
@@ -218,7 +218,7 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Fld],
 */
   cartan_type := (n mod 2 eq 1) select "B" else "D";
   O_n := GroupOfLieType(StandardRootDatum(cartan_type, n div 2), K);
-  return AlgebraicModularForms(O_n, innerForm, weight);
+  return AlgebraicModularForms(O_n, ChangeRing(innerForm,K), weight);
 end intrinsic;
 
 function normalizeField(R)

@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -8,6 +8,13 @@
    FILE: modfrmalg.m (Class of space of algebraic modular forms)
 
    Implementation file for the space of algebraic modular forms.
+
+   04/21/20: Modified 'eq' to fix bugs when over a finite field.
+
+   04/20/20: Added normalizeField, for brevity.
+
+   04/16/20: Added the intrinsic 'eq' to test equality between spaces 
+             of modular forms.
 
    04/01/20: Changed ModFrmAlgInit to compute the weight space, added
              verbose.
@@ -101,7 +108,7 @@ intrinsic AlgebraicModularForms(G::GrpLie,
   
         K := BaseRing(G);
         require IsField(K) : "Lie group must be defined over a field";
-// Should add more input checks when having erros
+// Should add more input checks when having errors
 	/*       K := AbsoluteField(K);
         if Type(K) eq FldRat then
            K := RationalsAsNumberField();
@@ -123,7 +130,8 @@ intrinsic AlgebraicModularForms(G::GrpLie,
            isogenyType := "O";
            V := AmbientReflexiveSpace(innerForm);
 	else if cartanType eq "A" then
-	   require not IsSplit(G) : "Group is not compact.";
+		 // should replace it by the actual real condition
+	   require (Rank(G) eq 1) or IsTwisted(G) : "Group is not compact.";
 	   _, cc := HasComplexConjugate(K);
            cc := FieldAutomorphism(K, cc);
            isogenyType := "U";
@@ -213,12 +221,17 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Fld],
   return AlgebraicModularForms(O_n, innerForm, weight);
 end intrinsic;
 
+function normalizeField(R)
+    K := AbsoluteField(FieldOfFractions(R));
+    if Type(K) eq FldRat then
+	K := RationalsAsNumberField();
+    end if;
+    return K;
+end function;
+
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng]) -> ModFrmAlg
 {.}
-  K := AbsoluteField(FieldOfFractions(BaseRing(innerForm)));
-  if Type(K) eq FldRat then
-      K := RationalsAsNumberField();
-  end if;
+  K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
   W := TrivialRepresentation(GL(n,K),K);
   return OrthogonalModularForms(ChangeRing(innerForm,K), W);
@@ -227,7 +240,7 @@ end intrinsic;
 intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld],
 			      weight::GrpRep) -> ModFrmAlg
 {Create the space of modular forms with respect to the unitary group stabilizing the Hermitian form given by innerForm.}
-  K := BaseRing(innerForm);
+  K := normalizeField(BaseRing(innerForm));
   _, cc := HasComplexConjugate(K);
   alpha := FieldAutomorphism(K, cc);
   F := FixedField(alpha);
@@ -252,7 +265,8 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld],
   SL_n := GroupOfLieType("A" cat IntegerToString(n-1), K : Isogeny:= "SC");
   A := AutomorphismGroup(SL_n);
   AGRP := GammaGroup(F, A);
-  grph_auts := [GraphAutomorphism(SL_n, x) : x in [Sym(2) | 1, (1,2)]];
+  rev_aut := Reverse([1..n-1]);
+  grph_auts := [GraphAutomorphism(SL_n, x) : x in [Sym(n-1) | 1, rev_aut]];
   ngens := NumberOfGenerators(AGRP`Gamma);
   c := OneCocycle(AGRP, [grph_auts[Order(AGRP`Gamma.i)] : i in [1..ngens]]);
 
@@ -263,7 +277,7 @@ end intrinsic;
 
 intrinsic UnitaryModularForms(innerForm::AlgMatElt[Fld]) -> ModFrmAlg
 {.}
-  K := BaseRing(innerForm);
+  K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
   weight := TrivialRepresentation(GL(n, K), K);
   return UnitaryModularForms(innerForm, weight);
@@ -282,7 +296,7 @@ intrinsic UnitaryModularForms(F::Fld, n::RngIntElt) ->ModFrmAlg
 end intrinsic;
 
 function getWeightRep(weight, char, F, n)
-    F := AbsoluteField(F);
+//    F := AbsoluteField(F);
     if Type(F) eq FldRat then
 	F := RationalsAsNumberField();
     end if;
@@ -326,8 +340,9 @@ intrinsic UnitaryModularForms(F::Fld,
 			weight::SeqEnum[RngIntElt],
 			char::RngIntElt) -> ModFrmAlg
 {.}
+  F := normalizeField(F);
   W := getWeightRep(weight, char, F, n);
-  return UnitaryModularForms(BaseRing(W), n, W);
+  return UnitaryModularForms(F, n, W);
 end intrinsic;
 
 intrinsic UnitaryModularForms(F::Fld,
@@ -335,9 +350,10 @@ intrinsic UnitaryModularForms(F::Fld,
 			weight::SeqEnum[RngIntElt],
 			char::RngIntElt) -> ModFrmAlg
 {.}
+  F := normalizeField(F);
   n := Degree(Parent(innerForm));
   W := getWeightRep(weight, char, F, n);
-  return UnitaryModularForms(ChangeRing(innerForm,BaseRing(W)), W);
+  return UnitaryModularForms(ChangeRing(innerForm,F), W);
 end intrinsic;
 
 intrinsic OrthogonalModularForms(F::Fld,
@@ -345,9 +361,10 @@ intrinsic OrthogonalModularForms(F::Fld,
 			weight::SeqEnum[RngIntElt],
 			char::RngIntElt) -> ModFrmAlg
 {.}
+  F := normalizeField(F);
   n := Degree(Parent(innerForm));
   W := getWeightRep(weight, char, F, n);
-  return OrthogonalModularForms(ChangeRing(innerForm,BaseRing(W)), W);
+  return OrthogonalModularForms(ChangeRing(innerForm,F), W);
 end intrinsic;
 // Should also think how to get the isogeny in general,
 // and how it should affect calculations
@@ -381,7 +398,7 @@ end intrinsic;
 
 intrinsic BaseRing(M::ModFrmAlg) -> FldOrd
 { The base ring of the space of algebraic modular forms. }
-	return M`K;
+      return M`K;
 end intrinsic;
 
 intrinsic InnerForm(M::ModFrmAlg) -> AlgMatElt
@@ -577,3 +594,53 @@ intrinsic CuspidalHeckeOperator(M::ModFrmAlg, p::RngIntElt) -> AlgMatElt
 	return T;
 end intrinsic;
 
+intrinsic 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
+{.}
+  K1 := BaseRing(M1);
+  K2 := BaseRing(M2);
+  isom_fields, psi := IsIsomorphic(K1, K2);
+  if not isom_fields then return false; end if;
+  // Checking the groups - this is quite tricky when the group
+  // is twisted
+  isom_G, psi_G := IsIsomorphic(BaseRing(M1`G), BaseRing(M2`G));
+  if not isom_G then return false; end if;
+  if IsTwisted(M1`G) then
+      if not IsTwisted(M2`G) then return false; end if;
+      base_grp := GroupOfLieType(RootDatum(M1`G`c`A`A`G), BaseRing(M2`G));
+      A := AutomorphismGroup(base_grp);
+      fixed_field := sub<BaseRing(M2`G) |
+			[psi_G(x) : x in Generators(M1`G`c`A`k)]>;
+      images := [a(BaseRing(M2`G)!(M2`G`c`A`k.1)) :
+		 a in Automorphisms(BaseRing(M2`G))];
+      if BaseRing(M2`G)!(fixed_field.1) notin images
+	  then return false; end if;
+      AGRP := GammaGroup(fixed_field, A);
+      grph_auts := [GraphAutomorphism(base_grp, x) :
+		    x in [img`Data`g : img in M1`G`c`imgs]];
+      c := OneCocycle(AGRP, grph_auts);
+      if M2`G ne TwistedGroupOfLieType(c) then return false; end if;
+  elif not (ChangeRing(M1`G, BaseRing(M2`G)) eq M2`G) then
+      return false;
+  end if;
+  if not (ChangeRing(M1`W, BaseRing(M2`W)) eq M2`W) then return false; end if;
+  keys := Keys(M1`Hecke`Ts);
+  if keys ne Keys(M2`Hecke`Ts) then return false; end if;
+  for k in keys do
+      primes1 := [p : p in Keys(M1`Hecke`Ts[k])];
+      primes2 := [ideal<Integers(K2)|[psi(K1!x) : x in Generators(p)]> :
+		  p in primes1];
+      if Set(primes2) ne Keys(M2`Hecke`Ts[k]) then return false; end if;
+      for idx in [1..#primes1] do
+	  p1 := primes1[idx];
+	  p2 := primes2[idx];
+	  if ChangeRing(M1`Hecke`Ts[k][p1], BaseRing(M2`W)) ne
+	     M2`Hecke`Ts[k][p2] then
+	      return false;
+	  end if;
+      end for;
+  end for;
+  if M1`Hecke`Eigenforms ne M2`Hecke`Eigenforms then
+      return false;
+  end if;
+  return true;
+end intrinsic;

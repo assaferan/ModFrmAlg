@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -9,6 +9,12 @@
 
    Implementation file for elements belong to the space of algebraic modular
    forms. the space of algebraic modular forms.
+
+   04/21/20: Modified 'eq' to handle also finite field case.
+
+   04/17/20 : Fixed a bug in HeckeEigensystem.
+
+   04/16/20: Added intrinsic 'eq' to compare two modular forms.
 
    04/02/20: In HeckeEigensystem - verified that the base ring of the 
              Hecke operators is a subfield of the base ring of the 
@@ -181,7 +187,8 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
 
 		// Promote the Hecke matrix to the base ring of the eigenform.
 		// Magma doesn't do IsSubfield(QQ,QQ)
-		if Type(BaseRing(Ts[i])) ne FldRat then
+		if (Type(BaseRing(Ts[i])) ne FldRat) and
+		    (Type(BaseRing(f`vec)) ne FldRat) then
 		    _ := IsSubfield(BaseRing(Ts[i]), BaseRing(f`vec));
 		end if;
 		T := ChangeRing(Ts[i], BaseRing(f`vec));
@@ -375,3 +382,76 @@ intrinsic ModularForm(f::ModFrmAlgElt) -> ModFrmElt
 	return [];
 end intrinsic;
 
+intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
+{.}
+  L1 := BaseRing(f1`vec);
+  L2 := BaseRing(f2`vec);
+  if IsFinite(L1) then
+      isom := IsFinite(L2) and #L1 eq #L2;
+      char := Characteristic(L2);
+      if #L2 eq char then
+	  aut := [hom<L2->L2|>];
+      else
+	  baseField := FiniteField(char);
+	  _, aut, _ := AutomorphismGroup(L2, baseField);
+      end if;
+  else
+      isom, _ := IsIsomorphic(L1, L2);
+      aut := Automorphisms(L2);
+  end if;
+  if not isom then return false; end if;
+  f1_changed := ChangeRing(f1`vec, L2);
+  f1_vecs := [Vector([a(x) : x in Eltseq(f1_changed)]) :
+	      a in aut];
+  if f2`vec notin f1_vecs then return false; end if;
+  K1 := BaseRing(f1`M);
+  K2 := BaseRing(f2`M);
+  isom, psi := IsIsomorphic(K1, K2);
+  if not isom then return false; end if;
+  
+  if assigned f1`Eigenvalues then
+      if not assigned f2`Eigenvalues then
+	  return false;
+      end if;
+      keys := Keys(f1`Eigenvalues);
+      if keys ne Keys(f2`Eigenvalues) then return false; end if;
+
+      evs := [[HeckeEigensystem(f, dim) : dim in keys] : f in [f1,f2]];  
+
+      for k in keys do
+	  if IsEmpty(evs[1][k]) then
+	      if not IsEmpty(evs[2][k]) then return false; end if;
+	      continue;
+	  end if;
+
+	  for j in [1..#evs[1][k]] do
+	      F := [* FieldOfFractions(Parent(ev[k][j]))  : ev in evs *];
+	      for ev_idx in [1..#evs] do
+		  if not IsFinite(F[ev_idx]) then
+		      F[ev_idx] := AbsoluteField(F[ev_idx]);
+		  end if;
+	      end for;
+
+	      if IsFinite(F[1]) then
+		  if not IsFinite(F[2]) then return false; end if;
+		  L := FiniteField(LCM(#F[1], #F[2]));
+		  embs := [hom< F[1] -> L |>];
+	      else
+		  if IsFinite(F[2]) then return false; end if;
+		  L := Compositum(F[1], F[2]);
+		  zeta := PrimitiveElement(F[1]);
+		  roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+		  embs := [hom< F[1] -> L | r> : r in roots];
+	      end if;
+	      
+	      if not exists(emb){emb : emb in embs |
+			     emb(evs[1][k][j]) eq evs[2][k][j]} then
+		  return false;
+	      end if;
+	  end for;
+      end for;
+  elif assigned f2`Eigenvalues then
+      return false;
+  end if;
+  return true;
+end intrinsic;

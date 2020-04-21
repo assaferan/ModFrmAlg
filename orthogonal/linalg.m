@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -11,6 +11,8 @@
 
    !!! TODO : move to the utils folder
 
+   04/08/20 : Modified to handle finite fields as well.
+
    04/01/20 : Started preparation to adjust for arbitrary characteristic.
               Not much of a change yet.
 
@@ -20,8 +22,6 @@
               absolute fields. (over the rationals)
  
  ***************************************************************************/
-
-// import "../utils/helper.m" : MVM;
 
 function Decompose(T, t)
     // The characteristic polynomial of this matrix.
@@ -35,12 +35,9 @@ function Decompose(T, t)
 
     for data in fs do
 	// Number field associated to one of the irreducible factors.
-	// TODO: Fix this. Sometimes crashes.
-	//K := NumberField(ChangeRing(data[1], Rationals()));
-	//K := NumberField(data[1]);
-	K := ext< BaseRing(data[1]) | data[1] >;
-	// TODO: Keep an eye out for this, make sure it works.
 	
+	K := ext< BaseRing(data[1]) | data[1] >;
+
 	// The eigenvalue associated to this factor.
 	if Degree(data[1]) eq 1 then
 	    eig := -Evaluate(data[1], 0);
@@ -64,22 +61,15 @@ function Decompose(T, t)
 	// Promote the ambient matrix to the current number field.
 	tt := ChangeRing(t, K);
 	
-	// Add eigenspace to the list of spaces and flag it depending
-	//  on whether this eigenspace is irreducible.
-	// !!! Problem - over finite field we might have generalized eigenspaces.
-	// probably have to replace by another decomposition function...
+
 	
 	if Characteristic(BaseRing(T)) eq 0 then
-	    // fa := data[1];
 	    fT := tt-eig*id;
 	else
-	    //	    fa := data[1]^data[2];
 	    fT := (tt-eig*id)^data[2];
 	end if;
-//	fT := Evaluate(fa, tt);
 
 	Append(~spaces,
-//	       	       < Nullspace(Transpose(tt)-eig*id), data[2] eq 1 >);
 	       < Nullspace(fT), data[2] eq 1 >);
     end for;
     
@@ -134,30 +124,6 @@ intrinsic EigenspaceDecomposition(array::Assoc : Warning := true)
 	  
 	  // Dimension of this space.
 	  dim := Dimension(space);
-/*	  
-	  // The basis of this space.
-	  basis := Basis(space);
-	  
-	  // The pivots for this space.
-	  pivots := [ 0 : v in basis ];
-	  for j in [1..#basis] do
-	      repeat pivots[j] +:= 1;
-	      until basis[j][pivots[j]] ne 0;
-	  end for;
-
-	  // Modify the base ring in preparation for matrix-
-	  //  vector multiplication.
-	  tempT := ChangeRing(Ts[idx], BaseRing(space));
-	  
-	  // Form a "tall" matrix which corresponds to the column
-	  //  vectors AFTER we act tempT upon the eigenbasis.
-	  T := Transpose(Matrix([ Eltseq(MVM(tempT, v))
-				  : v in basis ]));
-	  
-	  // Extract the submatrix associated to this subspace.
-	  T := Submatrix(T, pivots, [1..dim]);
-*/
-	  
 
 	  B := BasisMatrix(space);
 	  tempT := ChangeRing(Ts[idx], BaseRing(space));

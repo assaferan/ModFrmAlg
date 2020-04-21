@@ -1,7 +1,3 @@
-LieThry
-{
-  +LieThry.spec
-}
 {
   
   io/saveload.m
@@ -26,7 +22,7 @@ LieThry
   representation/combfreemod.m
   representation/representation.m
   
-  tests/unitary-tests.m
+  tests/tests.m
   
   unitary/fieldaut.m
   unitary/stdbasis.m

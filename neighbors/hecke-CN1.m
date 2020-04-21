@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -6,6 +6,10 @@
                             Eran Assaf                                 
                                                                             
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
+
+   04/14/20: Added the parameter UseLLL.
+ 
+   04/13/20: Added Time Estimates for the computations.
 
    03/26/20: Added some verbose print outs for debugging and profiling.
              Moved the calculation of the space from the Hecke operator
@@ -29,10 +33,10 @@ import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor,
 	GetNextNeighbor, SkipToNeighbor;
 
 procedure processNeighbor(~nProc, invs, ~hecke, idx :
-			  BeCareful := true, weight := 1)
+			  BeCareful := true, UseLLL := false, weight := 1)
     // Build the neighbor lattice corresponding to the
     //  current state of nProc.
-    nLat := BuildNeighbor(nProc : BeCareful := BeCareful);
+    nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
 
     // Compute the invariant of the neighbor lattice.
     inv := Invariant(nLat);
@@ -77,9 +81,64 @@ procedure processNeighbor(~nProc, invs, ~hecke, idx :
 			     : BeCareful := BeCareful);
 end procedure;
 
-// TODO: Add estimate functionality (mirror the implementation in hecke-QQ.m).
+procedure printEstimate(start, ~count, ~elapsed,
+			fullCount, pR, k :
+			increment := 1,
+			printSkip := 1000,
+			printOffset := 500,
+			timeSkip := 5)
+
+    // Increment counter.
+    count +:= increment;
+
+    last_elapsed := elapsed;
+
+    // Elapsed real time.
+    new_elapsed := Realtime() - start;
+    
+    if (count mod printSkip eq printOffset) or
+       (new_elapsed gt last_elapsed + timeSkip) then
+
+	// updating last time we printed an estimate
+	elapsed := new_elapsed;
+
+	// Seconds per neighbor computation.
+	t := RealField()!(elapsed / count);
+
+	// Number of neighbors left to compute.
+	remaining := fullCount - count;
+
+	// Estimate time remaining (in seconds).
+	estimate := t * remaining;
+
+	// Minutes remaining.
+	mins := Floor(estimate / 60);
+
+	// Seconds (modulo minutes) remaining.
+	secs := Floor(estimate - mins*60);
+
+	// Hours remaining.
+	hours := Floor(mins / 60);
+    
+	// Minutes (modulo hours) remaining.
+	mins -:= hours * 60;
+    
+	// Days remaining.
+	days := Floor(hours / 24);
+	
+	// Hours (modulo days) remaining.
+	hours -:= days * 24;
+
+	// Display estimate.
+	printf "Estimated time remaining for T_%o^%o:"
+	       cat " %od %oh %om %os\n",
+	       Norm(pR), k, days, hours, mins, secs;
+    end if;
+end procedure;
+
 function HeckeOperatorTrivialWeightCN1(M, pR, k
 				       : BeCareful := true,
+					 UseLLL := false,
 				         Estimate := false,
 				         Orbits := false)
 	// The genus representatives.
@@ -100,13 +159,25 @@ function HeckeOperatorTrivialWeightCN1(M, pR, k
 	Q := ReflexiveSpace(Module(M));
 	n := Dimension(Q);
 
+	fullCount := dim * NumberOfNeighbors(M, pR, k);
+	count := 0;
+	elapsed := 0;
+	start := Realtime();
+	
 	for idx in [1..dim] do
 		// The current isometry class under consideration.
 		L := reps[idx];
 
 		// Build neighboring procedure for this lattice.
 		nProc := BuildNeighborProc(L, pR, k
-			: BeCareful := BeCareful);
+					   : BeCareful := BeCareful);
+
+		if GetVerbose("AlgebraicModularForms") ge 1 then
+		    printf "Computing %o%o-neighbors for isometry class "
+			cat "representiative #%o...\n", pR,
+			   k eq 1 select "" else "^" cat IntegerToString(k),
+			   idx;
+		end if;
 
 		if Orbits then
 		    // The affine vector space.
@@ -141,12 +212,25 @@ function HeckeOperatorTrivialWeightCN1(M, pR, k
 			nProc := SkipToNeighbor(nProc, Basis(orbit[1]));
 			processNeighbor(~nProc, invs, ~hecke, idx :
 					BeCareful := BeCareful,
+					UseLLL := UseLLL,
 					weight := orbit[2]);
+			// !!! TODO : Estimate by the total number of orbits
+			if Estimate then
+			    printEstimate(start, ~count, ~elapsed,
+					  fullCount, pR, k
+					 : increment := orbit[2]);
+			end if;
 		    end for;
 		else
 		    while nProc`isoSubspace ne [] do
 			processNeighbor(~nProc, invs, ~hecke, idx :
-				    BeCareful := BeCareful);
+					BeCareful := BeCareful,
+					UseLLL := UseLLL);
+			
+			if Estimate then
+			    printEstimate(start, ~count, ~elapsed,
+					  fullCount, pR, k);
+			end if;
 		    end while;
 		end if;
 	end for;
@@ -207,10 +291,12 @@ end procedure;
 
 procedure processNeighborWeight(~nProc, invs, ~hecke,
 				idx, H :
-				BeCareful := true, weight := 1)
+				BeCareful := true,
+				UseLLL := false,
+				weight := 1)
     // Build the neighbor lattice corresponding to the
     //  current state of nProc.
-    nLat := BuildNeighbor(nProc : BeCareful := BeCareful);
+    nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
 
     if GetVerbose("AlgebraicModularForms") ge 2 then
 	printf "Processing neighbor corresponding to isotropic subspace ";
@@ -280,6 +366,7 @@ end procedure;
 
 function HeckeOperatorCN1(M, pR, k
 			  : BeCareful := true,
+			    UseLLL := false,
 			    Estimate := false,
 			    Orbits := false)
     
@@ -301,11 +388,12 @@ function HeckeOperatorCN1(M, pR, k
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
+    fullCount := #M`H * NumberOfNeighbors(M, pR, k);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+	
     for idx in [1..#M`H] do
-	if GetVerbose("AlgebraicModularForms") ge 1 then	
-	    printf "Going over p-neighbors of genus rep. no. %o...\n",
-		   idx;
-	end if;
 	// The current isometry class under consideration.
 	L := reps[idx];
 
@@ -313,6 +401,13 @@ function HeckeOperatorCN1(M, pR, k
 	nProc := BuildNeighborProc(L, pR, k
 				   : BeCareful := BeCareful);
 
+	if GetVerbose("AlgebraicModularForms") ge 1 then
+	    printf "Computing %o%o-neighbors for isometry class "
+		   cat "representiative #%o...\n", pR,
+		   k eq 1 select "" else "^" cat IntegerToString(k),
+		   idx;
+	end if;
+	
 	if Orbits then
 	    // The affine vector space.
 	    V := nProc`L`Vpp[pR]`V;
@@ -345,13 +440,24 @@ function HeckeOperatorCN1(M, pR, k
 		// Skip to the neighbor associated to this orbit.
 		nProc := SkipToNeighbor(nProc, Basis(orbit[1]));
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
-					BeCareful := BeCareful,
-					weight := orbit[2]);
+				      BeCareful := BeCareful,
+				      UseLLL := UseLLL,
+				      weight := orbit[2]);
+		if Estimate then
+		    printEstimate(start, ~count, ~elapsed,
+				  fullCount, pR, k :
+				  increment := orbit[2]);
+		end if;
 	    end for;
 	else
 	    while nProc`isoSubspace ne [] do
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H :
-				      BeCareful := BeCareful);
+				      BeCareful := BeCareful,
+				      UseLLL := UseLLL);
+		if Estimate then
+		    printEstimate(start, ~count, ~elapsed,
+				  fullCount, pR, k);
+		end if;
 	    end while;
 	end if;
     end for;

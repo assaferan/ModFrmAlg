@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 /****-*-magma-******a********************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
@@ -314,7 +314,7 @@ function HyperbolizeForm(M, alpha)
 		newBasis := Id(GL(V));
 		newBasis :=
 			InsertBlock(newBasis, subBasis, lowerDim+1, lowerDim+1);
-                basis := alpha(newBasis) * basis;
+                basis := newBasis * basis;
 	end if;
 
 	return gram, basis;

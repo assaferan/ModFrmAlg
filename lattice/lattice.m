@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 /****-*-magma-******a********************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
@@ -7,6 +7,9 @@
    FILE: lattice.m
 
    Implementation file for lattice routines
+
+   04/20/2020 : Modified LatticeWithBasis to handle bases given as a nonsquare 
+                matrix, and fixed a bug in PullUp.
 
    03/05/2020 : Created this file as a copy of the one from othogonal package.
                 Replaced quadratic spaces by reflexive spaces.
@@ -153,7 +156,7 @@ intrinsic StandardLattice(rfxSpace::RfxSpace) -> ModDedLat
 	return L;
 end intrinsic;
 
-intrinsic LatticeWithBasis(rfxSpace::RfxSpace, basis::AlgMatElt) -> ModDedLat
+intrinsic LatticeWithBasis(rfxSpace::RfxSpace, basis::Mtrx) -> ModDedLat
 { Construct the lattice with the specified basis given by the rows of the
 matrix provided. }
 	// Make sure that the base ring of the reflexive space and the base
@@ -820,7 +823,7 @@ intrinsic PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat :
   
   if BeCareful then
     alpha := Involution(ReflexiveSpace(Lambda));
-    print "gV maps Pi into Lambda?", &and[x*ans in Module(Lambda) :
+    print "gV maps Pi into Lambda?", &and[ChangeRing(x,L)*ans in Module(Lambda) :
 					x in PiZZ`basisR];
     print "gV respects the inner product?", InnerProductMatrix(V) eq ans*InnerProductMatrix(V)*alpha(Transpose(ans));
   end if;

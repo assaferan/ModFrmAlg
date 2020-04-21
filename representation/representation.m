@@ -1,10 +1,15 @@
-//freeze;
+freeze;
 /****-*-magma-**************************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
                             Eran Assaf                                 
                                                                             
    FILE: representation.m (class for group representations)
+
+   04/20/20: Changed pullback to saveh the description intead of the function.
+
+   04/13/20: Modified DimensionOfHighestWeightModule, as it is not supported 
+             in newer versions of Magma.
 
    04/03/20: Added references to original representation in cases of
              dual and symmetric representations. Also added a flag for
@@ -162,17 +167,10 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
       V`symmetric := param_array["SYMMETRIC"];
   end if;
 
-  //  V`action := action;
   V`action_desc := action_desc;
   action := eval action_desc;
   V`action := map< CartesianProduct(V`G, [1..Dimension(V`M)]) -> V`M |
-		 x :-> action(x[1], x[2], V)>;
-/*
-  require (Domain(V`action) eq CartesianProduct(G, [1..Dimension(M)])) and
-	  (Codomain(V`action) eq M) :
-	"action should have domain G x [1..Dimension(M)], and codomain M.";
-*/
-  
+		 x :-> action(x[1], x[2], V)>;  
   V`act_mats := AssociativeArray();
   V`known_grps := [sub<V`G|1>];
   V`act_mats[G!1] := IdentityMatrix(BaseRing(V`M), Dimension(V`M));
@@ -251,20 +249,7 @@ intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
     AssignNames(~R_X, V`M`names);
     S := MonomialsOfDegree(R_X, n);
     M := CombinatorialFreeModule(R, S);
-//  gens := RModule(R_X, Rank(V))!SetToSequence(MonomialsOfDegree(R_X,1));
-  /*
-  function action(g,m)
-      coeffs := [RModule(R_X, Rank(V)) | Eltseq(g * V.i) : i in [1..Dimension(V)]];
-      ys := Vector(gens) * Transpose(Matrix(coeffs));
-      ans := Evaluate(S[m], Eltseq(ys));
-      ans_coeffs, mons := CoefficientsAndMonomials(ans);
-      idxs := [Index(mons, name) : name in M`names];
-      return &+[ans_coeffs[idxs[i]] * M.i : i in [1..#idxs] | idxs[i] ne 0];
-  end function;
-  a := map< CartesianProduct(V`G, [1..Dimension(M)]) -> M |
-	  x :-> action(x[1], x[2]) >;
- */
-  a := Sprintf("
+    a := Sprintf("
   function action(g,m,V)
       R := Universe(V`M`names);
       gens := RModule(R, Ngens(R))![R.i : i in [1..Ngens(R)]];
@@ -285,12 +270,6 @@ intrinsic DualRepresentation(V::GrpRep) -> GrpRep
   R := BaseRing(V);
   names := [Sprintf("%o^*",b) : b in Basis(V)]; 
   M := CombinatorialFreeModule(R, names);
-  /*
-  function action(g,m)
-      v := V!Eltseq(M.m);
-      return M!(Eltseq(Transpose(g)^(-1) * v));
-  end function;
-  a := map< CartesianProduct(V`G, [1..Dimension(M)]) -> M | x :-> action(x[1], x[2]) >;*/
   a := Sprintf("
   function action(g,m,V)
       v := (V`dual)!Eltseq((V`M).m);
@@ -306,12 +285,6 @@ intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
   R := BaseRing(V);
   names := [Sprintf("<%o, %o>", v, w) : v in V`M`names, w in W`M`names];
   M := CombinatorialFreeModule(R, names);
-/*  function action(g,m)
-      vecs := [Vector(Eltseq(g*n)) : n in M`names[m]];
-      return M!(TensorProduct(vecs[1], vecs[2]));
-  end function;
-  a := map< CartesianProduct(V`G, [1..Dimension(M)]) -> M |
-	  x :-> action(x[1], x[2]) >; */
   a := Sprintf("
   function action(g,m,V)
       ops := [(V`tensor_product[i]).(V`M`names[m][i]) : i in [1..2]];
@@ -345,7 +318,7 @@ group homomorphism f. Does not verify that f is a group homomorphism}
   return action;
   ", f_desc, V`action_desc);
   ret := GroupRepresentation(G, M, action :
-			     params := [* <"PULLBACK", <V, f> > *]);
+			     params := [* <"PULLBACK", <V, f_desc, H> > *]);
 //  ret`pullback := < V, f >;
   return ret;
 end intrinsic;
@@ -533,7 +506,7 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
   // we don't record anything, just compute from the underlying structure
   if assigned V`pullback then
       W := V`pullback[1];
-      f := V`pullback[2];
+      f := (eval V`pullback[2])(V`pullback[3]);
       return getMatrixAction(W, f(g));
   end if;
   if assigned V`mat_to_elt then
@@ -645,8 +618,20 @@ intrinsic 'eq'(V1::GrpRep, V2::GrpRep) -> BoolElt
 {.}
   // In theory, we could have equivalent action descriptions
   // but we cannot really check this
-  return V1`M eq V2`M and V1`G eq V2`G and
-         Split(V1`action_desc, " \t\n") eq Split(V2`action_desc, " \t\n");
+  R1 := BaseRing(V1`M);
+  R2 := BaseRing(V2`M);
+  if IsFinite(R1) then
+      isom := (R1 eq R2);
+  else
+      isom := IsIsomorphic(R1, R2);
+  end if;
+  if (not isom) or (ChangeRing(V1`M, R2) ne V2`M) then
+      return false;
+  end if;
+  // should find something better here.
+  // for some reason can't change ring for these groups
+  if Sprintf("%o",V1`G) ne Sprintf("%o", V2`G) then return false; end if;
+  return Split(V1`action_desc, " \t\n") eq Split(V2`action_desc, " \t\n");
 end intrinsic;
 
 intrinsic Hash(V::GrpRep) -> RngIntElt
@@ -957,6 +942,7 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
   mats := [std_rep(x) : x in AlgebraicGenerators(G)];
   mat_grp := sub< GL_std | mats>;
   V`G := mat_grp;
+  // This wouldn't work in characteristic 0
   word_map := InverseWordMap(mat_grp);
   G_map := hom<Codomain(word_map) -> G | AlgebraicGenerators(G)>;
   if not IsSemisimple(G) then
@@ -976,7 +962,8 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
   V`mat_to_elt := word_map * G_map;
   V`weight := HighestWeightRepresentation(Codomain(V`mat_to_elt),hw);
   
-  d := DimensionOfHighestWeightModule(RootDatum(G), hw);
+  // d := DimensionOfHighestWeightModule(RootDatum(G), hw);
+  d := Degree(Codomain(V`weight));
   names := ["v" cat IntegerToString(n) : n in [1..d]];
   V`M := CombinatorialFreeModule(BaseRing(G), names);
   V`act_mats := AssociativeArray();

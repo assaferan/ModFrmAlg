@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -6,6 +6,11 @@
                             Eran Assaf                                 
                                                                             
    FILE: isotropic.m (class for tracking computation of isotropic subspaces)
+
+   04/14/20: Added formulae for the number of isotropic subspaces for unitary
+             spaces.
+
+   04/10/20: Fixed bugs in computations for inert primes and mod 2.
 
    03/10/20: added the intrinic BuildTrivialReflexiveSpace, 
    for the split primes in the unitary case, where all lines mod p are isotropic 
@@ -162,11 +167,11 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
 	 F := BaseRing(V);
 	 R := PolynomialRing(F, 2 * Dimension(V));
 	 gens := GeneratorsSequence(R);
-	 alpha := hom<R -> R | V`Involution, gens>;
+	 alpha_R := hom<R -> R | V`Involution, gens>;
 	 // Initialize matrix that will determine parameterization.
 	 vec := Vector([ R.i + F.1 * (R.(i+Dimension(V))) :
 			 i in [1..Dimension(V)] ]);
-	 vec_bar := Vector([alpha(x) : x in Eltseq(vec)]);
+	 vec_bar := Vector([alpha_R(x) : x in Eltseq(vec)]);
 	 V`Q := (vec * ChangeRing(M, BaseRing(vec)), vec_bar);
 	 V`QStd := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
      end if;
@@ -204,8 +209,7 @@ procedure __initializePivot(V, k)
 	    gens := GeneratorsSequence(R);
 	    alpha := hom<R -> R | V`Involution, gens>;
 	    // Initialize matrix that will determine parameterization.
-	    M := Matrix(R, k, Dimension(V), [ R.i + F.1 * (R.(i+rank)) :
-					      i in [1..rank] ]);
+	    M := Matrix(R, k, Dimension(V), [R.i + F.1 * (R.(i+rank)) : i in [1..rank] ]);
 	else
 	    // Multivariant polynomial ring used to determine parameterization.
 	    R := PolynomialRing(F, rank);
@@ -254,39 +258,49 @@ procedure __initializePivot(V, k)
 	row := 1;
 
 	for i in [1..k], j in [i..k] do
-		// The appropriate vector that we want to be isotropic.
-		vec := i eq j select M[i] else M[i]+M[j];
+	    // The appropriate vector that we want to be isotropic.
+	    vec := i eq j select M[i] else M[i]+M[j];
 
-		// Multinomial corresponding to the i-th basis vector.
-		f := Evaluate(V`QStd, Eltseq(vec));
-
-		// older - check compatibility
-		if IsUnitarySpace(V) then
-		    vec_bar := Vector([alpha(x) : x in Eltseq(vec)]);
-		    f2 := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
-		    assert f eq f2;
-		end if;
-
-		// Check each term of the resulting multinomial.
-		for term in Terms(f) do
-			if Degree(term) eq 2 then
-				// Degree 2 terms are inhomogenous.
-				mat[row][cols] -:= term;
-			else
-				// Otherwise we have a linear term.
-			    // val, mono := Contpp(term);
-			    vals, monos := CoefficientsAndMonomials(term);
-			    val := vals[1]; mono := monos[1];
-			    coord := &+[ mono eq R.n select n else 0
-					 : n in [1..Rank(R)] ];
-
-			    // And so fill in the matrix accordingly.
-			    mat[row,coord] := val;
-			end if;
+	    if IsUnitarySpace(V) then
+		param_vars := [[],[]];
+		for idx in [1..Dimension(V)] do
+		    coeffs, monoms := CoefficientsAndMonomials(vec[idx]);
+		    param_coeffs := [Eltseq(x) : x in coeffs];
+		    if vec[idx] eq 0 then
+			params := [R!0,R!0];
+		    else
+			params := [&+[param_coeffs[i][j] * monoms[i] : i in [1..#monoms]] : j in [1..2]];
+		    end if;
+		    Append(~param_vars[1], R!params[1]);
+		    Append(~param_vars[2], R!params[2]);
 		end for;
+		f := Evaluate(V`QStd, param_vars[1] cat param_vars[2]);
+	    else
+		f := Evaluate(V`QStd, Eltseq(vec));
+	    end if;
 
-		// Move on to the next row.
-		row +:= 1;
+	    // Check each term of the resulting multinomial.
+	    if f ne 0 then
+		for term in Terms(f) do
+		    if Degree(term) eq 2 then
+			// Degree 2 terms are inhomogenous.
+			mat[row][cols] -:= term;
+		    else
+			// Otherwise we have a linear term.
+			// val, mono := Contpp(term);
+			vals, monos := CoefficientsAndMonomials(term);
+			val := vals[1]; mono := monos[1];
+			coord := &+[ mono eq R.n select n else 0
+				     : n in [1..Rank(R)] ];
+		    
+			// And so fill in the matrix accordingly.
+			mat[row,coord] := val;
+		    end if;
+		end for;
+	    end if;
+	    
+	    // Move on to the next row.
+	    row +:= 1;
 	end for;
 
 	// Compute the Echelon form of the matrix.
@@ -324,15 +338,25 @@ procedure __initializePivot(V, k)
 
 	// Verify that we didn't screw up somewhere along the line.
 	for i in [1..k], j in [i..k] do
-		vec := i eq j select M[i] else M[i]+M[j];
-		assert Evaluate(V`QStd, Eltseq(vec)) eq 0;
-		// making sure we are compatible
-		if IsUnitarySpace(V) then
-		    vec_bar := ChangeRing(Vector([alpha(x) : x in Eltseq(vec)]),
-				      BaseRing(vec));
-		    assert (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)),
-			    vec_bar) eq 0;
-		end if;
+	    vec := i eq j select M[i] else M[i]+M[j];
+	    if IsUnitarySpace(V) then
+		param_vars := [[],[]];
+		for idx in [1..Dimension(V)] do
+		    coeffs, monoms := CoefficientsAndMonomials(Numerator(vec[idx]));
+		    param_coeffs := [Eltseq(x) : x in coeffs];
+		    if vec[idx] eq 0 then
+			params := [R!0, R!0];
+		    else
+			params := [&+[param_coeffs[i][j] * monoms[i] : i in [1..#monoms]] : j in [1..2]];
+		    end if;
+		    Append(~param_vars[1], R!params[1]);
+		    Append(~param_vars[2], R!params[2]);
+		end for;
+		f := Evaluate(V`QStd, param_vars[1] cat param_vars[2]);
+	    else
+		f := Evaluate(V`QStd, Eltseq(vec));
+	    end if;
+	    assert f eq 0;
 	end for;
 
 	// Determine the free variables.
@@ -558,36 +582,64 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	// The cardinality of the residue class field.
 	q := #F;
 
-	// The underlying quadratic space.
-	Q := QuadraticSpace(Module(M));
+	// The underlying reflexive space.
+	Q := ReflexiveSpace(Module(M));
 
-	// The dimension of the quadratic space.
+	// The dimension of the reflexive space.
 	n := Dimension(Q);
 
 	// An auxiliary integer used in our formulas.
 	m := Integers()!( n mod 2 eq 1 select (n-1)/2 else n/2 );
 
-	// Compute the number of isotropic subspaces.
-	if n mod 2 eq 1 then
-		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
-			&*[ q^i-1 : i in [1..k] ];
-	elif IsSquare(F!-1) then
-		if m eq k then
-			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] /
-				&*[ q^i-1 : i in [1..k-1] ];
-		else
-			count := (q^m-1) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
-				(q^(m-k)-1) / &*[ q^i-1 : i in [1..k] ];
-		end if;
+	if (SpaceType(Q) eq "Hermitian") and (RamificationIndex(pR) eq 1) then
+	    alpha := Involution(Q);
+	    if alpha(pR) ne pR then
+		// pR splits
+		count := (q^n - 1) div (q - 1);
+	    else
+		// pR is inert
+		_, q := IsSquare(q);
+		// formula from J.B.Derr "Stabilizers of isotropic subspaces in classical groups",
+		// Corollary 2 with d = 0, a,b,c = 0,k,0
+		count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1)) : i in [0..k-1] ] div
+			 &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
+	    end if;
 	else
+
+	    // if unitary and ramified, the residual space is orthogonal
+		
+	    // Compute the number of isotropic subspaces.
+	    if n mod 2 eq 1 then
+		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
+			 &*[ q^i-1 : i in [1..k] ];
+	    // This should be according to the Witt Index - check that it coincides
+	    elif IsSquare(F!-1) then
+		if m eq k then
+		    if k eq 1 then
+			count := 2 * (q-1);
+		    else
+			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] /
+				 &*[ q^i-1 : i in [1..k-1] ];
+		    end if;
+		else
+		    count := (q^m-1) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
+			     (q^(m-k)-1) / &*[ q^i-1 : i in [1..k] ];
+		end if;
+	    else
 		e := IsEven(m+1) select 1 else -1;
 		if m eq k then
+		    // to handle the empty product
+		    if k eq 1 then
+			count := 0;
+		    else
 			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] *
-				(q^k+e) / (q^k-1) / &*[ q^i-1 : i in [1..k-1] ];
+				 (q^k+e) / (q^k-1) / &*[ q^i-1 : i in [1..k-1] ];
+		    end if;
 		else
-			count := (q^m+e) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
-				(q^(m-k)+e) / &*[ q^i-1 : i in [1..k] ];
+		    count := (q^m+e) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
+			     (q^(m-k)+e) / &*[ q^i-1 : i in [1..k] ];
 		end if;
+	    end if;
 	end if;
 
 	// Verify that this count is an integer.

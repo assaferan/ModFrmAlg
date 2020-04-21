@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -6,6 +6,15 @@
                             Eran Assaf                                 
                                                                             
    FILE: saveload.m (Routines used for saving and loading data to/from disk.)
+
+   04/21/20: Changed reading and writing of eigenforms to read and write also 
+             the reducible spaces.
+
+   04/20/20: Fixed bug when loading a representation over a finite field.
+
+   04/17/20: Added reading and writing of the root datum and the group.
+
+   04/15/20: Renamed Load to a constructor, to prevent collisions.
 
    04/02/20: Added documentation
 
@@ -21,6 +30,7 @@
 // TODO: Update this script to accommodate for the updated accessor functions
 //  by removing direct access via the ` substructure symbol.
 
+import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 import "path.m" : path;
 import "../neighbors/genus-CN1.m" : sortGenusCN1;
 
@@ -85,7 +95,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			else
 				// Otherwise, we store the pseudobasis of L.
 				basis := [*
-					< [ Eltseq(b) : b in Basis(pb[1]) ],
+					< [ Eltseq(b) : b in Generators(pb[1]) ],
 					[ Eltseq(x) : x in Eltseq(pb[2]) ] >
 						: pb in L`psBasis *];
 			end if;
@@ -109,7 +119,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		Ts, Ps := HeckeOperators(M, dim);
 
 		// A coupled list of Hecke matrices and their ideals.
-		list := [* < Basis(Ps[i]), Ts[i] > : i in [1..#Ts] *];
+		list := [* < Generators(Ps[i]), Ts[i] > : i in [1..#Ts] *];
 
 		// Add this list to the ongoing list of Hecke matrices.
 		Append(~hecke, < dim, list >);
@@ -120,13 +130,45 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 
 	// Build data structure for saving the eigenforms to disk.
 	if assigned M`Hecke and assigned M`Hecke`Eigenforms then
-		for f in M`Hecke`Eigenforms do
-			if f`IsEigenform then
-				Append(~eigenforms, < Eltseq(f`vec) >);
-			end if;
-		end for;
+	    for f in M`Hecke`Eigenforms do
+		if f`IsEigenform then
+		    // Valid dimensions for the eigenvalues
+		    dims := Keys(f`Eigenvalues);
+
+		    // The eigenvalues we've computed.
+		    eigenvalues := [* *];
+
+		    for dim in dims do
+
+			Ps := [p : p in Keys(f`Eigenvalues[dim])];
+			evs := [f`Eigenvalues[dim][p] : p in Ps];
+		    
+			// A coupled list of eigenvalues and the corresponding ideals.
+			list := [* < Generators(Ps[i]), evs[i], Parent(evs[i]) >
+				 : i in [1..#Ps] *];
+
+			// Add this list to the ongoing list of Hecke matrices.
+			Append(~eigenvalues, < dim, list >);
+		    end for;
+		
+		    Append(~eigenforms, < Eltseq(f`vec) , true, eigenvalues >);
+		else
+		    Append(~eigenforms, < Eltseq(f`vec) , false>);
+		end if;
+	    end for;
 	end if;
 
+	function build_root_data(root_datum)
+	    root_data := [*
+			  < "SIMPLE_ROOTS", root_datum`SimpleRoots >,
+			  < "SIMPLE_COROOTS", root_datum`SimpleCoroots >,
+			  < "SIGNS", root_datum`ExtraspecialSigns >,
+			  < "TYPE", Sprintf("%o", root_datum`Type) >
+			  *];
+
+	    return root_data;
+	end function;
+	
 	group_data := [* *];
 	Append(~group_data, < "IS_TWISTED", IsTwisted(M`G)>);
 	if IsTwisted(M`G) then
@@ -136,19 +178,19 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	    fixed_field := M`G`c`A`k;
 	    coc_images := [img`Data`g : img in M`G`c`imgs];
 	    
-	    Append(~group_data, < "ROOT_DATUM", root_datum >);
+	    Append(~group_data, < "ROOT_DATUM", build_root_data(root_datum) >);
 	    Append(~group_data, < "BASE_FIELD", base_field >);
 	    Append(~group_data, < "FIXED_FIELD", fixed_field >);
 	    Append(~group_data, < "COCYCLE_IMAGES", coc_images>);
 	else
-	    Append(~group_data, < "ROOT_DATUM", RootDatum(M`G) >);
+	    Append(~group_data, < "ROOT_DATUM", build_root_data(RootDatum(M`G)) >);
 	    Append(~group_data, < "BASE_FIELD", BaseRing(M`G) >);
 	end if;
 
 	// Build the data structure that will be saved to file.
 	data := [*
 		< "GROUP", group_data >,
-		< "WEIGHT", M`W>,
+		< "WEIGHT", M`W >,
 		< "POLY", f >,
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
@@ -161,7 +203,58 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	Write(file, data, "Magma" : Overwrite := Overwrite);
 end intrinsic;
 
-intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
+function extract_root_datum(root_data)
+    root_array := AssociativeArray();
+
+    // Store meta data.
+    for entry in root_data do root_array[entry[1]] := entry[2]; end for;
+
+    A := root_array["SIMPLE_ROOTS"];
+    B := root_array["SIMPLE_COROOTS"];
+    Signs := root_array["SIGNS"];
+    type := eval root_array["TYPE"];
+
+    rank := Nrows(A);  dim := Ncols(A);
+    F := CoveringStructure(BaseRing(A), Rationals());
+    F := CoveringStructure(BaseRing(B), F);
+    A := Matrix(F,A);
+    B := Matrix(F,B);
+    C := Matrix( A*Transpose(B) );
+    is_c,newC := IsCoercible( MatrixAlgebra(Integers(),rank), C);
+    if is_c then C := newC; end if;
+
+    R := rootDatum( A, B, C, type, Signs);
+
+    return R;
+end function;
+
+function build_GroupOfLieType(group_data)
+    // An associative array which stores the appropriate meta data.
+    group_array := AssociativeArray();
+
+    // Store meta data.
+    for entry in group_data do group_array[entry[1]] := entry[2]; end for;	
+	
+    if (group_array["IS_TWISTED"]) then
+	root_datum := extract_root_datum(group_array["ROOT_DATUM"]);
+	base_field := group_array["BASE_FIELD"];
+	base_group := GroupOfLieType(root_datum, base_field);
+	A := AutomorphismGroup(base_group);
+	fixed_field := group_array["FIXED_FIELD"];
+	AGRP := GammaGroup(fixed_field, A);
+	grph_auts := [GraphAutomorphism(base_group, x) : x in group_array["COCYCLE_IMAGES"]];
+	c := OneCocycle(AGRP, grph_auts);
+	G := TwistedGroupOfLieType(c);
+    else
+	root_datum := extract_root_datum(group_array["ROOT_DATUM"]);
+	base_field := group_array["BASE_FIELD"];
+	G := GroupOfLieType(root_datum, base_field);
+    end if;
+    
+    return G;
+end function;
+
+intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 { Load an algebraic modular form from disk. }
 	// The file where the data will be loaded.
 	file := path() cat filename;
@@ -188,25 +281,14 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 	for entry in data do array[entry[1]] := entry[2]; end for;
 
 	if not IsDefined(array, "POLY") or
-			not IsDefined(array, "INNER") or
-			not IsDefined(array, "ISOGENY") then
-		print "ERROR: Corrupt data.";
-		return false;
+	       not IsDefined(array, "INNER") or
+		   not IsDefined(array, "ISOGENY") then
+	    print "ERROR: Corrupt data.";
+	    return false;
 	end if;
 
 	// TODO: Something weird going on here, try to get this under control a
 	//  bit more elegantly.
-
-	// Build the number field we're working over.
-	K := BaseRing(array["INNER"]);
-
-	// Assign the inner form.
-	innerForm := array["INNER"];
-
-	if Degree(K) eq 1 then
-		K := NumberField(array["POLY"]);
-		innerForm := ChangeRing(innerForm, K);
-	end if;
 
 	// Assign the isogeny type.
 	isogenyType := array["ISOGENY"];
@@ -216,29 +298,29 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 	//  specified weight and isogeny type.
 
 	group_data := array["GROUP"];
-	// An associative array which stores the appropriate meta data.
-	group_array := AssociativeArray();
+	G := build_GroupOfLieType(group_data);
 
-	// Store meta data.
-	for entry in group_data do group_array[entry[1]] := entry[2]; end for;
-
-	if (group_array["IS_TWISTED"]) then
-	    root_datum := group_array["ROOT_DATUM"];
-	    base_field := group_array["BASE_FIELD"];
-	    base_group := GroupOfLieType(root_datum, base_field);
-	    A := AutomorphismGroup(base_group);
-	    fixed_field := group_array["FIXED_FIELD"];
-	    AGRP := GammaGroup(fixed_field, A);
-	    grph_auts := [GraphAutomorphism(base_group, x) : x in group_array["COCYCLE_IMAGES"]];
-	    c := OneCocycle(AGRP, grph_auts);
-	    G := TwistedGroupOfLieType(c);
-	else
-	    root_datum := group_array["ROOT_DATUM"];
-	    base_field := group_array["BASE_FIELD"];
-	    G := GroupOfLieType(root_datum, base_field);
-	end if;
-	
+	// Build the number field we're working over.
+	K := BaseRing(G);
+//	K := BaseRing(array["INNER"]);
 	W := array["WEIGHT"];
+	
+	if Degree(K) eq 1 then
+	    // K := NumberField(array["POLY"]);
+	    K := RationalsAsNumberField();
+	    G := ChangeRing(G, K);
+	    // We don't really want that - that's the coefficient ring
+	    // W := ChangeRing(W, K);
+	    W`G := GL(Degree(W`G),K);
+	end if;
+
+	if Type(BaseRing(W)) eq FldRat then
+	    QQ := RationalsAsNumberField();
+	    W := ChangeRing(W,QQ);
+	end if;
+
+	// Assign the inner form.
+	innerForm := ChangeRing(array["INNER"], K);
 	
 	M := AlgebraicModularForms(G, innerForm, W);
 
@@ -339,7 +421,8 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 				P := ideal< M`L`R | gens >;
 
 				// Assign Hecke matrix.
-				M`Hecke`Ts[k][P] := entry[2];
+				M`Hecke`Ts[k][P] := ChangeRing(entry[2],
+							       BaseRing(M`W));
 			end for;
 		end for;
 	end if;
@@ -361,6 +444,10 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 
                         // Assign vector.
                         mform`vec := Vector(data[1]);
+			if Type(BaseRing(mform`vec)) eq FldRat then
+			    QQ := RationalsAsNumberField();
+			    mform`vec := ChangeRing(mform`vec, QQ);
+			end if;
 
                         // Flag as cuspidal?
                         mform`IsCuspidal :=
@@ -370,9 +457,41 @@ intrinsic Load(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
                         mform`IsEisenstein := not mform`IsCuspidal;
 
 			// Establish this as a Hecke eigenform.
-                        mform`IsEigenform := true;
+                        mform`IsEigenform := data[2];
 
+			if mform`IsEigenform then
+			    // Retrieve the list of Hecke eigenvalues.
+			    ev_list := data[3];
+
+			    // Assign eigenvalues associative array.
+			    mform`Eigenvalues := AssociativeArray();
+
+			    for ev_data in ev_list do
+				// The dimension of the eigenvalues.
+				k := ev_data[1];
+				
+				// Assign an empty associative array for this dimension.
+				mform`Eigenvalues[k] := AssociativeArray();
+				
+				for entry in ev_data[2] do
+				    // Generators of the prime ideal.
+				    gens := [ M`L`R ! Eltseq(x) : x in entry[1] ];
+				    
+				    // The prime ideal associated to this entry.
+				    P := ideal< M`L`R | gens >;
+				    
+				    // Assign eigenvalue.
+				    mform`Eigenvalues[k][P] :=
+					IsFinite(entry[3]) select
+					entry[3]!entry[2] else entry[2];
+				end for;
+			    end for;
+			   			   			   
+			end if;
 			Append(~M`Hecke`Eigenforms, mform);
+			if mform`IsEisenstein then
+			    M`Hecke`EisensteinSeries := mform;
+			end if;
 		end for;
 	end if;
 

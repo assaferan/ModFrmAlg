@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -6,6 +6,9 @@
                             Eran Assaf                                 
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
+
+   04/13/20: Added the UseLLL parameter - performing LLL; on the lattice 
+             after constructing it.
 
    03/11/20: Added the function SkipToNeighbor, from neighbor-QQ in the orthogonal
              case, in order to use it in the orbit method.
@@ -409,7 +412,7 @@ end function;
 
 // Constructing the next p-neighbor
 
-function BuildNeighbor(nProc : BeCareful := true)
+function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	// The affine data.
 	Vpp := nProc`L`Vpp[nProc`pR];
 
@@ -503,6 +506,15 @@ function BuildNeighbor(nProc : BeCareful := true)
 		assert Norm(Index(L, intLat)) eq nProc`pRnorm^nProc`k;
 		assert Norm(Index(nLat, intLat)) eq nProc`pRnorm^nProc`k;
 		assert IsIntegral(ZLattice(nLat));
+	end if;
+
+	if UseLLL then
+	    lll_ZZ := LLL(ZLattice(nLat) : Proof := false);
+	    K := BaseRing(Q);
+	    d := Degree(K);
+	    n := Dimension(Q);
+	    basis := [VectorSpace(Q)![ K![b[j] : j in [d*(i-1)+1..d*i]] : i in [1..n]] : b in Basis(lll_ZZ)];
+	    nLat := LatticeWithBasis(Q, Matrix(basis));
 	end if;
 
 	return nLat;

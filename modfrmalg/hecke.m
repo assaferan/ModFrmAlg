@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 
 /****-*-magma-**************************************************************
                                                                             
@@ -10,6 +10,10 @@
 
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
+
+   04/16/20: Added the parameter UseLLL, and modified the Hecke Operator so that
+             HeckeOperator(T,p) will always compute the Hecke operator at a
+             prime above p.
 
    03/29/20: Fixed a bug in HeckeOperator - when needed to identify base
              rings of ideal and ModFrmAlg, the resulting ideal was not prime
@@ -140,9 +144,10 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	end if;
 	
         hecke := HeckeOperatorCN1(M, pR, k
-			: BeCareful := BeCareful,
-			  Estimate := Estimate,
-			  Orbits := use_orbits);
+				  : BeCareful := BeCareful,
+				    UseLLL := UseLLL,
+				    Estimate := Estimate,
+				    Orbits := use_orbits);
 
 	// Sets the Hecke operator in the internal data structure for this
 	//  algebraic modular form.
@@ -179,9 +184,10 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt
 { Computes the requested Hecke operator, under the assumption that the base
 number field is the rationals. }
 	// Make sure that the base ring of the number field is the rationals.
-	require Degree(BaseRing(M)) eq 1: "Base ring must be the rationals.";
+//	require Degree(BaseRing(M)) eq 1: "Base ring must be the rationals.";
 
-	return HeckeOperator(M, ideal< BaseRing(Module(M)) | Norm(pR) >, k
+        p := Factorization(ideal< BaseRing(Module(M)) | pR >)[1][1];
+	return HeckeOperator(M, p, k
 			     : BeCareful := BeCareful,
 			       Force := Force,
 			       Estimate := Estimate,
@@ -198,8 +204,9 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
 			  Fast := false,
 			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator with isotropic dimension 1, under the
-assumption that the base number field is the rationals. }
-	return HeckeOperator(M, ideal< BaseRing(Module(M)) | Norm(pR) >, 1
+									  assumption that the base number field is the rationals. }
+
+	return HeckeOperator(M, pR, 1
 			     : BeCareful := BeCareful,
 			       Force := Force,
 			       Estimate := Estimate,
@@ -217,7 +224,8 @@ intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt, k::RngIntElt
 			  Orbits := false) -> AlgMatElt
 { Computes the requested Hecke operator under the assumption that the base
 number field is the rationals. }
-	return HeckeOperator(M, ideal< Integers() | p >, k
+        pR := Factorization(ideal< BaseRing(Module(M)) | p >)[1][1];
+        return HeckeOperator(M, pR, k
 			     : BeCareful := BeCareful,
 			       Force := Force,
 			       Estimate := Estimate,
@@ -235,7 +243,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt
 			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator with isotropic dimension 1, under the
 assumption that the base number field is the rationals. }
-	return HeckeOperator(M, ideal< Integers() | p >, 1
+	return HeckeOperator(M, p, 1
 			     : BeCareful := BeCareful,
 			       Force := Force,
 			       Estimate := Estimate,

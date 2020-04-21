@@ -289,14 +289,16 @@ intrinsic UnitaryMass(L,m : prec := 30) -> Lat
   ZF := LSeries(F : Precision := prec);
   LofM :=  &*[Evaluate(ZL/ZF,1-r) : r in [1..m] | r mod 2 eq 1]*&*[Evaluate(ZF,1-r) : r in [1..m] | r mod 2 eq 0];   
 
+  /*
   if m mod 2 eq 0 then
     prod_of_local_factors := 1;
-  else 
+  else
+*/ 
     RF := &cat[[x[1] : x in Factorization(p*ZZ_F)] : p in PrimeFactors(Discriminant(ZZ_L))];                                                 
     RL := [Factorization(ideal<ZZ_L|Generators(I)>)[1,1] : I in RF]; 
     N := #[I : I in RF | Factorization(ideal<ZZ_L|Generators(I)>)[1,2] gt 1];
     prod_of_local_factors := (1/2)^N;
-  end if;
+  //end if;
 
   mass := 1/2^(m*d)*LofM*tau*prod_of_local_factors;
   return mass;

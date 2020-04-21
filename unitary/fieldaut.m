@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 /****-*-magma-******a********************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          

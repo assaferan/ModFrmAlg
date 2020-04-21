@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 /****-*-magma-**************************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
@@ -10,39 +10,22 @@
  
  ***************************************************************************/
 
-import "examples.m" : Example_7_2,
-       Example_7_3,
-       Example_7_4,
-       Example_7_4_W_2_0,
-       Example_7_4_W_2_2,
-       Example_7_4_W_3_1,
-       Example_7_4_W_3_3,
-       Example_7_4_W_4_0,
-       Example_7_5,
-       Example_7_6;
+import "examples.m" : AlgebraicModularFormsExamples;
 
 forward testExample;
 
-intrinsic ModularFormTests() -> ModFrmAlg
-{.}
-  M := [];
-  // we're cutting down the number of primes until we have
-// a more efficient implementation
-  // ??? Maybe move this construction to examples.m and assign names to
-  // examples (in the record structure)
-  examples := [ Example_7_2,
-		Example_7_3,
-		Example_7_4,
-		Example_7_4_W_2_0,
-		Example_7_4_W_2_2,
-		Example_7_4_W_3_1,
-		Example_7_4_W_3_3,
-		Example_7_4_W_4_0,
-		Example_7_5,
-		Example_7_6];
+intrinsic AlgebraicModularFormsTests(: num_primes := 0) -> ModFrmAlg
+{Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting num_primes.}
 
-  for example in examples do
-      Append(~M, testExample(example : num_primes := 3));
+  for example in AlgebraicModularFormsExamples do
+      // testing that we obtain the correct results
+      M := testExample(example : num_primes := num_primes);
+      // saving to a file
+      fname := Sprintf("Example_%o.dat", example`name);
+      Save(M, fname : Overwrite := true);
+      // loading from the file and verifying we get the same object
+      M2 := AlgebraicModularForms(fname);
+      assert M eq M2;
   end for;
 
   return M;
@@ -86,7 +69,9 @@ function testExample(example : num_primes := 0)
 	    printf "Computing T(p,%o), (N(p) = %o) ...\n", k, Norm(p);
 	    t := Cputime();
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
-				       Orbits := (k eq 1)));
+						  Estimate := true,
+						  UseLLL := true,
+						  Orbits := (k eq 1)));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;
 	    if (#example`timing ge i) then
@@ -113,20 +98,32 @@ function testExample(example : num_primes := 0)
     keys := Keys(M`Hecke`Ts);
     keys := Sort([ x : x in keys ]);
 
-    evs := [[HeckeEigensystem(f, dim) : dim in keys] : f in eigenforms];  
+    evs := [[HeckeEigensystem(f, dim) : dim in keys] :
+	    f in eigenforms | f`IsEigenform];  
 
-    for i in [1..#evs] do
+    for i in [1..#example`evs] do
 	for k in keys do
 	    ev_calc := evs[i][k];
 	    ev := example`evs[i][k][1..N];
 	    // the field of definition might be different,
 	    // so we check if there is some embedding under which
 	    // all the eigenvalues coincide
-	    F := AbsoluteField(Parent(ev_calc[1]));
-	    L := Compositum(AbsoluteField(FieldOfFractions(Parent(ev[1]))), F);
-	    zeta := PrimitiveElement(F);
-	    roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
-	    embs := [hom<Parent(ev_calc[1]) -> L | r> : r in roots];
+	    F1 := Parent(ev_calc[1]);
+	    F2 := FieldOfFractions(Parent(ev[1]));
+	    if IsFinite(F1) then
+		assert IsFinite(F2);
+		L := GF(LCM(#F1, #F2));
+		embs := [hom<F1->L|>];
+	    else
+		assert not IsFinite(F2);
+		F1 := AbsoluteField(F1);
+		F2 := AbsoluteField(F2);
+		L := Compositum(F1, F2);
+		zeta := PrimitiveElement(F1);
+		roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+		embs := [hom<Parent(ev_calc[1]) -> L | r> : r in roots];
+	    end if;
+	    
 	    assert exists(emb){emb : emb in embs |
 			       [emb(x) : x in ev_calc] eq [x : x in ev]};
 	end for;

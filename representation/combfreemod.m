@@ -1,10 +1,13 @@
-//freeze;
+freeze;
 /****-*-magma-**************************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
                             Eran Assaf                                 
                                                                             
    FILE: combfreemod.m (class for combinatorial free modules)
+
+   04/20/20 : Modified Print to overcome the difficulty of introducing line 
+   	      breaks in printed strings
 
    04/03/20: Added ChangeRing Intrinsic, added some coercions, changed construction of homomorphisms
              to support loading from files
@@ -248,7 +251,18 @@ intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 	  names_str := prefix_str cat (&cat all_mon_str);
 	  Append(~params, <"NAMES", Names(R_X)>);
 	else
-	  names_str := Sprintf("%m", CFM`names);
+	    // we wanted to do this:
+	    // names_str := Sprintf("%m", CFM`names);
+	    // but when writing a list of strings, when there is a line break,
+	    // magma might break the string
+	    names_str := "[ Strings () | ";
+	    if not IsEmpty(CFM`names) then
+		names_str cat:= Sprintf("%m", CFM`names[1]);
+	    end if;
+	    for name in CFM`names[2..#CFM`names] do
+		names_str cat:= Sprintf(",\n%m", name);
+	    end for;
+	    names_str cat:= "]";
 	end if;
 	printf "CombinatorialFreeModule(%m, %o : params := %m)", BaseRing(CFM`M), names_str, params;  
 	return;

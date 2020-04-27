@@ -9,6 +9,9 @@ freeze;
 
    Implementation file for the space of algebraic modular forms.
 
+   04/27/20: Modified ModFrmAlgInit to use the special automorphism group,
+             when working with SO.
+
    04/24/20: Removed attribute isogenyType,
              Modified constructors to use GrpRed instead of GrpLie,
              and use new constructors for Orthogonal and Unitary Group.
@@ -17,7 +20,7 @@ freeze;
              Changed default value of parameter BeCareful to false.
 
    04/21/20: Modified 'eq' to fix bugs when over a finite field.
-   	     Modified the OrthogonalMOdularForms constructor to normalize the field.
+   	     Modified the OrthogonalModularForms constructor to normalize the field.
 
    04/20/20: Added normalizeField, for brevity.
 
@@ -368,8 +371,12 @@ procedure ModFrmAlgInit(M : BeCareful := false,
 	    printf "Found %o genus representatives.\n", #reps;
 	    print "Calculating the automorphism groups Gamma_i...";
 	end if;
+
+	// !!! TODO : treat the special unitary case
 	
-	gamma_reps := [AutomorphismGroup(r) : r in reps];
+	gamma_reps := [AutomorphismGroup(r :
+					 Special := IsSpecialOrthogonal(M)) :
+		       r in reps];
 	
 	gammas := [sub<M`W`G|
 		      [Transpose(PullUp(Matrix(g), reps[i], reps[i] :

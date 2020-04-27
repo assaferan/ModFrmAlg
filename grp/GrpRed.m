@@ -9,6 +9,9 @@ freeze;
 
    I've grown weary of trying to use GrpLie...
 
+   04/27/20: Fixed bug in constructor of orthogonal group from dimension.
+             Added constructors for the special orthogonal group.
+
    04/23/20: File created.
  
  ***************************************************************************/
@@ -96,13 +99,18 @@ end intrinsic;
 
 // orthogonal
 
-intrinsic OrthogonalGroup(quad::RfxSpace) -> GrpRed
-{Construct the orthogonal group associated to the quadratic space.}
+function build_orthogonal(quad, special)
   F := BaseRing(quad);
   n := Dimension(quad);
   cartan_type := (n mod 2 eq 1) select "B" else "D";
   SO_n := GroupOfLieType(StandardRootDatum(cartan_type, n div 2), F);
-  return ReductiveGroup(SO_n, CyclicGroup(2) : InnerForms := [quad]);
+  comp := CyclicGroup(special select 1 else 2); 
+  return ReductiveGroup(SO_n, comp : InnerForms := [quad]);
+end function;
+
+intrinsic OrthogonalGroup(quad::RfxSpace) -> GrpRed
+{Construct the orthogonal group associated to the quadratic space.}
+  return build_orthogonal(quad, false);
 end intrinsic;
 
 intrinsic OrthogonalGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
@@ -113,7 +121,23 @@ end intrinsic;
 intrinsic OrthogonalGroup(n::RngIntElt, F::Fld) -> GrpRed
 {Construct the split orthogonal group of dimension n over F}
   cartan_type := (n mod 2 eq 1) select "B" else "D";	  
-  return OrthogonalGroup(SplitReflexiveSpace(cartan_type, n, F));
+  return OrthogonalGroup(SplitReflexiveSpace(cartan_type, n div 2, F));
+end intrinsic;
+
+intrinsic SpecialOrthogonalGroup(quad::RfxSpace) -> GrpRed
+{Construct the special orthogonal group associated to the quadratic space.}
+  return build_orthogonal(quad, true);
+end intrinsic;
+
+intrinsic SpecialOrthogonalGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
+{Construct the special orthogonal group preserving the specified symmetric form.}
+  return SpecialOrthogonalGroup(AmbientReflexiveSpace(innerForm));
+end intrinsic;
+
+intrinsic SpecialOrthogonalGroup(n::RngIntElt, F::Fld) -> GrpRed
+{Construct the split special orthogonal group of dimension n over F}
+  cartan_type := (n mod 2 eq 1) select "B" else "D";	  
+  return SpecialOrthogonalGroup(SplitReflexiveSpace(cartan_type, n div 2, F));
 end intrinsic;
 
 // unitary

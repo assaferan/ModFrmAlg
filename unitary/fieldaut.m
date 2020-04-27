@@ -12,6 +12,8 @@ freeze;
    Maybe should also write a structure for the group itself, 
    so far it is not eneded.
 
+   04/27/2020 : Fixed bug in constructor to handle construction from io.
+
    04/24/2020 : Added construction of automorphism for a quadratic etale case.
                 Modified Print to have Magma level printing.
 		Changed constructor to support construction from Magma level io.
@@ -119,7 +121,7 @@ intrinsic FieldAutomorphism(L::Fld, f::Map[Fld,Fld]) -> FldAut
     if IsFinite(L) then
 	require (#L eq #Domain(f)) and (#L eq #Codomain(f)) :
 	     "map must be an automorphism of the field.";
-    else
+    elif FldRat notin [Type(L), Type(Domain(f))] then
 	is_isom_in, phi_in := IsIsomorphic(L, Domain(f));
 	is_isom_out, phi_out := IsIsomorphic(Codomain(f), L);
 	require is_isom_in and is_isom_out :

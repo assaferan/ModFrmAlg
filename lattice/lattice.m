@@ -8,6 +8,12 @@ freeze;
 
    Implementation file for lattice routines
 
+   04/27/2020 : Modified AutomorphismGroup to work also for SO 
+   	      	(parameter special)
+                Fixed bug in IsIsometric when special = true.
+                Removed restriction of positive-definite, as now we also use
+                this module for construction of indefinite groups.
+
    04/24/2020 : Modified default values of BeCareful to be false.
                 Modified IsIsometric to have a parameter, indicating a special 
 		isometry.
@@ -150,9 +156,12 @@ intrinsic StandardLattice(rfxSpace::RfxSpace) -> ModDedLat
 
 	// The standard basis.
 	basis := Id(MatrixRing(BaseRing(rfxSpace), Dimension(rfxSpace)));
-
+	
 	// Build the standard lattice.
 	L := LatticeWithBasis(rfxSpace, basis);
+	
+	require IsIntegral(Discriminant(L)) :
+		"Standard Lattice is not integral for reflexive space!" ; 
 
 	// Assign the ZLattice.
 	L`ZLattice := ZLattice(L : Standard := true);
@@ -292,7 +301,8 @@ intrinsic ZLattice(lat::ModDedLat : Standard := false) -> Lat
 	end if;
 
 	// Construct the ZLattice with basis in the correct quadratic space.
-	lat`ZLattice := LatticeWithBasis(basisZ, ChangeRing(gram, Rationals()));
+	lat`ZLattice := LatticeWithBasis(basisZ, ChangeRing(gram, Rationals())
+					: CheckPositive := false);
 
 	// Assign the bases for the ZLattice.
 	lat`ZLattice`basisR := basisR;
@@ -349,7 +359,9 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
 	try
 		phis := [ ChangeRing(phi, Integers()) : phi in phis ];
 		assert IsSymmetric(phis[1]);
-		assert IsPositiveDefinite(phis[1]);
+		// We are now using this function also to construct groups
+		// corresponding to non-definite forms
+		// assert IsPositiveDefinite(phis[1]);
 	catch e
 		require false: "Auxiliary forms are not of the correct form!";
 	end try;
@@ -635,7 +647,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 
 	if not iso then return false, _; end if;
 	
-	f := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
+	// f := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
 
 	// Currently, this only works for SO, where det in -1,1
 	if special and Determinant(f) eq -1 then
@@ -647,7 +659,9 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 	    //  compose f and g in such a way to produce a proper isometry.
 	    for g in gens do
 		if Determinant(g) eq -1 then
-		    return true, g*f;
+		    return true,
+			   PullUp(Matrix(g*f), lat1, lat2 :
+				  BeCareful := BeCareful);
 		end if;
 	    end for;
 
@@ -655,7 +669,9 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 	    gens := Generators(AutomorphismGroup(lat2));
 	    for g in gens do
 		if Determinant(g) eq -1 then
-		    return true, g*f;
+		    return true,
+			   PullUp(Matrix(f*g), lat1, lat2 :
+				  BeCareful := BeCareful);
 		end if;
 	    end for;
 
@@ -664,19 +680,24 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 	    return false, _;
 	end if;
 	
-	return iso, f;
+	return iso, PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
 end intrinsic;
 
-intrinsic AutomorphismGroup(lat::ModDedLat) -> SeqEnum
+intrinsic AutomorphismGroup(lat::ModDedLat : Special := false) -> SeqEnum
 { Computes the automorphism group of the specified lattice. }
-	// Return the automorphism group if it has already been computed.
+        if Special then
+	    aut := AutomorphismGroup(lat);
+	    return sub<aut |[x : x in aut | Determinant(x) eq 1]>;
+	end if;
+
+        // Return the automorphism group if it has already been computed.
 	if assigned lat`AutomorphismGroup then
 		return lat`AutomorphismGroup;
 	end if;
 
 	// Compute the automorphism group of this lattice.
 	aut := AutomorphismGroup(ZLattice(lat), AuxForms(lat));
-
+	
 	// Save it for further use.
 	lat`AutomorphismGroup := aut;
 

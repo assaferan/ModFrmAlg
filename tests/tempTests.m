@@ -3,9 +3,38 @@ SetHelpUseExternalBrowser(false);
 AttachSpec("spec");
 AlgebraicModularFormsTests(:num_primes := 3);
 
+if assigned AlgebraicModularFormsExamples then
+    delete AlgebraicModularFormsExamples;
+end if;
+
+if assigned testExample then
+    delete testExample;
+end if;
+
+if assigned normalizeField then
+    delete normalizeField;
+end if;
+
 import "tests/examples.m" : AlgebraicModularFormsExamples;
 import "tests/tests.m" : testExample;
+import "modfrmalg/modfrmalg.m" : normalizeField;
+
 examples := AlgebraicModularFormsExamples;
+/*
+QQ := Rationals();
+n := 5;
+innerForm := 2 * IdentityMatrix(QQ,n);
+// innerForm := examples[1]`inner_form;
+K := normalizeField(BaseRing(innerForm));
+n := Nrows(innerForm);
+V := StandardRepresentation(GL(n,K));
+W := SymmetricRepresentation(V,2);
+// Why is this not working?
+//SO_n := SpecialOrthogonalGroup(ChangeRing(innerForm, K));
+O_n := OrthogonalGroup(ChangeRing(innerForm, K));
+M := AlgebraicModularForms(O_n, W);
+Dimension(M);
+*/
 /*
 example := examples[1];
 M := testExample(example : num_primes := 3);
@@ -17,7 +46,7 @@ M eq M2;
 */
 /*
 ps := [Factorization(ideal<Integers(BaseRing(M))|n>)[1][1] :
-	   n in examples[7]`norm_p];
+	   n in examples[1]`norm_p];
 
     for k in [1..2] do
 	Ts_k := [];
@@ -28,7 +57,7 @@ ps := [Factorization(ideal<Integers(BaseRing(M))|n>)[1][1] :
 	    t := Cputime();
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
 						  Estimate := true,
-						  UseLLL := true,
+						  UseLLL := false,
 						  Orbits := (k eq 1)));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;

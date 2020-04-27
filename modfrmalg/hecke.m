@@ -11,6 +11,9 @@ freeze;
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   04/27/20: Changed default value of BeCareful to false.
+             Modified to not use LLL when group is SO.
+
    04/16/20: Added the parameter UseLLL, and modified the Hecke Operator so that
              HeckeOperator(T,p) will always compute the Hecke operator at a
              prime above p.
@@ -90,7 +93,7 @@ end intrinsic;
 // get (computation) methods
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
-			: BeCareful := true,
+			: BeCareful := false,
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,
@@ -142,10 +145,17 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	else
 	    use_orbits := Orbits;
 	end if;
+
+	// Currently LLL doesn't seem to work for SO
+	if UseLLL and not IsSpecialOrthogonal(M) then
+	    use_LLL := true;
+	else
+	    use_LLL := false;
+	end if;
 	
         hecke := HeckeOperatorCN1(M, pR, k
 				  : BeCareful := BeCareful,
-				    UseLLL := UseLLL,
+				    UseLLL := use_LLL,
 				    Estimate := Estimate,
 				    Orbits := use_orbits);
 
@@ -158,7 +168,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl
-			: BeCareful := true,
+			: BeCareful := false,
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,
@@ -175,7 +185,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt
-			: BeCareful := true,
+			: BeCareful := false,
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,
@@ -197,7 +207,7 @@ number field is the rationals. }
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
-			: BeCareful := true,
+			: BeCareful := false,
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,
@@ -216,7 +226,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt, k::RngIntElt
-			: BeCareful := true,
+			: BeCareful := false,
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,
@@ -235,7 +245,7 @@ number field is the rationals. }
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt
-			: BeCareful := true,
+			: BeCareful := false,
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,

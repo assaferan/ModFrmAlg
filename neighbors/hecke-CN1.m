@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
 
+   04/27/20: Changed default value of parameter BeCareful to false.
+
    04/24/20: Modified HeckeOperatorCN1 to include a parameter indicating 
              whether the isometries should be special.
              Moved all old code to the end.
@@ -95,7 +97,7 @@ end procedure;
 
 procedure processNeighborWeight(~nProc, invs, ~hecke,
 				idx, H :
-				BeCareful := true,
+				BeCareful := false,
 				UseLLL := false,
 				weight := 1,
 				special := false)
@@ -174,7 +176,7 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 end procedure;
 
 function HeckeOperatorCN1(M, pR, k
-			  : BeCareful := true,
+			  : BeCareful := false,
 			    UseLLL := false,
 			    Estimate := false,
 			    Orbits := false)

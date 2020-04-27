@@ -12,6 +12,10 @@ freeze;
    Maybe should also write a structure for the group itself, 
    so far it is not eneded.
 
+   04/24/2020 : Added construction of automorphism for a quadratic etale case.
+                Modified Print to have Magma level printing.
+		Changed constructor to support construction from Magma level io.
+
    03/05/2020 : Added basic documentation.
  
  ***************************************************************************/
@@ -24,7 +28,7 @@ freeze;
 
 declare type FldAut;
 declare attributes FldAut :
-  L, // the field
+  L,   // the field (or etale quadratic extension of a field)
   map, // the mapping
   elt, // the element in the automorphism group
   isom; // the isomorphism between the group and the set of maps
@@ -52,15 +56,31 @@ function fullAutomorphismGroup(L)
    return gal, aut, phi;
 end function;
 
+intrinsic FieldAutomorphism(L::AlgAss[Fld]) -> FldAut
+{Return the involution swapping the indices.}
+  require Dimension(L) eq 2 :
+			    "Algebra must be a quadratic etale algebra.";
+  alpha := New(FldAut);
+  alpha`L := L;
+  S2 := SymmetricGroup(2);
+  alpha`elt := S2!(1,2);
+  id_map := hom<L -> L | [L.1, L.2]>;
+  alpha`map := hom<L -> L | [L.2, L.1]>;
+  alpha`isom := map<S2 -> Parent(alpha`map) | [<S2!1, id_map>,
+					       <S2!(1,2), alpha`map> ] >;
+  return alpha;
+end intrinsic;
+
 intrinsic FieldAutomorphism(L::Fld, g::GrpPermElt) -> FldAut
 {.}
   alpha := New(FldAut);
   alpha`L := L;
   gal, _, psi := fullAutomorphismGroup(L);
-  require g in gal :
+  isom, phi := IsIsomorphic(Parent(g), gal);
+  require isom :
   "Group element must be in the automorphism group of the field!";
-  alpha`elt := g;
-  alpha`map := psi(g);
+  alpha`elt := phi(g);
+  alpha`map := psi(alpha`elt);
   alpha`isom := psi;
 
   return alpha; 
@@ -96,6 +116,16 @@ end intrinsic;
 
 intrinsic FieldAutomorphism(L::Fld, f::Map[Fld,Fld]) -> FldAut
 {.}
+    if IsFinite(L) then
+	require (#L eq #Domain(f)) and (#L eq #Codomain(f)) :
+	     "map must be an automorphism of the field.";
+    else
+	is_isom_in, phi_in := IsIsomorphic(L, Domain(f));
+	is_isom_out, phi_out := IsIsomorphic(Codomain(f), L);
+	require is_isom_in and is_isom_out :
+		"map must be an automorphism of the field.";
+	f := phi_in * f * phi_out;
+    end if;
    gal, _, psi := fullAutomorphismGroup(L);
    if IsFinite(L) then
      gens := [L.1];
@@ -108,9 +138,14 @@ intrinsic FieldAutomorphism(L::Fld, f::Map[Fld,Fld]) -> FldAut
 end intrinsic;
 
 /* Printing */
-intrinsic Print(alpha::FldAut)
+intrinsic Print(alpha::FldAut, level::MonStgElt)
 {.}
-  printf "Field Automorphism of %o", alpha`L;
+  if level eq "Magma" then
+      printf "FieldAutomorphism(%m, %m!%m)",
+	     alpha`L, Parent(alpha`elt), alpha`elt;
+  else      
+      printf "Field Automorphism of %o", alpha`L;
+  end if;
 end intrinsic;
 
 /* access */

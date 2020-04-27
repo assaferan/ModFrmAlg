@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: saveload.m (Routines used for saving and loading data to/from disk.)
 
+   04/24/20: Modified reading and writing of group according to GrpRed
+
    04/21/20: Changed reading and writing of eigenforms to read and write also 
              the reducible spaces.
 
@@ -158,6 +160,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	    end for;
 	end if;
 
+	/*
 	function build_root_data(root_datum)
 	    root_data := [*
 			  < "SIMPLE_ROOTS", root_datum`SimpleRoots >,
@@ -186,16 +189,15 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	    Append(~group_data, < "ROOT_DATUM", build_root_data(RootDatum(M`G)) >);
 	    Append(~group_data, < "BASE_FIELD", BaseRing(M`G) >);
 	end if;
-
+*/
 	// Build the data structure that will be saved to file.
 	data := [*
-		< "GROUP", group_data >,
+		< "GROUP", /* group_data */ M`G >,
 		< "WEIGHT", M`W >,
 		< "POLY", f >,
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
 		< "HECKE", hecke >,
-		< "ISOGENY", M`isogenyType >,
 		< "EIGENFORMS", eigenforms >
 	*];
 
@@ -203,6 +205,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	Write(file, data, "Magma" : Overwrite := Overwrite);
 end intrinsic;
 
+/*
 function extract_root_datum(root_data)
     root_array := AssociativeArray();
 
@@ -253,6 +256,7 @@ function build_GroupOfLieType(group_data)
     
     return G;
 end function;
+*/
 
 intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 { Load an algebraic modular form from disk. }
@@ -281,8 +285,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	for entry in data do array[entry[1]] := entry[2]; end for;
 
 	if not IsDefined(array, "POLY") or
-	       not IsDefined(array, "INNER") or
-		   not IsDefined(array, "ISOGENY") then
+	       not IsDefined(array, "INNER")  then
 	    print "ERROR: Corrupt data.";
 	    return false;
 	end if;
@@ -290,27 +293,23 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// TODO: Something weird going on here, try to get this under control a
 	//  bit more elegantly.
 
-	// Assign the isogeny type.
-	isogenyType := array["ISOGENY"];
-
 	// Build the space of algebraic modular forms.
 	// TODO: Refine the parameters to construct this appropriate space with
 	//  specified weight and isogeny type.
 
-	group_data := array["GROUP"];
-	G := build_GroupOfLieType(group_data);
+	// group_data := array["GROUP"];
+	// G := build_GroupOfLieType(group_data);
 
+	G := array["GROUP"];
+	
 	// Build the number field we're working over.
-	K := BaseRing(G);
-//	K := BaseRing(array["INNER"]);
+	K := SplittingField(G);
 	W := array["WEIGHT"];
 	
 	if Degree(K) eq 1 then
-	    // K := NumberField(array["POLY"]);
 	    K := RationalsAsNumberField();
-	    G := ChangeRing(G, K);
-	    // We don't really want that - that's the coefficient ring
-	    // W := ChangeRing(W, K);
+	    // !!! TODO : Change also the inner forms
+	    G`G0 := ChangeRing(G`G0, K);
 	    W`G := GL(Degree(W`G),K);
 	end if;
 
@@ -322,7 +321,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// Assign the inner form.
 	innerForm := ChangeRing(array["INNER"], K);
 	
-	M := AlgebraicModularForms(G, innerForm, W);
+	M := AlgebraicModularForms(G, W);
 
 	// Assign genus representatives.
 	if IsDefined(array, "GENUS") and #array["GENUS"] ne 0 then

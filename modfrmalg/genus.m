@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: genus.m (class for all genus related data and computations)
 
+   04/24/20: Modified default value of parameter BeCareful to false. 
+
    04/01/20: Removed call to ModFrmAlgInit from genus - 
              no need to construct the space to compute the genus.
              Added direct call to computeGenusRepsCN1
@@ -49,7 +51,7 @@ end intrinsic;
 // access
 
 intrinsic GenusReps(M::ModFrmAlg
-	: BeCareful := true, Force := false, Orbits := false) -> SeqEnum
+	: BeCareful := false, Force := false, Orbits := false) -> SeqEnum
 { Computes the genus representatives of the inner form associated to the
 	   space of algebraic modular forms provided. }
 // This was here before - but we don't need to initialize the space for the genus representatives

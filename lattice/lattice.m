@@ -8,6 +8,10 @@ freeze;
 
    Implementation file for lattice routines
 
+   04/24/2020 : Modified default values of BeCareful to be false.
+                Modified IsIsometric to have a parameter, indicating a special 
+		isometry.
+ 
    04/20/2020 : Modified LatticeWithBasis to handle bases given as a nonsquare 
                 matrix, and fixed a bug in PullUp.
 
@@ -367,7 +371,7 @@ intrinsic Discriminant(lat::Lat) -> RngInt
 	return ideal< Integers() | det / factor >;
 end intrinsic;
 
-function pMaximalGram(L, pR : BeCareful := true, given_coeffs := [])
+function pMaximalGram(L, pR : BeCareful := false, given_coeffs := [])
 	if assigned L`pMaximal then
 		// If the p-maximal data has been assigned, return it.
 		if IsDefined(L`pMaximal, pR) then
@@ -615,45 +619,8 @@ intrinsic Index(lat1::ModDedLat, lat2::ModDedLat) -> RngOrdFracIdl
 	return root;
 end intrinsic;
 
-intrinsic IsIsometric(M::ModFrmAlg, lat1::Lat, lat2::Lat) -> BoolElt
-{ Determines whether the two specified lattices are isometric. }
-	// Check for isometry.
-	iso, f := IsIsometric(lat1, lat2);
-
-	// If not isometric, immediately return.
-	if not iso then return false; end if;
-
-	// If isogeny type is SO, then we require proper isometry.
-	if IsSpecialOrthogonal(M) and Determinant(f) eq -1 then
-		// Look at the generators of the automorphism group of the
-		//  first lattice.
-		gens := Generators(AutomorphismGroup(lat1));
-
-		// If any of the generators have determinant -1, then we can
-		//  compose f and g in such a way to produce a proper isometry.
-		for g in gens do
-			if Determinant(g) eq -1 then
-				return true;
-			end if;
-		end for;
-
-		// Same as above.
-		gens := Generators(AutomorphismGroup(lat2));
-		for g in gens do
-			if Determinant(g) eq -1 then
-				return true;
-			end if;
-		end for;
-
-		// No generators of determinant -1 found, therefore these two
-		//  lattices are not properly isometric.
-		return false;
-	end if;
-
-	return iso;
-end intrinsic;
-
-intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat) -> BoolElt, .
+intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
+		      special := false, BeCareful := false) -> BoolElt, Mtrx
 { Determines whether the two specified lattices are isometric. }
 	// Verify that both lattices reside in the same reflexive space.
 	require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
@@ -664,10 +631,40 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat) -> BoolElt, .
 	L2 := ZLattice(lat2);
 
 	// Check for isometry.
-//	iso, f := IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
+	iso, f := IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
 
-//	return iso;
-        return IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
+	if not iso then return false, _; end if;
+	
+	f := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
+
+	// Currently, this only works for SO, where det in -1,1
+	if special and Determinant(f) eq -1 then
+	    // Look at the generators of the automorphism group of the
+	    //  first lattice.
+	    gens := Generators(AutomorphismGroup(lat1));
+
+	    // If any of the generators have determinant -1, then we can
+	    //  compose f and g in such a way to produce a proper isometry.
+	    for g in gens do
+		if Determinant(g) eq -1 then
+		    return true, g*f;
+		end if;
+	    end for;
+
+	    // Same as above.
+	    gens := Generators(AutomorphismGroup(lat2));
+	    for g in gens do
+		if Determinant(g) eq -1 then
+		    return true, g*f;
+		end if;
+	    end for;
+
+	    // No generators of determinant -1 found, therefore these two
+	    //  lattices are not properly isometric.
+	    return false, _;
+	end if;
+	
+	return iso, f;
 end intrinsic;
 
 intrinsic AutomorphismGroup(lat::ModDedLat) -> SeqEnum
@@ -798,7 +795,7 @@ intrinsic FreeBasis(L::ModDedLat) -> SeqEnum
 end intrinsic;
 
 intrinsic PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat :
-		 BeCareful := true) -> AlgMatElt
+		 BeCareful := false) -> AlgMatElt
   {Takes an isometry g : Pi -> Lambda and reexpresses it as an L-linear map gV : V -> V.}
 
   LambdaZZ := ZLattice(Lambda);

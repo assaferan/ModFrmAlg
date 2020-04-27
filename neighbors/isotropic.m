@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: isotropic.m (class for tracking computation of isotropic subspaces)
 
+   04/24/20: Fixed bug in BuildTrivialReflexiveSpace of not assigning 
+   	     PrimitiveElement attribute.
+
    04/14/20: Added formulae for the number of isotropic subspaces for unitary
              spaces.
 
@@ -80,6 +83,9 @@ intrinsic BuildTrivialReflexiveSpace(F::FldFin,
   V`Basis := BasisMatrix(V);
   V`GramMatrix := MatrixAlgebra(F,dim)!0;
   V`GramMatrixStd := MatrixAlgebra(F,dim)!0;
+
+  // Assign the cyclic generator of the group of units of the field.
+  V`PrimitiveElement := PrimitiveElement(F);
   
   return V;
 end intrinsic;

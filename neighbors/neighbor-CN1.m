@@ -7,6 +7,14 @@ freeze;
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 
+   04/27/20: Changed the default value of the BeCareful parameter to false.
+
+   04/23/20: Fixed bug in the unitary split case for k > 1, where skew vector 
+             changed when constructing the isotropy subspace.
+   
+   04/22/20: Fixed bug in BuildNeighbor, of computing pairings only for k = 1 
+             in the unitary case.
+
    04/13/20: Added the UseLLL parameter - performing LLL; on the lattice 
              after constructing it.
 
@@ -82,7 +90,7 @@ declare attributes NeighborProc:
 
 // auxiliary function to lift a subspace from mod p
 
-function LiftSubspace(nProc : BeCareful := true, Override := false)
+function LiftSubspace(nProc : BeCareful := false, Override := false)
 	// If we're trying to lift an empty subspace, return trivial entries.
 	if nProc`isoSubspace eq [] then return [], [], []; end if;
 
@@ -304,7 +312,7 @@ end function;
 
 // The initialization function
 
-function BuildNeighborProc(L, pR, k : BeCareful := true)
+function BuildNeighborProc(L, pR, k : BeCareful := false)
 	// Initialize the neighbor procedure.
 	nProc := New(NeighborProc);
 
@@ -393,7 +401,13 @@ function BuildNeighborProc(L, pR, k : BeCareful := true)
 	Vpp := L`Vpp[pR];
 
 	// Build the skew vector.
-	nProc`skewDim := Integers()!(k*(k-1)/2);
+	alpha := Involution(ReflexiveSpace(nProc`L));
+	is_split := alpha(nProc`pR) ne nProc`pR;
+	if is_split then
+	    nProc`skewDim := 0;
+	else
+	    nProc`skewDim := Integers()!(k*(k-1)/2);
+	end if;
 	if nProc`skewDim ne 0 then
 		nProc`skew := Zero(MatrixRing(Vpp`F, k));
 	end if;
@@ -470,8 +484,13 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	    end for;
 	    X_conj := [alpha(x) : x in XX];
 	    B := InnerForm(Q);
+	    //	    Fixing for it to work for larger k
+	    /*
 	    pairings := [(Matrix(y)*B*Transpose(Matrix(X_conj)))[1,1] :
 			 y in local_basis];
+	    */
+	    pairings := &cat[Eltseq(Matrix(y)*B*Transpose(Matrix(X_conj))) :
+			     y in local_basis];
 	    kPbar, kPbarMap := ResidueClassField(alpha(nProc`pR));
 	    A := Matrix(kPbar, dim, #XX, [kPbarMap(x) : x in pairings]);
 	    lifted_null_space_basis := [&+[w[i]@@kPbarMap*local_basis[i] :
@@ -522,7 +541,7 @@ end function;
 
 // Advancement - getting the next neighbor
 
-function GetNextNeighbor(nProc : BeCareful := true)
+function GetNextNeighbor(nProc : BeCareful := false)
 	// The affine data.
 	Vpp := nProc`L`Vpp[nProc`pR];
 
@@ -580,8 +599,10 @@ function GetNextNeighbor(nProc : BeCareful := true)
 		until done or row+col eq k+1;
 	end if;
 
+	alpha := Involution(ReflexiveSpace(nProc`L));
+	is_split := alpha(nProc`pR) ne nProc`pR;
 	// If we haven't rolled over, update the skew space and return...
-	if row+col lt k+1 then
+	if (not is_split) and (row+col lt k+1) then
 		// Shortcuts for the projection maps modulo pR and
 	        //  pR * alpha(pR).
 		map := Vpp`proj_pR;
@@ -608,7 +629,7 @@ function GetNextNeighbor(nProc : BeCareful := true)
 	return nProc;
 end function;
 
-function SkipToNeighbor(nProc, space : BeCareful := true)
+function SkipToNeighbor(nProc, space : BeCareful := false)
     //	nProc`isoSubspace := [ space ];
         nProc`isoSubspace := space;
 	nProc`X, nProc`Z, nProc`U := LiftSubspace(nProc

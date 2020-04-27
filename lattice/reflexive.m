@@ -8,6 +8,9 @@
 
    Implementation file for ambient reflexive space
 
+   04/24/2010 : Modified Print to include Magma level printing.
+                Added support in quadratic etale algebras, which are not fields
+                Fixed bug in setting of attribute Definite for a unitary form.
    03/05/2020 : Added orthogonalization of matrix and creation of bilinear form
    03/03/2020 : Started this file as a copy of quadratic spaces
  
@@ -124,9 +127,14 @@ declare attributes RfxSpaceAff:
 
 // printing
 
-intrinsic Print(R::RfxSpace) {}
-	K := BaseRing(R`V);
-	R`V;
+intrinsic Print(R::RfxSpace, level::MonStgElt)
+{}
+  if level eq "Magma" then
+      printf "AmbientReflexiveSpace(%m, %m)", InnerForm(R), Involution(R);
+  else
+      K := BaseRing(R`V);
+      printf "%o", R`V;
+  end if;
 end intrinsic;
 
 // boolean operators
@@ -223,91 +231,102 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
   // The base ring.
   R := BaseRing(innerForm);
 
-  // Determine field of fractions.
-  if IsField(R) then
-    if R cmpeq Rationals() then
-      R := RationalsAsNumberField();
-    end if;
+  // if we're in the case of a split etale algebra (GL_n(D))
 
-    // Make sure we're dealing with a number field.
-    require IsNumberField(R):
-      "Base ring must be a number field or number ring.";
-    // The maximal order of our number field.
-    R := Integers(R);
-  elif R cmpeq Integers() then
-  // Convert to a maximal order format.
-    R := Integers(RationalsAsNumberField());
+  if Type(R) eq AlgAss then
+      F := BaseRing(R);
+      require IsField(F) and Dimension(R) eq 2 :
+		"Base ring must be an etale quadratic extension of a field"; 
+      
+  else
+
+      // Determine field of fractions.
+      if IsField(R) then
+	  if R cmpeq Rationals() then
+	      R := RationalsAsNumberField();
+	  end if;
+
+	  // Make sure we're dealing with a number field.
+	  require IsNumberField(R) or (Type(R) eq FldOrd):
+	          "Base ring must be a number field or number ring.";
+	  // The maximal order of our number field.
+	  R := Integers(R);
+      elif R cmpeq Integers() then
+	  // Convert to a maximal order format.
+	  R := Integers(RationalsAsNumberField());
+      end if;
+
+      // The field of fractions of the maximal order of our number field.
+      F := FieldOfFractions(R);
+      
+      alpha := FieldAutomorphism(F, Automorphism(alpha));
+
+      // Coerce the inner form into the appropriate field.
+      innerForm := ChangeRing(innerForm, F);
   end if;
 
-  // The field of fractions of the maximal order of our number field.
-  F := FieldOfFractions(R);
+  // Initialize a new reflexive space data structre.
+  rfxSpace := New(RfxSpace);
 
-	// Initialize a new reflexive space data structre.
-	rfxSpace := New(RfxSpace);
+  // Assign base field and base ring.
+  rfxSpace`F := F;
+  rfxSpace`R := Integers(F);
+  rfxSpace`deg := Degree(F);
+  rfxSpace`classNo := ClassNumber(AbsoluteField(F));
 
-//        F := BaseField(alpha);
-        alpha := FieldAutomorphism(F, Automorphism(alpha));
+  // Assign automorphism
+  rfxSpace`aut := alpha;
+  
+  require Order(alpha) le 2 :
+	"Automorphism must be either an involution or the identity";
 
-	// Coerce the inner form into the appropriate field.
-	innerForm := ChangeRing(innerForm, F);
+  require (IsIdentity(alpha) and
+	   Transpose(innerForm) in [innerForm, -innerForm]) or
+          (Order(alpha) eq 2 and Transpose(alpha(innerForm)) eq innerForm ) :
+	"Form is not reflexive";
 
-	// Assign base field and base ring.
-	rfxSpace`F := F;
-        rfxSpace`R := Integers(F);
-	rfxSpace`deg := Degree(F);
-        rfxSpace`classNo := ClassNumber(AbsoluteField(F));
+  // Assign the inner form to the reflexive space.
+  rfxSpace`innerForm := innerForm;
 
-        // Assign automorphism
-        rfxSpace`aut := alpha;
+  // Diagonalize the inner form.
+  rfxSpace`Diagonal, rfxSpace`DiagonalBasis :=
+      //		OrthogonalizeGram(innerForm);
+      OrthogonalizeForm(innerForm, alpha);
 
-        require Order(alpha) le 2 :
-	  "Automorphism must be either an involution or the identity";
+  // The diagonal entries.
+  rfxSpace`Diagonal := Diagonal(rfxSpace`Diagonal);
 
-        require (IsIdentity(alpha) and
-		 Transpose(innerForm) in [innerForm, -innerForm]) or
-        (Order(alpha) eq 2 and Transpose(alpha(innerForm)) eq innerForm ) :
-		"Form is not reflexive";
+  F0 := FixedField(alpha);
+  
+  // Determine whether this space is totally positive definite.
+  rfxSpace`Definite := IsTotallyReal(F0) and
+		       &and[ IsTotallyPositive(F0!d) : d in rfxSpace`Diagonal ];
 
-	// Assign the inner form to the reflexive space.
-        rfxSpace`innerForm := innerForm;
+  // Assign the reflexive space.
+  if SpaceType(rfxSpace) eq "Symmetric" then
+      rfxSpace`V := QuadraticSpace(innerForm / 2);
+  else if SpaceType(rfxSpace) eq "Alternating" then
+           rfxSpace`V := SymplecticSpace(innerForm);
+       else if SpaceType(rfxSpace) eq "Hermitian" then
+		rfxSpace`V := UnitarySpace(innerForm, Automorphism(alpha));
+            else
+		require false : "Form is not reflexive";
+            end if;
+       end if;
+  end if;
 
-	// Diagonalize the inner form.
-	rfxSpace`Diagonal, rfxSpace`DiagonalBasis :=
-	  //		OrthogonalizeGram(innerForm);
-	  OrthogonalizeForm(innerForm, alpha);
+  // Assign the reflexive form.
+  rfxSpace`Q := ReflexiveForm(innerForm, alpha);
+  
+  if SpaceType(rfxSpace) eq "Symmetric" then
+      rfxSpace`Q := QuadraticForm(innerForm) / 2;
+  end if;
+  
+  // Assign the dimension.
+  rfxSpace`dim := Nrows(innerForm);
 
-	// The diagonal entries.
-	rfxSpace`Diagonal := Diagonal(rfxSpace`Diagonal);
+  // Assign the standard lattice for this reflexive space.
+  rfxSpace`stdLat := StandardLattice(rfxSpace);
 
-	// Determine whether this space is totally positive definite.
-	rfxSpace`Definite := IsTotallyReal(F) and
-		&and[ IsTotallyPositive(d) : d in rfxSpace`Diagonal ];
-
-	// Assign the reflexive space.
-        if SpaceType(rfxSpace) eq "Symmetric" then
-	  rfxSpace`V := QuadraticSpace(innerForm / 2);
-        else if SpaceType(rfxSpace) eq "Alternating" then
-          rfxSpace`V := SymplecticSpace(innerForm);
-        else if SpaceType(rfxSpace) eq "Hermitian" then
-	  rfxSpace`V := UnitarySpace(innerForm, Automorphism(alpha));
-        else
-	  require false : "Form is not reflexive";
-        end if;
-        end if;
-        end if;
-
-	// Assign the reflexive form.
-        rfxSpace`Q := ReflexiveForm(innerForm, alpha);
-
-        if SpaceType(rfxSpace) eq "Symmetric" then
-           rfxSpace`Q := QuadraticForm(innerForm) / 2;
-        end if;
-
-	// Assign the dimension.
-	rfxSpace`dim := Nrows(innerForm);
-
-	// Assign the standard lattice for this reflexive space.
-	rfxSpace`stdLat := StandardLattice(rfxSpace);
-
-	return rfxSpace;
+  return rfxSpace;
 end intrinsic;

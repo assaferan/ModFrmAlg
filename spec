@@ -1,5 +1,7 @@
 {
-  
+
+  grp/GrpRed.m
+
   io/saveload.m
 
   lattice/lattice.m

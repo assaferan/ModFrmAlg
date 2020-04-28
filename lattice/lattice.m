@@ -660,7 +660,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 	    for g in gens do
 		if Determinant(g) eq -1 then
 		    return true,
-			   PullUp(Matrix(g*f), lat1, lat2 :
+			   PullUp(Matrix(f*g), lat1, lat2 :
 				  BeCareful := BeCareful);
 		end if;
 	    end for;
@@ -670,7 +670,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 	    for g in gens do
 		if Determinant(g) eq -1 then
 		    return true,
-			   PullUp(Matrix(f*g), lat1, lat2 :
+			   PullUp(Matrix(g*f), lat1, lat2 :
 				  BeCareful := BeCareful);
 		end if;
 	    end for;

@@ -11,15 +11,18 @@ freeze;
  ***************************************************************************/
 
 import "examples.m" : AlgebraicModularFormsExamples;
+import "../io/path.m" : path;
 
 forward testExample;
 
-intrinsic AlgebraicModularFormsTests(: num_primes := 0) -> ModFrmAlg
+intrinsic AlgebraicModularFormsTests(: num_primes := 0,
+				       use_existing := false) -> ModFrmAlg
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting num_primes.}
 
   for example in AlgebraicModularFormsExamples do
       // testing that we obtain the correct results
-      M := testExample(example : num_primes := num_primes);
+      M := testExample(example : num_primes := num_primes,
+				 use_existing := use_existing);
       // saving to a file
       fname := Sprintf("Example_%o.dat", example`name);
       Save(M, fname : Overwrite := true);
@@ -31,15 +34,20 @@ intrinsic AlgebraicModularFormsTests(: num_primes := 0) -> ModFrmAlg
   return M;
 end intrinsic;
 
-function testExample(example : num_primes := 0)
-    if example`group eq "Unitary" then
-	M := UnitaryModularForms(example`field, example`inner_form,
-				 example`weight, example`coeff_char);
-    elif example`group eq "Orthogonal" then
-	M := OrthogonalModularForms(example`field, example`inner_form,
-				    example`weight, example`coeff_char);
+function testExample(example : num_primes := 0, use_existing := false)
+    fname := Sprintf("Example_%o.dat", example`name);
+    if use_existing and FileExists(path() cat fname) then
+	M := AlgebraicModularForms(fname);
     else
-	error "The group type %o is currently not supported!";
+	if example`group eq "Unitary" then
+	    M := UnitaryModularForms(example`field, example`inner_form,
+				     example`weight, example`coeff_char);
+	elif example`group eq "Orthogonal" then
+	    M := OrthogonalModularForms(example`field, example`inner_form,
+					example`weight, example`coeff_char);
+	else
+	    error "The group type %o is currently not supported!";
+	end if;
     end if;
     printf "Testing example of %o\n", M;
     
@@ -119,9 +127,13 @@ function testExample(example : num_primes := 0)
 		F1 := AbsoluteField(F1);
 		F2 := AbsoluteField(F2);
 		L := Compositum(F1, F2);
-		zeta := PrimitiveElement(F1);
-		roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
-		embs := [hom<Parent(ev_calc[1]) -> L | r> : r in roots];
+		if Type(F1) eq FldRat then
+		    embs := [hom<F1 -> L | >];
+		else
+		    zeta := PrimitiveElement(F1);
+		    roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+		    embs := [hom<F1 -> L | r> : r in roots];
+		end if;
 	    end if;
 	    
 	    assert exists(emb){emb : emb in embs |

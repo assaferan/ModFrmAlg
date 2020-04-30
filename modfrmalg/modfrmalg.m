@@ -109,7 +109,41 @@ declare attributes ModFrmAlg:
 // matrix. However, there seems to be no reason for that.
 
 intrinsic AlgebraicModularForms(G::GrpRed,
-				// innerForm::AlgMatElt[Rng],
+			        weight::GrpRep,
+				level::AlgMatElt[Fld]) -> ModFrmAlg
+{Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.}
+        require IsCompact(G) : "Group must be compact at infinity.";
+        K := SplittingField(G);
+        require IsField(K) : "Reductive group must be defined over a field.";
+
+        if " " in CartanName(G) then
+	  error "Groups of type %o are not supported.\n", CartanName(G);
+        end if;
+
+        cartanType := CartanName(G)[1];
+
+	V := InnerForm(G,1);
+
+	// Build the lattice from the level
+	L := LatticeWithBasis(V, ChangeRing(level, K));
+
+	// Initialize the space of algebraic modular forms.
+	M := New(ModFrmAlg);
+
+        dim := Dimension(L);
+        M`K := K;
+        M`G := G;
+        M`L := L;
+	M`W := weight;
+
+	// Assign the Hecke module for this instance.
+	M`Hecke := New(ModHecke);
+	M`Hecke`Ts := AssociativeArray();
+
+	return M;
+end intrinsic;
+
+intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep) -> ModFrmAlg
 { Builds the space of algebraic modular forms with respect to the reductive group G and representation weight.}
 

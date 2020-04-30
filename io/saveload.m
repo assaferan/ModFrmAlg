@@ -143,7 +143,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		    for dim in dims do
 
 			Ps := [p : p in Keys(f`Eigenvalues[dim])];
-			evs := [f`Eigenvalues[dim][p] : p in Ps];
+			evs := [* f`Eigenvalues[dim][p] : p in Ps *];
 		    
 			// A coupled list of eigenvalues and the corresponding ideals.
 			list := [* < Generators(Ps[i]), evs[i], Parent(evs[i]) >

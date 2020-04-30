@@ -48,9 +48,11 @@ Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 inner_form_7_3 := Matrix([[2,0,0,1],[0,2,1,0],[0,1,6,0],[1,0,0,6]]);
 eis_7_3 := [[* x^2 : x in eis_7_2[1] *], [* 2*x*(x-1) : x in eis_7_2[1] *]];
 a_7_3 := [[* x^2 : x in cusp_7_2[1] *],
-	  [* 2*(cusp_7_2[1][i]^2 - ps_7_2[i] -1) : i in [1..#ps_7_2] *]];
+	  [* ps_7_2[i] eq 11 select 0 else
+	   2*(cusp_7_2[1][i]^2 - ps_7_2[i] - 1) : i in [1..#ps_7_2] *]];
 b_7_3 := [[* cusp_7_2[1][i] * eis_7_2[1][i] : i in [1..#ps_7_2] *],
-	  [* cusp_7_2[1][i]^2 + ps_7_2[i]^2 - 1 : i in [1..#ps_7_2]  *] ];
+	  [*  ps_7_2[i] eq 11 select 0 else
+	   cusp_7_2[1][i]^2 + ps_7_2[i]^2 - 1 : i in [1..#ps_7_2]  *] ];
 Example_7_3 := rec< ExampleRF | name := "[GV2]_7_3",
 				group := "Orthogonal",
 				field := Rationals(),

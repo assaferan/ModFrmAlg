@@ -1002,7 +1002,7 @@ function get_hecke_representatives(p)
     assert num eq #reps;
     return ret;
 end function;
-
+/*
 function foo()
     QQ_2 := pAdicField(2);
     K := QuadraticField(-7);
@@ -1022,4 +1022,4 @@ function foo()
     assert pAdicModule(Rows(tt)) eq pAdicLatticeAtSplitPrime(reps[2],2);
     return x_hat;
 end function;
-	     
+*/	     

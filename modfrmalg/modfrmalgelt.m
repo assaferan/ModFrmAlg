@@ -439,9 +439,13 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
 	      else
 		  if IsFinite(F[2]) then return false; end if;
 		  L := Compositum(F[1], F[2]);
-		  zeta := PrimitiveElement(F[1]);
-		  roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
-		  embs := [hom< F[1] -> L | r> : r in roots];
+		  if Type(F[1]) eq FldRat then
+		      embs := [hom< F[1] -> L |>];
+		  else
+		      zeta := PrimitiveElement(F[1]);
+		      roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+		      embs := [hom< F[1] -> L | r> : r in roots];
+		  end if;
 	      end if;
 	      
 	      if not exists(emb){emb : emb in embs |

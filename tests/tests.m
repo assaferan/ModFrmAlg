@@ -82,7 +82,7 @@ function testExample(example : num_primes := 0, use_existing := false)
 						  Orbits := (k eq 1)));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;
-	    if (#example`timing ge i) then
+	    if (#example`timing ge i) and (timing ne 0) then
 		ratio := example`timing[i] / timing;
 		printf "this should take %o times the time.\n", ratio;
 	    end if;
@@ -111,12 +111,12 @@ function testExample(example : num_primes := 0, use_existing := false)
 
     for i in [1..#example`evs] do
 	for k in keys do
-	    ev_calc := evs[i][k];
+	    ev_calc := evs[i][k][1..N];
 	    ev := example`evs[i][k][1..N];
 	    // the field of definition might be different,
 	    // so we check if there is some embedding under which
 	    // all the eigenvalues coincide
-	    F1 := Parent(ev_calc[1]);
+	    F1 := FieldOfFractions(Parent(ev_calc[1]));
 	    F2 := FieldOfFractions(Parent(ev[1]));
 	    if IsFinite(F1) then
 		assert IsFinite(F2);

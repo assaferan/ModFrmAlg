@@ -180,7 +180,9 @@ function createExamples_7_4()
 
     F<alpha> := QuadraticField(-259);
     evs_3_3[2][1] := [* (alpha - 7) / 8, (244*alpha - 7441) / 1331,
-		   (-21940 * alpha - 162337) / 12167 *];
+		      (-21940 * alpha - 162337) / 12167,
+		      1/24389*(-14392*alpha + 710867),
+		      1/50653*(-46728*alpha + 1014587) *];
     
     Example_7_4_W_2_0 := rec<ExampleRF | name := "[GV2]_7_4_W_2_0",
 					 group := "Unitary",

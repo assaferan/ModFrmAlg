@@ -111,12 +111,17 @@ function testExample(example : num_primes := 0, use_existing := false)
 
     for i in [1..#example`evs] do
 	for k in keys do
-	    ev_calc := evs[i][k][1..N];
-	    ev := example`evs[i][k][1..N];
+	    len := Minimum(N, #example`evs[i][k]); 
+	    ev_calc := evs[i][k][1..len];
+	    ev := example`evs[i][k][1..len];
+	    
 	    // the field of definition might be different,
 	    // so we check if there is some embedding under which
 	    // all the eigenvalues coincide
+	    
 	    F1 := FieldOfFractions(Parent(ev_calc[1]));
+	    assert &and[IsIsomorphic(F1, FieldOfFractions(Parent(x))) :
+		    x in ev_calc];
 	    F2 := FieldOfFractions(Parent(ev[1]));
 	    if IsFinite(F1) then
 		assert IsFinite(F2);
@@ -135,9 +140,15 @@ function testExample(example : num_primes := 0, use_existing := false)
 		    embs := [hom<F1 -> L | r> : r in roots];
 		end if;
 	    end if;
-	    
+
+	    // This is what we wanted to do, but because different
+	    // eigenvalues have different parents, we can't
+	    /*
 	    assert exists(emb){emb : emb in embs |
 			       [emb(x) : x in ev_calc] eq [x : x in ev]};
+	   */
+	    assert &and[exists(emb) {emb : emb in embs |
+				     emb(ev_calc[i]) eq ev[i]} : i in [1..N]];
 	end for;
     end for;
 

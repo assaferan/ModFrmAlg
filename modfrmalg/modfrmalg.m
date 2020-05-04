@@ -115,7 +115,11 @@ intrinsic AlgebraicModularForms(G::GrpRed,
         require IsCompact(G) : "Group must be compact at infinity.";
         K := SplittingField(G);
         require IsField(K) : "Reductive group must be defined over a field.";
-
+	// !!! TODO : eventually want them to be the same
+	// G eq weight`G. For that needs to be able to build
+	// representations of GrpRed
+	require(Dimension(G) eq Degree(weight`G)) :
+				"Weight must be a representation of the group.";
         if " " in CartanName(G) then
 	  error "Groups of type %o are not supported.\n", CartanName(G);
         end if;

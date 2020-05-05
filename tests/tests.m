@@ -6,6 +6,8 @@ freeze;
                                                                             
    FILE: tests.m (functions for testing examples)
 
+   05/04/20: Fixed a bug when testing over finite coefficient fields 
+
    04/03/20: renamed from unitary-tests.m
  
  ***************************************************************************/
@@ -120,14 +122,16 @@ function testExample(example : num_primes := 0, use_existing := false)
 	    // all the eigenvalues coincide
 	    
 	    F1 := FieldOfFractions(Parent(ev_calc[1]));
-	    assert &and[IsIsomorphic(F1, FieldOfFractions(Parent(x))) :
-		    x in ev_calc];
 	    F2 := FieldOfFractions(Parent(ev[1]));
 	    if IsFinite(F1) then
 		assert IsFinite(F2);
+		assert &and[#F1 eq  #FieldOfFractions(Parent(x)) :
+			    x in ev_calc];
 		L := GF(LCM(#F1, #F2));
 		embs := [hom<F1->L|>];
 	    else
+		assert &and[IsIsomorphic(F1, FieldOfFractions(Parent(x))) :
+			    x in ev_calc];
 		assert not IsFinite(F2);
 		F1 := AbsoluteField(F1);
 		F2 := AbsoluteField(F2);

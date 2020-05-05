@@ -9,6 +9,9 @@ freeze;
 
    Implementation file for the space of algebraic modular forms.
 
+   05/04/20: Fixed a bug in ModFrmAlgInit, had to tell magma that two fields
+             are isomorphic.
+
    04/27/20: Modified ModFrmAlgInit to use the special automorphism group,
              when working with SO.
 
@@ -415,13 +418,15 @@ procedure ModFrmAlgInit(M : BeCareful := false,
 	gamma_reps := [AutomorphismGroup(r :
 					 Special := IsSpecialOrthogonal(M)) :
 		       r in reps];
+	assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
+			    BaseRing(M`W`G));
 	
 	gammas := [sub<M`W`G|
 		      [Transpose(PullUp(Matrix(g), reps[i], reps[i] :
 					BeCareful := BeCareful)) :
 		       g in Generators(gamma_reps[i])]> :
 		   i in [1..#reps]];
-
+        
 	if GetVerbose("AlgebraicModularForms") ge 2 then
 	    printf "The sizes of the automorphism groups are %o.\n",
 		   [#x : x in gammas];

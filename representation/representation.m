@@ -6,6 +6,12 @@ freeze;
                                                                             
    FILE: representation.m (class for group representations)
 
+   05/04/20: Fixed a bug in reading and writing a representation defined by
+             a highest weight over a finite field. The relevant attributes 
+	     weren`t read or written so far.
+             Added multiplication by a non-invertible matrix 
+	     (so far, only a matrix on the underlying vector space)
+
    04/20/20: Changed pullback to saveh the description intead of the function.
 
    04/13/20: Modified DimensionOfHighestWeightModule, as it is not supported 
@@ -165,6 +171,33 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
 
   if IsDefined(param_array, "SYMMETRIC") then
       V`symmetric := param_array["SYMMETRIC"];
+  end if;
+
+  if IsDefined(param_array, "WEIGHT") then
+      grp := param_array["WEIGHT"][1];
+      hw := param_array["WEIGHT"][2];
+      lie_G := grp`G0;
+      std_rep := StandardRepresentation(lie_G);
+      GL_std := Codomain(std_rep);
+      mats := [std_rep(x) : x in AlgebraicGenerators(lie_G)];
+      word_map := InverseWordMap(V`G);
+      G_map := hom<Codomain(word_map) -> lie_G | AlgebraicGenerators(lie_G)>;
+      if not IsSemisimple(lie_G) then
+	  RootDat := RootDatum(lie_G);
+	  AdRootDat := RootDatum(CartanName(RootDat));
+	  // This is the central weight
+	  ones := Vector([Rationals() | 1 : i in [1..Dimension(RootDat)]]);
+	  zero := Vector([Rationals()| 0 : i in [1..Dimension(AdRootDat)]]);
+	  A := VerticalJoin(SimpleRoots(RootDat), ones)^(-1) *
+	       VerticalJoin(SimpleRoots(AdRootDat), zero);
+	  B := VerticalJoin(SimpleCoroots(RootDat), ones)^(-1) *
+	       VerticalJoin(SimpleCoroots(AdRootDat), zero);
+	  phi := hom<RootDat -> AdRootDat | A, B>;
+	  red := GroupOfLieTypeHomomorphism(phi, BaseRing(lie_G));
+	  G_map := G_map * red;
+      end if;
+      V`mat_to_elt := word_map * G_map;
+      V`weight := HighestWeightRepresentation(Codomain(V`mat_to_elt),hw);
   end if;
 
   V`action_desc := action_desc;
@@ -382,6 +415,13 @@ function build_rep_params(V)
     if assigned V`pullback then
 	Append(~params, < "PULLBACK", V`pullback >);
     end if;
+    if assigned V`mat_to_elt then
+	lie_grp := Codomain(Components(V`mat_to_elt)[2]);
+	Append(~params, < "WEIGHT",
+			  <ReductiveGroup(lie_grp,
+					  CyclicGroup(1)),
+			   HighestWeight(V`weight)[1] > >);
+    end if;
     if assigned V`ambient then
 	images := [V`embedding(V.i)`m : i in [1..Dimension(V)]];
 	iota := Homomorphism(V`M, V`ambient`M, images);
@@ -504,9 +544,15 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
 {Computes the martix describing the action of g on V.}
   // In the cases of pullbacks and weight representations
   // we don't record anything, just compute from the underlying structure
+  if Type(BaseRing(g)) ne FldFin then
+      assert IsIsomorphic(BaseRing(V`G),BaseRing(g));
+  end if;
   if assigned V`pullback then
       W := V`pullback[1];
       f := (eval V`pullback[2])(V`pullback[3]);
+      if Type(BaseRing(g)) ne FldFin then
+	  assert IsIsomorphic(BaseRing(Domain(f)), BaseRing(g));
+      end if;
       return getMatrixAction(W, f(g));
   end if;
   if assigned V`mat_to_elt then
@@ -575,7 +621,14 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
   end if;
   
 end intrinsic;
+/*
+// in case we have a non-invertible element and the action is defined for it.
 
+intrinsic getMatrixAction(V::GrpRep, m::AlgMatElt) -> AlgMatElt
+{.}
+   return Matrix([V`action(m, i)`vec : i in [1..Dimension(V)]]);
+end intrinsic;
+*/
 /* arithmetic operations */
 
 intrinsic '*'(g::GrpElt, v::GrpRepElt) -> GrpRepElt
@@ -587,6 +640,15 @@ intrinsic '*'(g::GrpElt, v::GrpRepElt) -> GrpRepElt
   g_act := getMatrixAction(V,g);
   
   return V!(v`m`vec * g_act);
+end intrinsic;
+
+// Direct matrix multiplication
+intrinsic '*'(m::AlgMatElt, v::GrpRepElt) -> GrpRepElt
+{.}
+
+  V := Parent(v);
+  
+  return V!(v`m`vec * m);
 end intrinsic;
 
 intrinsic '+'(elt_l::GrpRepElt, elt_r::GrpRepElt) -> GrpRepElt
@@ -976,6 +1038,8 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
   end function;
   return action;
   ");
-  V`action := eval V`action_desc;
+  action := eval V`action_desc;
+  V`action := map< CartesianProduct(V`G, [1..Dimension(V`M)]) -> V`M |
+		 x :-> action(x[1], x[2], V)>;
   return V;
 end intrinsic;	  

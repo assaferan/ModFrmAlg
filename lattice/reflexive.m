@@ -1,4 +1,4 @@
-//freeze;
+freeze;
 /****-*-magma-******a********************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
@@ -8,7 +8,9 @@
 
    Implementation file for ambient reflexive space
 
-   04/24/2010 : Modified Print to include Magma level printing.
+   05/04/2020 : Added support for the case of 2-dimensional etale algebra 
+
+   04/24/2020 : Modified Print to include Magma level printing.
                 Added support in quadratic etale algebras, which are not fields
                 Fixed bug in setting of attribute Definite for a unitary form.
    03/05/2020 : Added orthogonalization of matrix and creation of bilinear form
@@ -130,7 +132,14 @@ declare attributes RfxSpaceAff:
 intrinsic Print(R::RfxSpace, level::MonStgElt)
 {}
   if level eq "Magma" then
-      printf "AmbientReflexiveSpace(%m, %m)", InnerForm(R), Involution(R);
+      if Type(BaseRing(InnerForm(R))) eq AlgAss then
+	  printf "AmbientReflexiveSpace(%m ! %m, %m)",
+		 Parent(InnerForm(R)),
+		 [Eltseq(x) : x in Eltseq(InnerForm(R))],
+		 Involution(R);
+      else
+	  printf "AmbientReflexiveSpace(%m, %m)", InnerForm(R), Involution(R);
+      end if;
   else
       K := BaseRing(R`V);
       printf "%o", R`V;
@@ -234,6 +243,7 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
   // if we're in the case of a split etale algebra (GL_n(D))
 
   if Type(R) eq AlgAss then
+      alpha := FieldAutomorphism(R, Automorphism(alpha));
       F := BaseRing(R);
       require IsField(F) and Dimension(R) eq 2 :
 		"Base ring must be an etale quadratic extension of a field"; 
@@ -270,9 +280,12 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 
   // Assign base field and base ring.
   rfxSpace`F := F;
-  rfxSpace`R := Integers(F);
+  if Type(F) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
+      rfxSpace`R := Integers(F);
+      rfxSpace`classNo := ClassNumber(AbsoluteField(F));
+  end if;
+  
   rfxSpace`deg := Degree(F);
-  rfxSpace`classNo := ClassNumber(AbsoluteField(F));
 
   // Assign automorphism
   rfxSpace`aut := alpha;
@@ -297,22 +310,27 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
   rfxSpace`Diagonal := Diagonal(rfxSpace`Diagonal);
 
   F0 := FixedField(alpha);
-  
-  // Determine whether this space is totally positive definite.
-  rfxSpace`Definite := IsTotallyReal(F0) and
-		       &and[ IsTotallyPositive(F0!d) : d in rfxSpace`Diagonal ];
+
+  if Type(F) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
+      // Determine whether this space is totally positive definite.
+      rfxSpace`Definite := IsTotallyReal(F0) and
+			   &and[ IsTotallyPositive(F0!d) :
+				 d in rfxSpace`Diagonal ];
+  end if;
 
   // Assign the reflexive space.
   if SpaceType(rfxSpace) eq "Symmetric" then
       rfxSpace`V := QuadraticSpace(innerForm / 2);
-  else if SpaceType(rfxSpace) eq "Alternating" then
-           rfxSpace`V := SymplecticSpace(innerForm);
-       else if SpaceType(rfxSpace) eq "Hermitian" then
-		rfxSpace`V := UnitarySpace(innerForm, Automorphism(alpha));
-            else
-		require false : "Form is not reflexive";
-            end if;
-       end if;
+  elif SpaceType(rfxSpace) eq "Alternating" then
+      rfxSpace`V := SymplecticSpace(innerForm);
+  elif SpaceType(rfxSpace) eq "Hermitian" then
+      if Type(alpha`L) eq AlgAss then
+	  rfxSpace`V := VectorSpace(F, Nrows(innerForm));
+      else
+	  rfxSpace`V := UnitarySpace(innerForm, Automorphism(alpha));
+      end if;
+  else
+      require false : "Form is not reflexive";
   end if;
 
   // Assign the reflexive form.
@@ -326,7 +344,9 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
   rfxSpace`dim := Nrows(innerForm);
 
   // Assign the standard lattice for this reflexive space.
-  rfxSpace`stdLat := StandardLattice(rfxSpace);
+  if Type(F) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
+      rfxSpace`stdLat := StandardLattice(rfxSpace);
+  end if;
 
   return rfxSpace;
 end intrinsic;

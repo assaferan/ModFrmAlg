@@ -1,7 +1,7 @@
 SetDebugOnError(true);
 SetHelpUseExternalBrowser(false);
 AttachSpec("spec");
-AlgebraicModularFormsTests(:num_primes := 3);
+// AlgebraicModularFormsTests(:num_primes := 3);
 
 if assigned AlgebraicModularFormsExamples then
     delete AlgebraicModularFormsExamples;
@@ -18,8 +18,94 @@ end if;
 import "tests/examples.m" : AlgebraicModularFormsExamples;
 import "tests/tests.m" : testExample;
 import "modfrmalg/modfrmalg.m" : normalizeField;
+import "neighbors/hecke-CN1.m" : processNeighborWeight, HeckeOperatorCN1;
+import "neighbors/inv-CN1.m" : Invariant;
+import "neighbors/neighbor-CN1.m" : BuildNeighborProc,
+       SkipToNeighbor,
+       BuildNeighbor;
+
+print "Hello!";
 
 examples := AlgebraicModularFormsExamples;
+example := examples[7];
+M := UnitaryModularForms(example`field, example`inner_form,
+			 example`weight, example`coeff_char);
+d := Dimension(M);
+p := 2;
+pR := Factorization(ideal<Integers(BaseRing(M)) | p>)[1][1];
+k := 1;
+reps := Representatives(Genus(M));
+hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] : h in M`H];
+isoms := [ [ [* [] : hh in M`H*] : vec_idx in [1..Dimension(h)]] : h in M`H];
+invs := M`genus`RepresentativesAssoc;
+Q := ReflexiveSpace(Module(M));
+n := Dimension(Q);
+fullCount := #M`H * NumberOfNeighbors(M, pR, k);
+
+function get_orbit_contrib1(orbit, nProc, psi, gens_modp, Aut,
+			    gens, n, Q, M, invs, idx, B)
+    nProc := SkipToNeighbor(nProc, Basis(orbit[1]));
+
+    mat_gen_seq := [[
+			   gens[Index(gens_modp, Eltseq(Aut.Abs(i)))]^Sign(i) :
+			   i in Eltseq((B*g*B^(-1))@@psi)] :
+		    g in orbit[2]];
+    mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+		  &*seq : seq in mat_gen_seq];
+
+    w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+	    g in mat_lifts];
+
+    hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] :
+	       h in M`H];
+    
+    processNeighborWeight(~nProc, invs, ~hecke, idx, M`H: weight := w);
+    return hecke;
+end function;
+
+function get_orbit_contrib2(orbit, nProc, psi, gens_modp, Aut,
+			    gens, n, Q, M, invs, idx, B)
+    hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] :
+	       h in M`H];
+    for gamma in orbit[2] do
+	iso_gens := [ b * B * gamma * B^(-1) : b in Basis(orbit[1])];
+	nProc := SkipToNeighbor(nProc, iso_gens);
+	processNeighborWeight(~nProc, invs, ~hecke, idx, M`H);
+    end for;
+    return hecke;
+end function;
+
+for idx in [1..#M`H] do
+    L := reps[idx];
+    nProc := BuildNeighborProc(L, pR, k);
+    V := nProc`L`Vpp[pR]`V;
+    F := BaseRing(V);
+    G := AutomorphismGroup(L);
+    BeCareful := true;
+    gens := [PullUp(Matrix(g), L, L :BeCareful := BeCareful):g in Generators(G)];
+    pMaximalBasis :=ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
+    conj_gens := [pMaximalBasis * g * pMaximalBasis^(-1) :g in gens];
+    gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]: g in conj_gens];
+    Aut := sub<GL(n, F) | gens_modp>;
+    fp_aut, psi := FPGroup(Aut);
+    isoOrbits := IsotropicOrbits(V, Aut, k);
+    B := Transpose(V`Basis);
+    for orb_idx in [1..#isoOrbits] do
+	orbit := isoOrbits[orb_idx];
+	contrib1 := get_orbit_contrib1(orbit, nProc, psi, gens_modp, Aut,
+				       gens, n, Q, M, invs, idx, B);
+	contrib2 := get_orbit_contrib2(orbit, nProc, psi, gens_modp, Aut,
+				       gens, n, Q, M, invs, idx, B);
+	assert contrib1 eq contrib2;
+    end for;
+end for;
+
+h := HeckeOperatorCN1(M, pR, 1
+			  : BeCareful := false,
+			    UseLLL := false,
+			    Estimate := true,
+			    Orbits := true);
+
 /*
 QQ := Rationals();
 n := 5;

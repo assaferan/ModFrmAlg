@@ -9,6 +9,8 @@ freeze;
 
    I've grown weary of trying to use GrpLie...
 
+   05/04/20: Added support in non-semisimple lie groups
+
    04/27/20: Fixed bug in constructor of orthogonal group from dimension.
              Added constructors for the special orthogonal group.
 
@@ -61,7 +63,7 @@ the inner form over the base field.}
 
   // Create corresponding reflexive spaces for the split case
   if IsEmpty(InnerForms) then
-      ds := DirectSumDecomposition(RootDatum(G`G0));
+      ds := DirectSumDecomposition(AdjointVersion(RootDatum(G`G0)));
       cartans := [CartanName(r) : r in ds];
       types := [<c[1], StringToInteger(c[2..#c])> : c in cartans];
       InnerForms := [SplitReflexiveSpace(t[1], t[2], DefRing(G0)) : t in types];

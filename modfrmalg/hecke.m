@@ -11,6 +11,9 @@ freeze;
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   05/04/20: Modified HeckeOperator to use orbits if instructed to, 
+             now that it actually works!
+
    04/27/20: Changed default value of BeCareful to false.
              Modified to not use LLL when group is SO.
 
@@ -137,15 +140,6 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 	// Right now, in this version, we do not choose, but use always the same
 	// function.
 
-	// !!! Right now, when the weight is non-trivial, the orbit method
-	// fails - have to check why. Meanwhile this is our temporary fix
-
-	if (Dimension(M`W) gt 1) then
-	    use_orbits := false;
-	else
-	    use_orbits := Orbits;
-	end if;
-
 	// Currently LLL doesn't seem to work for SO
 	if UseLLL and not IsSpecialOrthogonal(M) then
 	    use_LLL := true;
@@ -157,7 +151,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 				  : BeCareful := BeCareful,
 				    UseLLL := use_LLL,
 				    Estimate := Estimate,
-				    Orbits := use_orbits);
+				    Orbits := Orbits);
 
 	// Sets the Hecke operator in the internal data structure for this
 	//  algebraic modular form.

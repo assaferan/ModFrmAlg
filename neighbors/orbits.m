@@ -1,6 +1,20 @@
-// Scripts for computing isotropic line orbits under the automorphism group.
+freeze;
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma                          
+                            Eran Assaf                                 
+                                                                            
+   FILE: orbits.m (Scripts for computing isotropic line 
+   	 	  	   orbits under the automorphism group.)
 
-declare attributes ModTupFld: parent, rank;
+   05/04/20: started documentation. Added tracking of isometries, in order to
+             support using orbits with non-trivial weights.
+             Modified IsotropicOrbits to return the coset representatives.
+ 
+****************************************************************************/
+
+
+declare attributes ModTupFld: parent, rank, isom;
 
 intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 						   k::RngIntElt) -> SeqEnum
@@ -15,6 +29,7 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	for i in [1..#list] do
 		list[i]`rank := 0;
 		list[i]`parent := list[i];
+		list[i]`isom := G!1;
 	end for;
 
 	// Retrieve the generators of the automorphism group.
@@ -25,28 +40,34 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	// This function establishes the parent node of all elements in the
 	//  partition to an element of least rank.
 	function find(x)
-		if x`parent ne x then
-			x`parent := find(x`parent);
-		end if;
-		return x`parent;
+	    if x`parent ne x then
+		x`parent, isom := find(x`parent);
+		x`isom := isom * x`isom;
+	    end if;
+	    return x`parent, x`isom;
 	end function;
 
 	// Merge sets which are in the same equivalance class. We do this by
 	//  establishing the parent (found with `find' above) for all elements
 	//  in the partition.
-	procedure union(x,y)
-		xRoot := find(x);
-		yRoot := find(y);
-		if xRoot eq yRoot then return; end if;
+	// TODO : This union-find is not very efficient...
+	// Implement an efficient version
+	procedure union(x,y,g)
+	    xRoot, xIsom := find(x);
+	    yRoot, yIsom := find(y);
+	    if xRoot eq yRoot then return; end if;
 
-		if xRoot`rank lt yRoot`rank then
-			xRoot`parent := yRoot;
-		elif xRoot`rank gt yRoot`rank then
-			yRoot`parent := xRoot;
-		else
-			yRoot`parent := xRoot;
-			xRoot`rank := xRoot`rank + 1;
-		end if;
+	    if xRoot`rank lt yRoot`rank then
+		xRoot`parent := yRoot;
+		xRoot`isom := yIsom * g^(-1) * xIsom^(-1);
+	    elif xRoot`rank gt yRoot`rank then
+		yRoot`parent := xRoot;
+		yRoot`isom := xIsom * g * yIsom^(-1);
+	    else
+		yRoot`parent := xRoot;
+		yRoot`isom := xIsom * g * yIsom^(-1);
+		xRoot`rank := xRoot`rank + 1;
+	    end if;
 	end procedure;
 	
 	// Apply the generators of the automorphism group to each subspace.
@@ -56,7 +77,7 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 		// S := sub< V | x.1 * g >;
 		S := sub< V | gens >;
 		idx := Index(list, S);
-		union(x, list[idx]);
+		union(x, list[idx], g);
 	    end for;
 	end for;
 
@@ -66,11 +87,13 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	// Populate the associative array, keeping track of how many orbits are
 	//  in each partition.
 	for x in list do
-		if not IsDefined(O, x`parent) then
-			O[x`parent] := 1;
-		else
-			O[x`parent] +:= 1;
-		end if;
+	    if not IsDefined(O, x`parent) then
+		//O[x`parent] := 1;
+		O[x`parent] := [x`isom];
+	    else
+		//O[x`parent] +:= 1;
+		O[x`parent] := O[x`parent] cat [x`isom];
+	    end if;
 	end for;
 
 	// Prepare the data to be returned to the user.

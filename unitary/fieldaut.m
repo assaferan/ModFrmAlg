@@ -12,6 +12,8 @@ freeze;
    Maybe should also write a structure for the group itself, 
    so far it is not eneded.
 
+   05/04/2020 : Added support in 2 dimensional etale algebras
+
    04/27/2020 : Fixed bug in constructor to handle construction from io.
 
    04/24/2020 : Added construction of automorphism for a quadratic etale case.
@@ -38,7 +40,14 @@ declare attributes FldAut :
 /* constructors */
 
 function fullAutomorphismGroup(L)
-   assert IsField(L);
+   // assert IsField(L);
+   if Type(L) eq AlgAss then
+       id_map := hom<L->L|[L.1,L.2]>;
+       alpha := hom<L->L|[L.2,L.1]>;
+       aut := [id_map, alpha];
+       gal := Sym(2);
+       return gal, aut, map<gal -> aut | <gal!1, aut[1]>, <gal!(1,2), aut[2]> >;
+   end if;
    char := Characteristic(L);
    if (char eq 0) then
       gal, aut, phi := AutomorphismGroup(L);
@@ -58,19 +67,24 @@ function fullAutomorphismGroup(L)
    return gal, aut, phi;
 end function;
 
-intrinsic FieldAutomorphism(L::AlgAss[Fld]) -> FldAut
+intrinsic FieldAutomorphism(L::AlgAss[Fld], g::GrpPermElt) -> FldAut
 {Return the involution swapping the indices.}
   require Dimension(L) eq 2 :
 			    "Algebra must be a quadratic etale algebra.";
   alpha := New(FldAut);
   alpha`L := L;
-  S2 := SymmetricGroup(2);
-  alpha`elt := S2!(1,2);
+  S2 := Parent(g);
+  alpha`elt := g;
   id_map := hom<L -> L | [L.1, L.2]>;
   alpha`map := hom<L -> L | [L.2, L.1]>;
   alpha`isom := map<S2 -> Parent(alpha`map) | [<S2!1, id_map>,
-					       <S2!(1,2), alpha`map> ] >;
+					       <g, alpha`map> ] >;
   return alpha;
+end intrinsic;
+
+intrinsic FieldAutomorphism(L::AlgAss[Fld]) -> FldAut
+{Return the involution swapping the indices.}
+  return FieldAutomorphism(L, Sym(2)!(1,2));
 end intrinsic;
 
 intrinsic FieldAutomorphism(L::Fld, g::GrpPermElt) -> FldAut
@@ -139,6 +153,31 @@ intrinsic FieldAutomorphism(L::Fld, f::Map[Fld,Fld]) -> FldAut
    return FieldAutomorphism(L, g);
 end intrinsic;
 
+intrinsic FieldAutomorphism(L::AlgAss[Fld],
+			       f::Map[AlgAss[Fld],AlgAss[Fld]]) -> FldAut
+{.}
+    if IsFinite(BaseRing(L)) then
+	require (#L eq #Domain(f)) and (#L eq #Codomain(f)) :
+	     "map must be an automorphism of the algebra.";
+    elif FldRat notin [Type(BaseRing(L)), Type(BaseRing(Domain(f)))] then
+	is_isom_in, phi_in := IsIsomorphic(BaseRing(L), BaseRing(Domain(f)));
+	is_isom_out, phi_out := IsIsomorphic(BaseRing(Codomain(f)),
+					     BaseRing(L));
+	require is_isom_in and is_isom_out :
+		"map must be an automorphism of the field.";
+	// f := phi_in * f * phi_out;
+    end if;
+    // !! TODO : check that it works in general
+    f_in := hom<L -> Domain(f) | [Domain(f).1, Domain(f).2]>;
+    f_out := hom<Codomain(f) -> L | [L.1, L.2]>;
+    f := f_in * f * f_out;
+    gal, _, psi := fullAutomorphismGroup(L);
+    gens := [L.1, L.2];
+    require exists(g){g : g in gal | &and[psi(g)(x) eq f(x) : x in gens]} :
+		  "Map must be an automorphism of the field!";
+    return FieldAutomorphism(L, g);
+end intrinsic;
+
 /* Printing */
 intrinsic Print(alpha::FldAut, level::MonStgElt)
 {.}
@@ -164,7 +203,10 @@ end intrinsic;
 
 intrinsic FixedField(alpha::FldAut) -> Fld
 {.}
-  if IsFinite(alpha`L) then
+  // maybe better for all cases:
+  // sub<alpha`L | [alpha`L.i + alpha(alpha`L.i) : i in [1..Ngens(alpha`L)]]>
+  if IsFinite(alpha`L) or
+     ((Type(alpha`L) eq AlgAss) and IsFinite(BaseRing(alpha`L))) then
     return sub<alpha`L|[x : x in alpha`L | alpha(x) eq x]>;
   end if;
   return FixedField(alpha`L, [alpha`map]);
@@ -224,6 +266,11 @@ intrinsic '@'(x::FldElt, alpha::FldAut) -> FldElt
   return alpha`map(x);
 end intrinsic;
 
+intrinsic '@'(x::AlgAssElt[Fld], alpha::FldAut) -> FldElt
+{.}
+  return alpha`map(x);
+end intrinsic;
+
 intrinsic '@'(v::ModTupFldElt[Fld], alpha::FldAut) -> ModTupFldElt
 {.}
   V := Parent(v);
@@ -232,6 +279,14 @@ intrinsic '@'(v::ModTupFldElt[Fld], alpha::FldAut) -> ModTupFldElt
 end intrinsic;
 
 intrinsic '@'(a::AlgMatElt[Fld], alpha::FldAut) -> AlgMatElt[Fld]
+{.}
+  A := Parent(a);
+  require BaseRing(A) eq BaseField(alpha) : "map must be defined on elements!";
+  return A![[alpha(a[i,j]) : j in [1..Degree(A)]]
+				  : i in [1..Degree(A)]];
+end intrinsic;
+
+intrinsic '@'(a::AlgMatElt[AlgAss[Fld]], alpha::FldAut) -> AlgMatElt[Fld]
 {.}
   A := Parent(a);
   require BaseRing(A) eq BaseField(alpha) : "map must be defined on elements!";

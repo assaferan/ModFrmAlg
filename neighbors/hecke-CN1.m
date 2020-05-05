@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
 
+   05/04/20: Modified the orbit method to work with any weight.
+
    04/27/20: Changed default value of parameter BeCareful to false.
 
    04/24/20: Modified HeckeOperatorCN1 to include a parameter indicating 
@@ -214,7 +216,7 @@ function HeckeOperatorCN1(M, pR, k
 
 	if GetVerbose("AlgebraicModularForms") ge 1 then
 	    printf "Computing %o%o-neighbors for isometry class "
-		   cat "representiative #%o...\n", pR,
+		   cat "representative #%o...\n", pR,
 		   k eq 1 select "" else "^" cat IntegerToString(k),
 		   idx;
 	end if;
@@ -236,29 +238,43 @@ function HeckeOperatorCN1(M, pR, k
 	    pMaximalBasis :=
 		ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
 
-	    gens := [pMaximalBasis * g * pMaximalBasis^(-1) :
+	    conj_gens := [pMaximalBasis * g * pMaximalBasis^(-1) :
 		     g in gens];
 
 	    gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]
-			  : g in gens];
+			  : g in conj_gens];
 		 
 	    Aut := sub<GL(n, F) | gens_modp>;
+	    fp_aut, psi := FPGroup(Aut);
 
 	    // The isotropic orbit data.
 	    isoOrbits := IsotropicOrbits(V, Aut, k);
 
+	    B := Transpose(V`Basis);
+	    
 	    for orbit in isoOrbits do
 		// Skip to the neighbor associated to this orbit.
 		nProc := SkipToNeighbor(nProc, Basis(orbit[1]));
+
+		mat_gen_seq := [[
+			gens[Index(gens_modp, Eltseq(Aut.Abs(i)))]^Sign(i) :
+				       i in Eltseq((B*g*B^(-1))@@psi)] :
+				g in orbit[2]];
+		mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+			      &*seq : seq in mat_gen_seq];
+
+		w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+			g in mat_lifts];
+		
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
-				      weight := orbit[2],
+				      weight := w,
 				      special := IsSpecialOrthogonal(M));
 		if Estimate then
 		    printEstimate(start, ~count, ~elapsed,
 				  fullCount, pR, k :
-				  increment := orbit[2]);
+				  increment := #orbit[2]);
 		end if;
 	    end for;
 	else

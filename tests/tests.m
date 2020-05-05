@@ -112,38 +112,41 @@ function testExample(example : num_primes := 0, use_existing := false)
 	    f in eigenforms | f`IsEigenform];  
 
     for i in [1..#example`evs] do
-	for k in keys do
-	    len := Minimum(N, #example`evs[i][k]); 
-	    ev_calc := evs[i][k][1..len];
-	    ev := example`evs[i][k][1..len];
+	found := false;
+	for j in [1..#evs] do
+	    is_compat := true;
+	    for k in keys do
+		len := Minimum(N, #example`evs[i][k]); 
+		ev_calc := evs[j][k][1..len];
+		ev := example`evs[i][k][1..len];
 	    
-	    // the field of definition might be different,
-	    // so we check if there is some embedding under which
-	    // all the eigenvalues coincide
+		// the field of definition might be different,
+		// so we check if there is some embedding under which
+		// all the eigenvalues coincide
 	    
-	    F1 := FieldOfFractions(Parent(ev_calc[1]));
-	    F2 := FieldOfFractions(Parent(ev[1]));
-	    if IsFinite(F1) then
-		assert IsFinite(F2);
-		assert &and[#F1 eq  #FieldOfFractions(Parent(x)) :
-			    x in ev_calc];
-		L := GF(LCM(#F1, #F2));
-		embs := [hom<F1->L|>];
-	    else
-		assert &and[IsIsomorphic(F1, FieldOfFractions(Parent(x))) :
-			    x in ev_calc];
-		assert not IsFinite(F2);
-		F1 := AbsoluteField(F1);
-		F2 := AbsoluteField(F2);
-		L := Compositum(F1, F2);
-		if Type(F1) eq FldRat then
-		    embs := [hom<F1 -> L | >];
+		F1 := FieldOfFractions(Parent(ev_calc[1]));
+		F2 := FieldOfFractions(Parent(ev[1]));
+		if IsFinite(F1) then
+		    assert IsFinite(F2);
+		    assert &and[#F1 eq  #FieldOfFractions(Parent(x)) :
+				x in ev_calc];
+		    L := GF(LCM(#F1, #F2));
+		    embs := [hom<F1->L|>];
 		else
-		    zeta := PrimitiveElement(F1);
-		    roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
-		    embs := [hom<F1 -> L | r> : r in roots];
+		    assert &and[IsIsomorphic(F1, FieldOfFractions(Parent(x))) :
+				x in ev_calc];
+		    assert not IsFinite(F2);
+		    F1 := AbsoluteField(F1);
+		    F2 := AbsoluteField(F2);
+		    L := Compositum(F1, F2);
+		    if Type(F1) eq FldRat then
+			embs := [hom<F1 -> L | >];
+		    else
+			zeta := PrimitiveElement(F1);
+			roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+			embs := [hom<F1 -> L | r> : r in roots];
+		    end if;
 		end if;
-	    end if;
 
 	    // This is what we wanted to do, but because different
 	    // eigenvalues have different parents, we can't
@@ -151,9 +154,15 @@ function testExample(example : num_primes := 0, use_existing := false)
 	    assert exists(emb){emb : emb in embs |
 			       [emb(x) : x in ev_calc] eq [x : x in ev]};
 	   */
-	    assert &and[exists(emb) {emb : emb in embs |
-				     emb(ev_calc[i]) eq ev[i]} : i in [1..N]];
+		is_compat and:=  &and[exists(emb) {emb : emb in embs |
+			emb(ev_calc[idx]) eq ev[idx]} : idx in [1..N]];
+		if not is_compat then break; end if;
+	    end for;
+	    // we found compatible j, so we can go to the next i
+	    if is_compat then found := true; break; end if;
 	end for;
+	// There should have been at least one compatible j
+	assert found;
     end for;
 
     return M;

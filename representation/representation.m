@@ -940,6 +940,7 @@ intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
       printf "Calculating the fixed subspace for the group gamma";
       printf " with %o generators.\n", #gamma_gens;
   end if;
+  if IsEmpty(gamma_gens) then gamma_gens := [gamma!1]; end if;
   gamma_actions := [getMatrixAction(V, g) : g in gamma_gens];
   if GetVerbose("AlgebraicModularForms") ge 2 then
       printf "Calculating kernel...\n";

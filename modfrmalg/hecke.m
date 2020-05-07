@@ -37,12 +37,16 @@ freeze;
 //imports
 
 import "modfrmalg.m" : ModFrmAlgInit;
-import "../neighbors/hecke-CN1.m" : HeckeOperatorCN1;
+import "../neighbors/hecke-CN1.m" : HeckeOperatorCN1, HeckeOperatorCN1Sparse;
 
 // Data structure
 
 declare type ModHecke;
 declare attributes ModHecke:
+
+	// images of the standard basis vectors by Hecke operators
+	standard_images,
+	
 	// A list of Hecke matrices.
 	Ts,
 
@@ -63,7 +67,19 @@ intrinsic SetHeckeOperator(
 	end if;
 
 	// Assign Hecke matrix.
-	M`Hecke`Ts[k][pR] := T;
+        M`Hecke`Ts[k][pR] := T;
+
+	// Assign Hecke images of standard basis vectors
+	if not assigned M`Hecke`standard_images then
+	    M`Hecke`standard_images :=
+		[AssociativeArray() : i in [1..Dimension(M)]];
+	end if;
+	for i in [1..Dimension(M)] do
+	    if not IsDefined(M`Hecke`standard_images[i], k) then
+		M`Hecke`standard_images[i][k] := AssociativeArray();
+	    end if;
+	    M`Hecke`standard_images[i][k][pR] := Transpose(T)[i];
+	end for;
 end intrinsic;
 
 intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR:RngOrdIdl)
@@ -275,3 +291,77 @@ ordered list of ideals to which they belong. }
 	return HeckeOperators(M, 1);
 end intrinsic;
 
+function SparseRepresentation(M, v)
+// Sparse representation of vector v.
+   sp := [];
+   v  := Eltseq(v);
+   i := 1;
+   space_start := 1;
+   for space_idx in [1..#M`H] do
+       for vec_idx in [1..Dimension(M`H[space_idx])] do
+	   if v[i] ne 0 then
+               Append(~sp, <v[i],space_idx,space_start>);
+	   end if;
+	   i +:= 1;
+       end for;
+       space_start := i;
+   end for;
+ 
+   return sp;
+end function;
+
+intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
+				       n::RngIntElt, k::RngIntElt :
+		      BeCareful := false,
+		      Estimate := true,
+		      Orbits := true,
+		      UseLLL := true) -> SeqEnum
+{The images of the ith standard basis vector
+ under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
+These are computed using sparse methods that don't
+require computing the full Hecke operator.}  
+   assert 1 le i and i le Dimension(M);
+   if not assigned M`Hecke`standard_images then
+       M`Hecke`standard_images :=
+	   [AssociativeArray() : j in [1..Dimension(M)]];
+   end if;
+   s := SparseRepresentation(M, VectorSpace(M).i);
+   space_idx := s[1][2];
+   start_idx := s[1][3];
+   end_idx := start_idx + Dimension(M`H[space_idx]) - 1;
+   assert start_idx le i and i le end_idx;
+   // Due to the nature of the computation, we compute an entire block together
+   if not IsDefined(M`Hecke`standard_images[i], k) then
+       for j in [start_idx..end_idx] do
+	   M`Hecke`standard_images[j][k] := AssociativeArray();
+       end for;
+   end if;
+   // !!! TODO : maybe should restrict to one of each relevant norm
+   // also lift split restriction when we fix handling that case
+   /*
+   ps := [ p : p in PrimesUpTo(n, BaseRing(M)) |
+	   Gcd(Integers()!Norm(Discriminant(Module(M))),
+	       Norm(p)) eq 1 and IsSplit(p)];
+   */
+   ps := [Factorization(ideal<Integers(BaseRing(M))|p>)[1][1] :
+	  p in PrimesUpTo(n) |
+	  (Gcd(Integers()!Norm(Discriminant(Module(M))),p) eq 1)];
+   if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
+       ps := [p : p in ps | IsSplit(p)];
+   end if;
+   if #M`Hecke`standard_images[i][k] lt #ps then  // generate more images..
+       new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
+       for p in new_ps do
+	   sp_hec := HeckeOperatorCN1Sparse(M, p, k, s : BeCareful := BeCareful,
+							 Estimate := Estimate,
+							 Orbits := Orbits,
+							 UseLLL := UseLLL);
+	   sp_mat := sp_hec[space_idx];
+	   for j in [start_idx..end_idx] do
+	       M`Hecke`standard_images[j][k][p] :=
+		   Transpose(sp_mat)[j-start_idx+1];
+	   end for;
+       end for;
+   end if;      
+   return M`Hecke`standard_images[i][k];       
+end intrinsic;

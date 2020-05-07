@@ -114,7 +114,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
 
 	RR := RealField();
 	total_mass := 0;
-	eps := 1; // ensure one pass
+	eps := Infinity(); // ensure one pass
 
 	// The formula as stated is simply incorrect
 	// Have to fix it

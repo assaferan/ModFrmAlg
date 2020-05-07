@@ -161,8 +161,11 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt) -> List, SeqEnum
 	return HeckeEigensystem(f, 1);
 end intrinsic;
 
-intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
-{ Computes the eigenvalues at various primes associated to this eigenform. }
+intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
+			   prec := 0, BeCareful := false,
+			   Estimate := true, Orbits := true,
+			   UseLLL := true) -> List, SeqEnum
+{ Computes the eigenvalues at various primes associated to this eigenform, for primes up to norm prec. If prec = 0, computes the eigenvalues only for precomputed hecke operators }
 	// Check whether this element is an eigenform.
 	if not f`IsEigenform then return []; end if;
 
@@ -181,6 +184,11 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
 	//  have been computed.
 	Ts, Ps := HeckeOperators(f`M, k);
 
+	// Get the pivot of the eigenform.
+	pivot := 0;
+	repeat pivot +:= 1;
+	until f`vec[pivot] ne 0;
+
 	for i in [1..#Ts] do
 		// Do not recompute eigenvalue if it has already been computed.
 		if IsDefined(f`Eigenvalues[k], Ps[i]) then continue; end if;
@@ -193,17 +201,31 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
 		end if;
 		T := ChangeRing(Ts[i], BaseRing(f`vec));
 
-		// Get the pivot of the eigenform.
-		pivot := 0;
-		repeat pivot +:= 1;
-		until f`vec[pivot] ne 0;
-
 		// Assign eigenvalue at the specified prime.
 		// f`Eigenvalues[k][Ps[i]] := MVM(T, f`vec)[pivot];
 		f`Eigenvalues[k][Ps[i]] := (f`vec * T)[pivot];
 	end for;
 
-	return [* f`Eigenvalues[k][P] : P in Ps *], [ P : P in Ps ];
+	// TODO : use this for both cases, with prec the maximum
+	if prec ne 0 then
+	    if GetVerbose("AlgebraicModularForms") ge 2 then
+		print "Computing Hecke eigenvalues at new primes";
+	    end if;
+	    hecke_images := HeckeImages(f`M, pivot, prec, k :
+					BeCareful := BeCareful,
+					Estimate := Estimate,
+					Orbits := Orbits,
+					UseLLL := UseLLL);
+	    Ps := Sort([x : x in Keys(hecke_images)]);
+	    for p in Ps do
+		f`Eigenvalues[k][p] :=
+		    DotProduct(f`vec, ChangeRing(hecke_images[p],
+						 BaseRing(f`vec)));;
+	    end for;
+	end if;
+	// !!! TODO : return a sequence instead of a list.
+	// These should all live in the same universe
+	return [ f`Eigenvalues[k][P] : P in Ps ], [ P : P in Ps ];
 end intrinsic;
 
 intrinsic HeckeEigenforms(M::ModFrmAlg) -> List

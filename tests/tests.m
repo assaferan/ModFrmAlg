@@ -18,25 +18,35 @@ import "../io/path.m" : path;
 forward testExample;
 
 intrinsic AlgebraicModularFormsTests(: num_primes := 0,
-				       use_existing := false) -> ModFrmAlg
+				       use_existing := false,
+				       Orbits := true,
+				       UseLLL := true) ->
+	  SeqEnum[ModFrmAlg], SeqEnum
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting num_primes.}
 
+  all_spaces := [];
+  all_timings := [];
   for example in AlgebraicModularFormsExamples do
       // testing that we obtain the correct results
-      M := testExample(example : num_primes := num_primes,
-				 use_existing := use_existing);
+      M, timings := testExample(example : num_primes := num_primes,
+					  use_existing := use_existing,
+					  Orbits := Orbits,
+					  UseLLL := UseLLL);
       // saving to a file
       fname := Sprintf("Example_%o.dat", example`name);
       Save(M, fname : Overwrite := true);
       // loading from the file and verifying we get the same object
       M2 := AlgebraicModularForms(fname);
       assert M eq M2;
+      Append(~all_spaces, M);
+      Append(~all_timings, timings);
   end for;
 
-  return M;
+  return all_spaces, all_timings;
 end intrinsic;
 
-function testExample(example : num_primes := 0, use_existing := false)
+function testExample(example : num_primes := 0, use_existing := false,
+			       Orbits := true, UseLLL := true)
     fname := Sprintf("Example_%o.dat", example`name);
     if use_existing and FileExists(path() cat fname) then
 	M := AlgebraicModularForms(fname);
@@ -70,20 +80,26 @@ function testExample(example : num_primes := 0, use_existing := false)
     
     ps := [Factorization(ideal<Integers(BaseRing(M))|n>)[1][1] :
 	   n in example`norm_p];
-
+    
+    timings := [];
     for k in [1..#example`evs[1]] do
 	Ts_k := [];
-    
+	timings_k := [];
+	
 	for i in [1..N] do
 	    p := ps[i];
 	    printf "Computing T(p,%o), (N(p) = %o) ...\n", k, Norm(p);
 	    t := Cputime();
+	    // maybe should restrict Orbits to k eq 1 - ? check why !?
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
 						  Estimate := true,
-						  UseLLL := true,
-						  Orbits := (k eq 1)));
+						  UseLLL := UseLLL,
+						  Orbits :=
+						      (Orbits and (k eq 1))
+				       ));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;
+	    Append(~timings_k, timing);
 	    if (#example`timing ge i) and (timing ne 0) then
 		ratio := example`timing[i] / timing;
 		printf "this should take %o times the time.\n", ratio;
@@ -93,6 +109,7 @@ function testExample(example : num_primes := 0, use_existing := false)
 
 	// Verify that these operators commute with each other.
 	assert &and[ A*B eq B*A : A,B in Ts_k ];
+	Append(~timings, timings_k);
     end for;
 
     // Compute eigenforms associated to this space of modular forms.
@@ -165,5 +182,5 @@ function testExample(example : num_primes := 0, use_existing := false)
 	assert found;
     end for;
 
-    return M;
+    return M, timings;
 end function;

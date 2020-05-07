@@ -608,3 +608,15 @@ intrinsic 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
   end if;
   return true;
 end intrinsic;
+
+intrinsic Representation(M::ModFrmAlg) -> ModTupFld
+{.}
+  dim := Dimension(M);
+  if dim eq 0 then return VectorSpace(BaseRing(M), 0); end if;
+  return VectorSpace(BaseRing(M`H[1]), dim);
+end intrinsic;
+
+intrinsic VectorSpace(M::ModFrmAlg) -> ModtupFld
+{.}
+  return Representation(M);
+end intrinsic;

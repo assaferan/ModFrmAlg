@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: saveload.m (Routines used for saving and loading data to/from disk.)
 
+   05/08/20: Changed reading and writing of eigenvalues to have all 
+             eigenvalues in the same universe.
+
    04/24/20: Modified reading and writing of group according to GrpRed
 
    04/21/20: Changed reading and writing of eigenforms to read and write also 
@@ -136,23 +139,31 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		if f`IsEigenform then
 		    // Valid dimensions for the eigenvalues
 		    dims := Keys(f`Eigenvalues);
+		    dims := Sort([x : x in dims]);
 
 		    // The eigenvalues we've computed.
-		    eigenvalues := [* *];
+		    // eigenvalues := [];
+		    all_ps := [];
+		    all_evs := [];
 
 		    for dim in dims do
 
 			Ps := [p : p in Keys(f`Eigenvalues[dim])];
-			evs := [* f`Eigenvalues[dim][p] : p in Ps *];
-		    
+			evs := [Eltseq(f`Eigenvalues[dim][p]) : p in Ps ];
+			
 			// A coupled list of eigenvalues and the corresponding ideals.
+			/*
 			list := [* < Generators(Ps[i]), evs[i], Parent(evs[i]) >
 				 : i in [1..#Ps] *];
+		       */
+			list := [* Generators(p) : p in Ps *];
 
 			// Add this list to the ongoing list of Hecke matrices.
-			Append(~eigenvalues, < dim, list >);
+			// Append(~eigenvalues, < dim, list, evs >);
+			Append(~all_evs, evs);
+			Append(~all_ps, list);
 		    end for;
-		
+		    eigenvalues := < dims, all_ps, all_evs >;
 		    Append(~eigenforms, < Eltseq(f`vec) , true, eigenvalues >);
 		else
 		    Append(~eigenforms, < Eltseq(f`vec) , false>);
@@ -461,28 +472,39 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 			if mform`IsEigenform then
 			    // Retrieve the list of Hecke eigenvalues.
 			    ev_list := data[3];
+			    dims := ev_list[1];
+			    ps := ev_list[2];
+			    evs := ev_list[3];
+			    F := BaseRing(mform`vec);
 
 			    // Assign eigenvalues associative array.
 			    mform`Eigenvalues := AssociativeArray();
 
-			    for ev_data in ev_list do
+			    for idx in [1..#dims] do
+			    //for ev_data in ev_list do
 				// The dimension of the eigenvalues.
-				k := ev_data[1];
+				// k := ev_data[1];
+				k := dims[idx];
 				
 				// Assign an empty associative array for this dimension.
 				mform`Eigenvalues[k] := AssociativeArray();
-				
-				for entry in ev_data[2] do
+
+				for p_idx in [1..#ps[idx]] do
+				// for entry in ev_data[2] do
 				    // Generators of the prime ideal.
-				    gens := [ M`L`R ! Eltseq(x) : x in entry[1] ];
-				    
+				    gens := [ M`L`R ! Eltseq(x) :
+					      x in ps[idx][p_idx]];
+				
 				    // The prime ideal associated to this entry.
 				    P := ideal< M`L`R | gens >;
 				    
 				    // Assign eigenvalue.
 				    mform`Eigenvalues[k][P] :=
-					IsFinite(entry[3]) select
-					entry[3]!entry[2] else entry[2];
+					F!evs[idx][p_idx];
+				    /*
+					IsFinite(F) select
+					F!evs[idx][p_idx] else evs[idx][p_idx];
+				   */
 				end for;
 			    end for;
 			   			   			   

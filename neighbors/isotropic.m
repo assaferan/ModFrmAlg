@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: isotropic.m (class for tracking computation of isotropic subspaces)
 
+   05/08/20: relaxed the condition k = 1, to catch the problems in
+             Orbits for k > 1 for future use.
+
    04/24/20: Fixed bug in BuildTrivialReflexiveSpace of not assigning 
    	     PrimitiveElement attribute.
 
@@ -505,7 +508,7 @@ end intrinsic;
 intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 { Returns an array consisting of all isotropic vectors. }
 	// TODO: Relax this condition to allow for higher dimensional spaces.
-	require k eq 1: "Must be one dimensional subspaces currently.";
+	// require k eq 1: "Must be one dimensional subspaces currently.";
 
 	// The first isotropic subspace.
 	space := FirstIsotropicSubspace(V, k);

@@ -840,7 +840,7 @@ intrinsic Print(phi::GrpRepHom, level::MonStgElt)
 	     Domain(phi), Codomain(phi), images;
       return;
   end if;
-  printf "Homorphism from %o to %o", Domain(phi), Codomain(phi);
+  printf "Homomorphism from %o to %o", Domain(phi), Codomain(phi);
 end intrinsic;
 
 /* Evaluation, image and pre-image */

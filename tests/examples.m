@@ -6,6 +6,8 @@ freeze;
                                                                             
    FILE: examples.m (data for examples to test on)
 
+   05/08/20: Changed examples to have eigenvalues in the same universe.
+
    04/14/20: Created an array of examples to be exported.
 
    04/13/20: Added the orthogonal examples
@@ -26,14 +28,14 @@ ExampleRF := recformat< name : MonStgElt,
 			weight : SeqEnum,
 			norm_p : SeqEnum,
 			timing : SeqEnum,
-		        evs : SeqEnum>;
+		        evs : List>;
 
 inner_form_7_2 := Matrix([[2,0,1],[0,2,0],[1,0,6]]);
 ps_7_2 := PrimesUpTo(100);
-eis_7_2 := [[* p eq 11 select 0 else p+1 : p in ps_7_2 *]];
+eis_7_2 := [[ p eq 11 select 0 else p+1 : p in ps_7_2 ]];
 cusp_7_2 := 
-    [[* p eq 11 select 0 else
-     Coefficient(Newforms(ModularForms(11))[1][1], p) : p in ps_7_2 *]];
+    [[ p eq 11 select 0 else
+     Coefficient(Newforms(ModularForms(11))[1][1], p) : p in ps_7_2 ]];
 Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 				group := "Orthogonal",
 				field := Rationals(),
@@ -43,16 +45,16 @@ Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 				weight := [0,0],
 				norm_p := ps_7_2,
 				timing := [],
-				evs := [eis_7_2, cusp_7_2] >;
+				evs := [* eis_7_2, cusp_7_2 *] >;
 
 inner_form_7_3 := Matrix([[2,0,0,1],[0,2,1,0],[0,1,6,0],[1,0,0,6]]);
-eis_7_3 := [[* x^2 : x in eis_7_2[1] *], [* 2*x*(x-1) : x in eis_7_2[1] *]];
-a_7_3 := [[* x^2 : x in cusp_7_2[1] *],
-	  [* ps_7_2[i] eq 11 select 0 else
-	   2*(cusp_7_2[1][i]^2 - ps_7_2[i] - 1) : i in [1..#ps_7_2] *]];
-b_7_3 := [[* cusp_7_2[1][i] * eis_7_2[1][i] : i in [1..#ps_7_2] *],
-	  [*  ps_7_2[i] eq 11 select 0 else
-	   cusp_7_2[1][i]^2 + ps_7_2[i]^2 - 1 : i in [1..#ps_7_2]  *] ];
+eis_7_3 := [[ x^2 : x in eis_7_2[1] ], [2*x*(x-1) : x in eis_7_2[1]]];
+a_7_3 := [[ x^2 : x in cusp_7_2[1] ],
+	  [ ps_7_2[i] eq 11 select 0 else
+	   2*(cusp_7_2[1][i]^2 - ps_7_2[i] - 1) : i in [1..#ps_7_2] ]];
+b_7_3 := [[ cusp_7_2[1][i] * eis_7_2[1][i] : i in [1..#ps_7_2] ],
+	  [  ps_7_2[i] eq 11 select 0 else
+	   cusp_7_2[1][i]^2 + ps_7_2[i]^2 - 1 : i in [1..#ps_7_2]  ] ];
 Example_7_3 := rec< ExampleRF | name := "[GV2]_7_3",
 				group := "Orthogonal",
 				field := Rationals(),
@@ -62,7 +64,7 @@ Example_7_3 := rec< ExampleRF | name := "[GV2]_7_3",
 				weight := [0,0],
 				norm_p := ps_7_2,
 				timing := [],
-				evs := [eis_7_3, a_7_3, b_7_3] >;
+				evs := [* eis_7_3, a_7_3, b_7_3 *] >;
 
 Example_7_4 := rec< ExampleRF | name := "[GV2]_7_4",
 				group := "Unitary",
@@ -81,18 +83,18 @@ Example_7_4 := rec< ExampleRF | name := "[GV2]_7_4",
 					   3.73, 4.18, 4.59, 5.85, 7.08,
 					   8.56, 9.04, 10.88, 13.78, 16.92,
 					   17.22, 17.29],
-				evs := [[[* 7, 133, 553, 871, 1407, 1893,
+				evs := [* [[ 7, 133, 553, 871, 1407, 1893,
 					  2863,
 					  4557, 5113, 6321, 11557, 11991,
 					  12883,
 					  16257, 18907, 22351, 22953, 26733,
-					  32221, 36673, 37443, 39007 *]],
-					[[* -1, 5, 41, -25, -1, 101, 47,
+					  32221, 36673, 37443, 39007 ]],
+					[[ -1, 5, 41, -25, -1, 101, 47,
 					  -51, 185,
 					  -15, 293, 215, -109, 129, -37,
 					  335,
 					  425, 237, -163, -127, 131,
-					  479 *]] ]>;
+					  479 ]] *]>;
 
 // This example is from David Loeffler's
 // Explicit Calculations of Automorphic Forms for
@@ -120,11 +122,11 @@ function createExamples_7_4()
     _, cc := HasComplexConjugate(K);
     alpha := FieldAutomorphism(K, cc);
     alpha_R := hom< R -> R | x :-> alpha(K!x) >;
-    evs_2_0 := [[[* *]]];
-    evs_3_1 := [[[* *]]];
-    evs_2_2 := [[[* *]],[[* *]]];
-    evs_3_3 := [[[* *]],[[* *]]];
-    evs_4_0 := [[[* *]],[[* *]],[[* *]]];
+    evs_2_0 := [* [[ ]] *];
+    evs_3_1 := [* [[ ]] *];
+    evs_2_2 := [* [[ ]],[[ ]] *];
+    evs_3_3 := [* [[ ]],[[ ]] *];
+    evs_4_0 := [* [[ ]],[[ ]],[[ ]] *];
 
     norm_p := [2, 11, 23, 29, 37, 43, 53, 67, 71,
 	   79, 107, 109, 113, 127, 137, 149,
@@ -179,10 +181,10 @@ function createExamples_7_4()
     end for;
 
     F<alpha> := QuadraticField(-259);
-    evs_3_3[2][1] := [* (alpha - 7) / 8, (244*alpha - 7441) / 1331,
+    evs_3_3[2][1] := [ (alpha - 7) / 8, (244*alpha - 7441) / 1331,
 		      (-21940 * alpha - 162337) / 12167,
 		      1/24389*(-14392*alpha + 710867),
-		      1/50653*(-46728*alpha + 1014587) *];
+		      1/50653*(-46728*alpha + 1014587) ];
     
     Example_7_4_W_2_0 := rec<ExampleRF | name := "[GV2]_7_4_W_2_0",
 					 group := "Unitary",
@@ -275,9 +277,9 @@ Example_7_5 := rec<ExampleRF | name := "[GV2]_7_5",
 					  242.20, 339.50, 378.81, 486.22,
 					  727.81,
 					  943.89],
-			       evs := [[[* GF(13)!x :
+			       evs := [* [[ GF(13)!x :
 					 x in [4, 11, 12, 5, 5, 3, 6,
-					 10, 1, 11, 2] *]]]>;
+					 10, 1, 11, 2] ]] *]>;
 K := CyclotomicField(7);
 Example_7_6 := rec<ExampleRF | name := "[GV2]_7_6",
 			       group := "Unitary",
@@ -290,10 +292,10 @@ Example_7_6 := rec<ExampleRF | name := "[GV2]_7_6",
 					  239, 281],
 			       timing := [2.16, 2.85, 6.77, 16.43, 21.35,
 					  51.14, 53.58, 73.05, 101.84],
-			       evs := [[[* 871, 1893, 5113, 12883, 16257,
-					39007, 44733, 57361, 79243 *]],
-				       [[* -25, 101, 185, -109, 129, 479,
-					-67, 17, 395 *]]]>;
+			       evs := [* [[ 871, 1893, 5113, 12883, 16257,
+					39007, 44733, 57361, 79243 ]],
+				       [[ -25, 101, 185, -109, 129, 479,
+					-67, 17, 395 ]] *]>;
 
 AlgebraicModularFormsExamples := [ Example_7_2,
 				  Example_7_3,

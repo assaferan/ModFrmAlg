@@ -10,6 +10,9 @@ freeze;
    Implementation file for elements belong to the space of algebraic modular
    forms. the space of algebraic modular forms.
 
+   05/08/20: Modified 'eq' to handle eigenvalues having a fixed universe.
+             (so now we actually check the embedding matches all eigenvalues)
+
    04/21/20: Modified 'eq' to handle also finite field case.
 
    04/17/20 : Fixed a bug in HeckeEigensystem.
@@ -184,7 +187,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	//  have been computed.
 	Ts, Ps := HeckeOperators(f`M, k);
 
-	// Get the pivot of the eigenform.
+	// Get the pivot of the eigenform
 	pivot := 0;
 	repeat pivot +:= 1;
 	until f`vec[pivot] ne 0;
@@ -192,7 +195,6 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	for i in [1..#Ts] do
 		// Do not recompute eigenvalue if it has already been computed.
 		if IsDefined(f`Eigenvalues[k], Ps[i]) then continue; end if;
-
 		// Promote the Hecke matrix to the base ring of the eigenform.
 		// Magma doesn't do IsSubfield(QQ,QQ)
 		if (Type(BaseRing(Ts[i])) ne FldRat) and
@@ -430,7 +432,9 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
   K2 := BaseRing(f2`M);
   isom, psi := IsIsomorphic(K1, K2);
   if not isom then return false; end if;
-  
+
+  // This is actually an overkill, the vectors suffice,
+  // Meantime, it's good for debugging
   if assigned f1`Eigenvalues then
       if not assigned f2`Eigenvalues then
 	  return false;
@@ -438,44 +442,33 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
       keys := Keys(f1`Eigenvalues);
       if keys ne Keys(f2`Eigenvalues) then return false; end if;
 
-      evs := [[HeckeEigensystem(f, dim) : dim in keys] : f in [f1,f2]];  
+      evs := [* [HeckeEigensystem(f, dim) : dim in keys] : f in [f1,f2] *];  
 
-      for k in keys do
-	  if IsEmpty(evs[1][k]) then
-	      if not IsEmpty(evs[2][k]) then return false; end if;
-	      continue;
+      F := [* FieldOfFractions(Universe(ev[1])) : ev in evs *];
+     
+      if IsFinite(F[1]) then
+	  assert IsFinite(F[2]);
+	  L := GF(LCM(#F[1], #F[2]));
+	  embs := [hom<F[1]->L|>];
+      else
+	  assert not IsFinite(F[2]);
+	  F[1] := AbsoluteField(F[1]);
+	  F[2] := AbsoluteField(F[2]);
+	  L := CompositeFields(F[1], F[2])[1];
+	  if Type(F[1]) eq FldRat then
+	      embs := [hom<F[1] -> L | >];
+	  else
+	      zeta := PrimitiveElement(F[1]);
+	      roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
+	      embs := [hom<F[1] -> L | r> : r in roots];
 	  end if;
-
-	  for j in [1..#evs[1][k]] do
-	      F := [* FieldOfFractions(Parent(ev[k][j]))  : ev in evs *];
-	      for ev_idx in [1..#evs] do
-		  if not IsFinite(F[ev_idx]) then
-		      F[ev_idx] := AbsoluteField(F[ev_idx]);
-		  end if;
-	      end for;
-
-	      if IsFinite(F[1]) then
-		  if not IsFinite(F[2]) then return false; end if;
-		  L := FiniteField(LCM(#F[1], #F[2]));
-		  embs := [hom< F[1] -> L |>];
-	      else
-		  if IsFinite(F[2]) then return false; end if;
-		  L := Compositum(F[1], F[2]);
-		  if Type(F[1]) eq FldRat then
-		      embs := [hom< F[1] -> L |>];
-		  else
-		      zeta := PrimitiveElement(F[1]);
-		      roots := [x[1] : x in Roots(MinimalPolynomial(zeta), L)];
-		      embs := [hom< F[1] -> L | r> : r in roots];
-		  end if;
-	      end if;
-	      
-	      if not exists(emb){emb : emb in embs |
-			     emb(evs[1][k][j]) eq evs[2][k][j]} then
-		  return false;
-	      end if;
-	  end for;
-      end for;
+      end if;
+      
+      ev_L := [[L!y : y in x] : x in evs[2]];
+      is_compat := exists(emb){emb : emb in embs |
+				     [[emb(y) : y in x] : x in evs[1]] eq
+				     ev_L};
+      if not is_compat then return false; end if;
   elif assigned f2`Eigenvalues then
       return false;
   end if;

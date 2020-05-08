@@ -11,6 +11,8 @@ freeze;
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   05/08/20: Added the attribute decomposition for future use.
+
    05/04/20: Modified HeckeOperator to use orbits if instructed to, 
              now that it actually works!
 
@@ -44,6 +46,9 @@ import "../neighbors/hecke-CN1.m" : HeckeOperatorCN1, HeckeOperatorCN1Sparse;
 declare type ModHecke;
 declare attributes ModHecke:
 
+	// decomposition to irreducible spaces for the Hecke algebra
+	decomposition,
+	
 	// images of the standard basis vectors by Hecke operators
 	standard_images,
 	

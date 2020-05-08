@@ -41,13 +41,35 @@ import "neighbors/neighbor-CN1.m" : BuildNeighborProc,
        SkipToNeighbor,
        BuildNeighbor;
 
+num_primes := 3;
+use_existing := false;
+Orbits := true;
+UseLLL := true;
+all_spaces := [];
+all_timings := [];
+example := AlgebraicModularFormsExamples[9];
+M, timings := testExample(example : num_primes := num_primes,
+                                    use_existing := use_existing,
+                                    Orbits := Orbits,
+                                    UseLLL := UseLLL);
+fname := Sprintf("Example_%o.dat", example`name);
+Save(M, fname : Overwrite := true);
+M2 := AlgebraicModularForms(fname);
+M eq M2;
+
 // SetVerbose("AlgebraicModularForms",2);
+/*
 examples := AlgebraicModularFormsExamples;
 QQ := Rationals();
 F := SymmetricMatrix(QQ, [4,-1,4,-1,0,12]);
 SO_3 := SpecialOrthogonalGroup(F);
 V := StandardRepresentation(GL(3,QQ));
-M := AlgebraicModularForms(SO_3, V);
+W := SymmetricRepresentation(V,2);
+M := AlgebraicModularForms(SO_3, W);
+printf "Dimension(M) = %o\n", Dimension(M);
+Ts := [HeckeOperator(M,p) : p in PrimesUpTo(10)];
+eigenforms := HeckeEigenforms(M);
+*/
 /*
 mat := IdentityMatrix(QQ,5);
 mat := 2*IdentityMatrix(QQ,5);

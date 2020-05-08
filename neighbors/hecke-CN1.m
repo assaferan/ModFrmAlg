@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
 
+   05/08/20: Fixed a bug in HeckeOperatorCN1SparseBasis with Orbits = false.
+
    05/04/20: Modified the orbit method to work with any weight.
 
    04/27/20: Changed default value of parameter BeCareful to false.
@@ -483,10 +485,6 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 				  BeCareful := BeCareful,
 				  UseLLL := UseLLL,
 				  special := IsSpecialOrthogonal(M));
-	    // Update nProc in preparation for the next neighbor
-	    //  lattice.
-	    nProc := GetNextNeighbor(nProc
-				     : BeCareful := BeCareful);
 	    if Estimate then
 		printEstimate(start, ~count, ~elapsed,
 			      fullCount, pR, k);

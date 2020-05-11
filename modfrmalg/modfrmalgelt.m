@@ -261,6 +261,11 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	// A list of cusp forms.
 	eigenforms := [* *];
 
+	// to see if they are cusp forms
+	reps := Representatives(Genus(M));
+	wts := &cat[[#AutomorphismGroup(reps[i]) : j in [1..Dimension(M`H[i])]]:
+		i in [1..#reps]];
+	
 	for i in [1..#spaces] do
 		// Extract the first basis vector of the eigenspace.
 		basis := Basis(spaces[i]);
@@ -276,7 +281,8 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 			mform`vec := vec;
 
 			// Flag as cuspidal?
-			mform`IsCuspidal := &+[ x : x in Eltseq(vec) ] eq 0;
+			mform`IsCuspidal := &+[ Eltseq(vec)[i] / wts[i] :
+						i in [1..#wts]] eq 0;
 
 			// Cusp forms are not Eistenstein.
 			mform`IsEisenstein := not mform`IsCuspidal;

@@ -9,6 +9,9 @@
 
    Implementation file for computing p-neighbors for genus computations
 
+   05/11/20: Updated computeGenusRepsAt, following interface change of 
+             GetNextNeighbor.
+
    04/15/20: Added the unitary mass formula. At the moment still not using it.
 
    03/06/20: added the procedure checkNextNeighbor, for easier debugging and flow
@@ -80,8 +83,8 @@ function computeGenusRepsAt(p, isoList, invs
 		        checkNextNeighbor(nProc, BuildNeighbor,
 					   ~invs, ~isoList);
 			// Move on to the next neighbor lattice.
-			nProc := GetNextNeighbor(nProc
-				: BeCareful := BeCareful);
+			GetNextNeighbor(~nProc
+					: BeCareful := BeCareful);
 		until nProc`isoSubspace eq [];
 
 		// Move on to the next genus representative.

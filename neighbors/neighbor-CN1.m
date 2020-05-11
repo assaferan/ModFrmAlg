@@ -7,6 +7,11 @@ freeze;
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 
+   05/11/20: Updated SkipToNeighbor to be able to specify the skew-matrix for 
+             p mod p^2.
+             Took out code chunks from GetNextNeighbor to form UpdateSkewMatrix
+             and UpdateSkewSpace, for greater modularity of the code.
+
    04/27/20: Changed the default value of the BeCareful parameter to false.
 
    04/23/20: Fixed bug in the unitary split case for k > 1, where skew vector 
@@ -541,7 +546,74 @@ end function;
 
 // Advancement - getting the next neighbor
 
-function GetNextNeighbor(nProc : BeCareful := false)
+procedure UpdateSkewMatrix(~nProc, ~row, ~col)
+    // The affine data.
+    Vpp := nProc`L`Vpp[nProc`pR];
+
+    // The isotropic dimension we're interested in.
+    k := nProc`k;
+    
+    repeat
+	// The primitive element of our finite field.
+	x := Vpp`V`PrimitiveElement;
+	
+	// Flag for determining whether we are done updating
+	//  the skew matrix.
+	done := true;
+	
+	// Increment value of the (row,col) position.
+	if IsPrime(#Vpp`F) then
+	    nProc`skew[row,col] +:= 1;
+	elif nProc`skew[row,col] eq 0 then
+	    nProc`skew[row,col] := x;
+	elif nProc`skew[row,col] eq 1 then
+	    nProc`skew[row,col] := 0;
+	else
+	    nProc`skew[row,col] *:= x;
+	end if;
+	
+	// Update the coefficient of the skew matrix reflected
+	//  across the anti-diagonal.
+	nProc`skew[k-col+1,k-row+1] := -nProc`skew[row,col];
+	
+	// If we've rolled over, move on to the next position.
+	if nProc`skew[row,col] eq 0 then
+	    // The next column of our skew matrix.
+	    col +:= 1;
+	    
+	    // Are we at the end of the column?
+	    if row+col eq k+1 then
+		// Yes. Move to the next row.
+		row +:= 1;
+		
+		// And reset the column.
+		col := 1;
+	    end if;
+	    
+	    // Indicate we should repeat another iteration.
+	    done := false;
+	end if;
+    until done or row+col eq k+1;
+end procedure;
+
+procedure UpdateSkewSpace(~nProc)
+    // The affine data.
+    Vpp := nProc`L`Vpp[nProc`pR];
+    // The isotropic dimension we're interested in.
+    k := nProc`k;
+    // Shortcuts for the projection maps modulo pR and
+    //  pR * alpha(pR).
+    map := Vpp`proj_pR;
+    proj := Vpp`proj_pR2;
+    // A nonzero element modulo pR^2 which is 0 modulo pR.
+    pElt := Vpp`proj_pR2(Vpp`pElt);
+    // Update the skew space.
+    nProc`X_skew := [ nProc`X[i] + pElt *
+				   &+[ proj(nProc`skew[i,j] @@ map) * nProc`Z[j]
+				       : j in [1..k] ] : i in [1..k] ];
+end procedure;
+
+procedure GetNextNeighbor(~nProc : BeCareful := false)
 	// The affine data.
 	Vpp := nProc`L`Vpp[nProc`pR];
 
@@ -551,89 +623,57 @@ function GetNextNeighbor(nProc : BeCareful := false)
 	// The starting position of the skew vector to update.
 	row := 1; col := 1;
 
-	// A nonzero element modulo pR^2 which is 0 modulo pR.
-	pElt := Vpp`proj_pR2(Vpp`pElt);
-
 	// Update the skew matrix (only for k ge 2).
 	if nProc`skewDim ne 0 then
-		repeat
-			// The primitive element of our finite field.
-			x := Vpp`V`PrimitiveElement;
-
-			// Flag for determining whether we are done updating
-			//  the skew matrix.
-			done := true;
-
-			// Increment value of the (row,col) position.
-			if IsPrime(#Vpp`F) then
-				nProc`skew[row,col] +:= 1;
-			elif nProc`skew[row,col] eq 0 then
-				nProc`skew[row,col] := x;
-			elif nProc`skew[row,col] eq 1 then
-				nProc`skew[row,col] := 0;
-			else
-				nProc`skew[row,col] *:= x;
-			end if;
-
-			// Update the coefficient of the skew matrix reflected
-			//  across the anti-diagonal.
-			nProc`skew[k-col+1,k-row+1] := -nProc`skew[row,col];
-
-			// If we've rolled over, move on to the next position.
-			if nProc`skew[row,col] eq 0 then
-				// The next column of our skew matrix.
-				col +:= 1;
-
-				// Are we at the end of the column?
-				if row+col eq k+1 then
-					// Yes. Move to the next row.
-					row +:= 1;
-
-					// And reset the column.
-					col := 1;
-				end if;
-
-				// Indicate we should repeat another iteration.
-				done := false;
-			end if;
-		until done or row+col eq k+1;
+	    UpdateSkewMatrix(~nProc, ~row, ~col);
 	end if;
 
 	alpha := Involution(ReflexiveSpace(nProc`L));
 	is_split := alpha(nProc`pR) ne nProc`pR;
 	// If we haven't rolled over, update the skew space and return...
 	if (not is_split) and (row+col lt k+1) then
-		// Shortcuts for the projection maps modulo pR and
-	        //  pR * alpha(pR).
-		map := Vpp`proj_pR;
-		proj := Vpp`proj_pR2;
-
-		// Update the skew space.
-		nProc`X_skew := [ nProc`X[i] + pElt *
-			&+[ proj(nProc`skew[i,j] @@ map) * nProc`Z[j]
-				: j in [1..k] ] : i in [1..k] ];
-
-		return nProc;
+		UpdateSkewSpace(~nProc);
+		return;
 	end if;
 
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "Currently space = %o, running NextIsotropicSubspace...\n",
+		   nProc`isoSubspace;
+	    data := Vpp`V`ParamArray[k];
+	    printf "data`Params = %o\n", data`Params;
+	    printf "data`PivotPtr = %o\n", data`PivotPtr;
+	    printf "data`FreeVars = %o\n", data`FreeVars;
+	    printf "V`Symbolic = %o\n", Vpp`V`Symbolic;
+	    printf "V`S = %o\n", Vpp`V`S;
+	    printf "data`IsotorpicParam = %o\n", data`IsotropicParam;
+	end if;
 	// ...otherwise, get the next isotropic subspace modulo pR.
 	nProc`isoSubspace := NextIsotropicSubspace(Vpp`V, k);
 
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "After NextIsotropicSubspace = %o, running lifting...\n",
+		   nProc`isoSubspace;
+	end if;
+	
 	// Lift the subspace if we haven't reached the end of the list.
 	if nProc`isoSubspace ne [] then
 		nProc`X, nProc`Z, nProc`U :=
 			LiftSubspace(nProc : BeCareful := BeCareful);
 		nProc`X_skew := [ x : x in nProc`X ];
 	end if;
+	
+end procedure;
 
-	return nProc;
-end function;
-
-function SkipToNeighbor(nProc, space : BeCareful := false)
-    //	nProc`isoSubspace := [ space ];
-        nProc`isoSubspace := space;
-	nProc`X, nProc`Z, nProc`U := LiftSubspace(nProc
-		: BeCareful := BeCareful, Override := true);
-	nProc`X_skew := [ x : x in nProc`X ];
-	return nProc;
-end function;
+procedure SkipToNeighbor(~nProc, space, skew : BeCareful := false)
+    nProc`isoSubspace := space;
+    nProc`X, nProc`Z, nProc`U := LiftSubspace(nProc
+					      : BeCareful := BeCareful,
+						Override := true);
+    nProc`X_skew := [ x : x in nProc`X ];
+    // Update the skew matrix (only for k ge 2).
+    if nProc`skewDim ne 0 then
+	nProc`skew := skew;
+	UpdateSkewSpace(~nProc);
+    end if;
+    
+end procedure;

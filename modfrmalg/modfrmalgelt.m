@@ -10,6 +10,10 @@ freeze;
    Implementation file for elements belong to the space of algebraic modular
    forms. the space of algebraic modular forms.
 
+   05/11/20: Added the intrinsic LPolynomials, which returns the L-polynomials
+             of f, up to a specified precision. At the moment, only supports 
+             SO(n) for 3<=n<=8.
+
    05/08/20: Modified 'eq' to handle eigenvalues having a fixed universe.
              (so now we actually check the embedding matches all eigenvalues)
 
@@ -65,7 +69,7 @@ declare attributes ModFrmAlgElt:
 // printing
 
 intrinsic Print(f::ModFrmAlgElt) {}
-	printf "%o%o%o%o%o given in coordinates by\n%o\n",
+	printf "%o%o%o%o%o given in coordinates by\n%o",
 		f`IsEisenstein select "Eisenstein " else "",
 		f`IsCuspidal select "Cuspidal " else "",
 		f`IsEigenform select "eigenform" else "",
@@ -473,4 +477,75 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
       return false;
   end if;
   return true;
+end intrinsic;
+
+intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
+					 Estimate := true,
+					 Orbits := false) -> RngUPolElt
+{Compute the L-polynomial of f at pR.}
+  require IsSpecialOrthogonal(f`M) : "Currently implemented only for SO_n";
+
+  n := Dimension(ReflexiveSpace(Module(f`M)));
+
+  require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
+
+  m := n div 2;
+  all_evs := AssociativeArray();
+  for i in [1..m] do
+      evs, ps := HeckeEigensystem(f, i : prec := prec,
+					 Estimate := Estimate,
+					 Orbits := Orbits);
+      for j in [1..#ps] do
+	  p := ps[j];
+	  if not IsDefined(all_evs, p) then all_evs[p] := []; end if;
+	  Append(~all_evs[p], evs[j]);
+      end for;
+  end for;
+  L_polys := [* *];
+  for P in ps do
+      evs := all_evs[P];
+      K := Universe(evs);
+      K_x<x> := PolynomialRing(K);
+      // Have to check what it should be when the base field is not QQ!!!
+      p := Norm(P);
+      if n mod 2 eq 1 then
+	  is_p_square, sqrt_p := IsSquare(K!p);
+	  if not is_p_square then
+	      L<sqrt_p> := ext< K | x^2 - p>;
+	      L_x<x> := PolynomialRing(L);
+	  end if;
+      end if;
+      case n:
+      when 3:
+	  L_poly := x^2 - (evs[1]/sqrt_p)*x+1;
+      when 4:
+	  L_poly := x^4 - (evs[1]/p)*x^3 +
+		    ((2+evs[2])/p)*x^2 - (evs[1]/p)*x + 1;
+      when 5:
+	  L_poly := x^4 - (evs[1]/sqrt_p^3)*x^3 +
+		    ((evs[2] + p^2 + 1)/p^2)*x^2 -
+		    (evs[1]/sqrt_p^3)*x + 1;
+      when 6:
+	  L_poly := x^6 - (evs[1]/p^2)*x^5 +
+		    ((1+p+p^2+evs[2])/p^3)*x^4 -
+		    ((2*evs[1]+evs[3])/p^3)*x^3 +
+		    ((1+p+p^2+evs[2])/p^3)*x^2 - (evs[1]/p^2)*x + 1;
+      when 7:
+	  L_poly := x^6 - (evs[1]/sqrt_p^5)*x^5 +
+		    ((evs[2]+1+p^2+p^4)/p^4)*x^4 -
+		    (((p^2+1)*evs[1]+evs[3])/sqrt_p^9)*x^3 +
+		    ((evs[2]+1+p^2+p^4)/p^4)*x^2 -
+		    (evs[1]/sqrt_p^5) * x + 1;
+      when 8:
+	  L_poly := x^8 - (evs[1]/p^3)*x^7 +
+		    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^6 -
+		    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^5 +
+		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)/p^6)*x^4-
+		    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^3 +
+		    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^2 -
+		    (evs[1]/p^3)*x + 1;
+      end case;
+      Append(~L_polys, L_poly);
+  end for;
+  return L_polys;
 end intrinsic;

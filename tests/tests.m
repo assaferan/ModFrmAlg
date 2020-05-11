@@ -6,6 +6,8 @@ freeze;
                                                                             
    FILE: tests.m (functions for testing examples)
 
+   05/11/20: Modified the tests to use Orbits for k > 1
+
    05/08/20: Modified testExample to test for eigenvalues in the same universe
              (so each embedding is checked for carrying all the eigenvalues)
 
@@ -97,8 +99,8 @@ function testExample(example : num_primes := 0, use_existing := false,
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
 						  Estimate := true,
 						  UseLLL := UseLLL,
-						  Orbits :=
-						      (Orbits and (k eq 1))
+						  Orbits := Orbits
+						     /* (Orbits and (k eq 1))*/
 				       ));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;

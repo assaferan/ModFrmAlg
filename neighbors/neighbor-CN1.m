@@ -246,16 +246,17 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	// We will need to divide by 2, so we will need to consider the Gram
 	//  matrix over the base ring instead of over the ring modulo pR^2.
 	if Vpp`ch eq 2 then
-	    factors := [];
 	    gram := __gram(Matrix(X cat Z) : quot := false);
 	    // !!! TODO : Check that it doesn't break anything !!!
 	    a := Involution(ReflexiveSpace(nProc`L));
-	    FF := FixedField(a);
-	    ZZ_F := Integers(FF);
-	    pR_FF := ideal<ZZ_F|Generators(nProc`pR)>;
-	    FF_bar, proj_FF := ResidueClassField(pR_FF);
-	    FF_x<x> := PolynomialRing(FF_bar);
 	    if Order(a) eq 2 then
+		factors := [];
+		FF := FixedField(a);
+		ZZ_F := Integers(FF);
+		pR_FF := ideal<ZZ_F|Generators(nProc`pR)>;
+		FF_bar, proj_FF := ResidueClassField(pR_FF);
+		FF_x<x> := PolynomialRing(FF_bar);
+	    
 		K := BaseField(a);
 		ZZ_K := Integers(K);
 		ZZ_K_basis := Basis(ZZ_K);
@@ -283,13 +284,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 		    Append(~factors, t1 + delta * (t2@@proj_FF));
 		end for;
 	    else
-		for i in [1..k] do
-		    f := proj_FF(gram[k+i,k+i]/pi)*x^2 - x +
-			 proj_FF(gram[i,i]/pi);
-		    roots := Roots(f);
-		    t1 := roots[1][1]@@proj_FF;
-		    Append(~factors, t1);
-		end for;
+		factors := [gram[i,i]/2 : i in [1..k]];
 	    end if;
 	else
 	    factors := [gram[i,i]/2 : i in [1..k]];
@@ -334,7 +329,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	gram := __gram(Matrix(X cat Z cat U));
 
 	// renormalize the vectors in X so that the off-diagonal entries are 1
-	X := [ X[i] * gram[i, k+i]^(-1) : i in [1..k] ];
+	X := [ X[i] * gram[i, 2*k+1-i]^(-1) : i in [1..k] ];
 
 	// The Gram matrix thusfar.
 	gram := __gram(Matrix(X cat Z cat U));
@@ -422,6 +417,7 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 		qAff`quotGram := Matrix(qAff`quot, dim, dim,
 			[ qAff`proj_pR2(e) : e in Eltseq(gram) ]);
 
+		
 		// Make some adjustments when we're in characteristic 2.
                 if qAff`ch eq 2 and SpaceType(V) eq "Symmetric" then
 			// Adjust the diagonal entries accordingly.
@@ -432,19 +428,20 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 			end for;
 		end if;
 
-                alpha_res := map< qAff`F -> qAff`F |
-		  x :-> qAff`proj_pR(nProc`inv_R(x@@qAff`proj_pR))>;
-
-                alpha_aff := FieldAutomorphism(qAff`F, alpha_res);
-
 		// The affine reflexive space.
                 if (pR eq alpha(pR)) then
+		    alpha_res := map< qAff`F -> qAff`F |
+				    x :-> qAff`proj_pR(
+					      nProc`inv_R(x@@qAff`proj_pR))>;
+
+                    alpha_aff := FieldAutomorphism(qAff`F, alpha_res);
                     qAff`V := BuildReflexiveSpace(mat, alpha_aff);
+		    qAff`inv_pR := alpha_aff;
                 else // split case
 		    qAff`V := BuildTrivialReflexiveSpace(qAff`F, dim);
+		    id_map := map< qAff`F -> qAff`F | x :-> x >;
+		    qAff`inv_pR := FieldAutomorphism(qAff`F, id_map);
 		end if;   
-
-                qAff`inv_pR := alpha_aff;
 
                 qAff`inv_pR2 := map< qAff`quot -> qAff`quot |
                     x :-> qAff`proj_pR2(nProc`inv_R(x@@qAff`proj_pR2))>;

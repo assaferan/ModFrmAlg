@@ -280,7 +280,18 @@ function Decomposition_recurse(M, V, primes, prime_idx,
        return [V];
    end if;
    
-   pR := Factorization(ideal<Integers(BaseRing(M))|primes[prime_idx]>)[1][1];
+   fac := Factorization(ideal<Integers(BaseRing(M))|
+			     Generators(primes[prime_idx])>);
+   // if the prime is ramified, at the moment the Hecke Operator
+   // is not computed correctly
+   if (#fac eq 1) and (fac[1][2] eq 2) then
+       return Decomposition_recurse(M, V, primes, prime_idx+1, proof,
+				    random_op : useLLL := useLLL,
+						estimate := estimate,
+						orbits := orbits);
+   end if;
+
+   pR := fac[1][1];
 
    vprintf AlgebraicModularForms, 1 : "Decomposing space of dimension %o using T_%o.\n", Dimension(V), Norm(pR);
    vprintf AlgebraicModularForms, 2 : "\t\t(will stop at %o)\n",
@@ -392,7 +403,7 @@ p coprime to the level of M and p<= bound. }
    alpha := Involution(AmbientSpace(Module(M)));
    F := FixedField(alpha);
    primes := PrimesUpTo(bound, F:
-			coprime_to := Discriminant(Module(M)));
+			coprime_to := Norm(Discriminant(Module(M))));
    prime_idx := [i : i in [1..#primes] | Norm(primes[i]) gt known][1];
    refined_decomp := &cat[Decomposition_recurse(M,MM, primes, prime_idx,
 						Proof, false :

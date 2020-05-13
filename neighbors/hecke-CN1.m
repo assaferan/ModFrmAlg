@@ -392,12 +392,14 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 	      Dimension(M`H[space_idx]);
     end if;
 */
-    assert 1 le idx and idx le Dimension(M);
+    assert 1 le idx and idx le #M`H;
     // The genus representatives.
     reps := Representatives(Genus(M));
     
     //    hecke := [* M`W!0 : hh in M`H *];
-    hecke := [ [ [M`W!0] : vec_idx in [1..Dimension(h)]] : h in M`H];
+    // hecke := [ [ [M`W!0] : vec_idx in [1..Dimension(h)]] : h in M`H];
+    hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] :
+	       h in M`H];
 
     // Keeping track of the gamma_i_j
     //  isom := [ [[] : h1 in H] : h2 in H ];
@@ -509,7 +511,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 	      weight := mat_lifts,
 	      special := IsSpecialOrthogonal(M));
 	   */
-		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
+		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H :
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
 				      weight := w,
@@ -555,7 +557,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 */
     iota := M`H[idx]`embedding;
    
-    mats := [[[Eltseq(hecke[space_idx][vec_idx][1]@@iota) :
+    mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota) :
 	       vec_idx in [1..Dimension(M`H[space_idx])]] :
 	      space_idx in [1..#M`H]]];
 

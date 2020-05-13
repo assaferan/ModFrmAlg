@@ -202,7 +202,7 @@ function testExample(example : num_primes := 0, use_existing := false,
 	N := num_primes;
     end if;
     
-    printf "Computing T(p) Hecke operators... ";
+    print "Computing T(p) Hecke operators...";
     
     ps := [Factorization(ideal<Integers(BaseRing(M))|n>)[1][1] :
 	   n in example`norm_p];

@@ -137,24 +137,24 @@ intrinsic DisplayHeckeEigensystem(f::ModFrmAlgElt : Verbose := true)
 	// Check whether this element is an eigenform.
 	if not f`IsEigenform then return; end if;
 
-	// Retrieve all dimensions at which Hecke operators have been computed.
-	keys := Keys(f`M`Hecke`Ts);
+	// Retrieve all dimensions at which eigenvalues have been computed
+	keys := Keys(f`Eigenvalues);
 	keys := Sort([ x : x in keys ]);
 
 	// Print the eigenform.
 	f;
 
 	for dim in keys do
-		// Retrieve the eigenvalues and associate prime.
-		Es, Ps := HeckeEigensystem(f, dim);
+	    // Retrieve the eigenvalues and associate prime.
+	    Es, Ps := HeckeEigensystem(f, dim);
 
-		// Display the pairing of eigenvalues and ideals.
-		printf "Hecke eigenvalues for T(p%o) operators:\n",
-			dim eq 1 select "" else "^" cat IntegerToString(dim);
-		for i in [1..#Es] do
-			printf "\tPrime of norm %o -->\t %o\n",
-				Norm(Ps[i]), Es[i];
-		end for;
+	    // Display the pairing of eigenvalues and ideals.
+	    printf "Hecke eigenvalues for T(p%o) operators:\n",
+		   dim eq 1 select "" else "^" cat IntegerToString(dim);
+	    for i in [1..#Es] do
+		printf "\tPrime of norm %o -->\t %o\n",
+		       Norm(Ps[i]), Es[i];
+	    end for;
 	end for;
 
 	// Display a helpful hint by default.
@@ -184,58 +184,76 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 
 	// If no eigenvalues computed at this dimension, assign an empty array.
 	if not IsDefined(f`Eigenvalues, k) then
-		f`Eigenvalues[k] := AssociativeArray();
+	    f`Eigenvalues[k] := AssociativeArray();
 	end if;
-
-	// Retrieve the Hecke matrices and primes at which the Hecke matrices
-	//  have been computed.
-	Ts, Ps := HeckeOperators(f`M, k);
 
 	// Get the pivot of the eigenform
 	pivot := 0;
 	repeat pivot +:= 1;
 	until f`vec[pivot] ne 0;
 
-	for i in [1..#Ts] do
-		// Do not recompute eigenvalue if it has already been computed.
-		if IsDefined(f`Eigenvalues[k], Ps[i]) then continue; end if;
-		// Promote the Hecke matrix to the base ring of the eigenform.
-		// Magma doesn't do IsSubfield(QQ,QQ)
-		if (Type(BaseRing(Ts[i])) ne FldRat) and
-		    (Type(BaseRing(f`vec)) ne FldRat) then
-		    _ := IsSubfield(BaseRing(Ts[i]), BaseRing(f`vec));
-		end if;
-		T := ChangeRing(Ts[i], BaseRing(f`vec));
-
-		// Assign eigenvalue at the specified prime.
-		// f`Eigenvalues[k][Ps[i]] := MVM(T, f`vec)[pivot];
-		f`Eigenvalues[k][Ps[i]] := (f`vec * T)[pivot];
-	end for;
-
-	// TODO : use this for both cases, with prec the maximum
-	if (Type(prec) eq SeqEnum) or (prec ne 0) then
-	    if GetVerbose("AlgebraicModularForms") ge 2 then
-		print "Computing Hecke eigenvalues at new primes";
+	if IsZero(prec) then
+	    already_known := {};
+	    if IsDefined(f`M`Hecke`Ts, k) then
+		already_known := already_known join Keys(f`M`Hecke`Ts[k]);
 	    end if;
-	 
-	    hecke_images := HeckeImages(f`M, pivot, prec, k :
-					BeCareful := BeCareful,
-					Estimate := Estimate,
-					Orbits := Orbits,
-					UseLLL := UseLLL);
-	    if Type(prec) eq SeqEnum then
-		Ps := prec;
-	    else
-		Ps := Sort([x : x in Keys(hecke_images)]);
+	    if IsDefined(f`Eigenvalues, k) then
+		already_known := already_known join Keys(f`Eigenvalues[k]);
 	    end if;
-	    for p in Ps do
-		f`Eigenvalues[k][p] :=
-		    DotProduct(f`vec, ChangeRing(hecke_images[p],
-						 BaseRing(f`vec)));;
-	    end for;
+	    if IsEmpty(already_known) then
+		error "No eigenvalues have been computed for this eigenform";
+	    end if;
+	    prec := [x : x in already_known];
 	end if;
-	// !!! TODO : return a sequence instead of a list.
-	// These should all live in the same universe
+	
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    print "Computing Hecke eigenvalues at new primes";
+	end if;
+	 
+	hecke_images := HeckeImages(f`M, pivot, prec, k :
+				    BeCareful := BeCareful,
+				    Estimate := Estimate,
+				    Orbits := Orbits,
+				    UseLLL := UseLLL);
+	if Type(prec) eq SeqEnum then
+	    Ps := prec;
+	else
+	    Ps := Sort([x : x in Keys(hecke_images)]);
+	end if;
+/*
+	K := BaseRing(f`M`W);
+	L := BaseRing(f`vec);
+	roots := Roots(MinimalPolynomial(K.1), L);
+	emb := hom<K -> L | roots[1][1]>;
+	for p in Ps do
+	    hecke_image := Vector([emb(x) : x in Eltseq(hecke_images[p])]);
+	    f`Eigenvalues[k][p] := DotProduct(f`vec, hecke_image);
+	end for;
+*/
+	found_emb := false;
+	for p in Ps do
+	    if IsDefined(f`Eigenvalues[k], p) then
+		if not found_emb then
+		    K := BaseRing(f`M`W);
+		    L := BaseRing(f`vec);
+		    if not IsPrimeField(K) then
+			roots := Roots(MinimalPolynomial(K.1), L);
+			embs := [hom<K -> L | root[1] > : root in roots];
+			vec := Eltseq(hecke_images[p]);
+			assert exists(emb){emb : emb in embs |
+				       f`Eigenvalues[k][p] eq
+				       DotProduct(f`vec,
+						  Vector([emb(x) : x in vec]))};
+			K2 := sub<L|emb(K.1)>;
+			assert IsIsomorphic(K,K2);
+		    end if;
+		end if;
+	    else
+		hecke_image := ChangeRing(hecke_images[p], BaseRing(f`vec));
+		f`Eigenvalues[k][p] := DotProduct(f`vec, hecke_image);
+	    end if;
+	end for;
+	
 	return [ f`Eigenvalues[k][P] : P in Ps ], [ P : P in Ps ];
 end intrinsic;
 

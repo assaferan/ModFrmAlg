@@ -442,6 +442,23 @@ procedure ModFrmAlgInit(M : BeCareful := false,
 		   [Dimension(h) : h in M`H];
 	    printf "\t\t\t\t (%o seconds)\n", Cputime() - t0;
 	end if;
+
+	// Sort representatives according to dimension
+	// That way computation of hecke images of standard vectors
+	// will be more efficient
+	dims := Sort([<Dimension(M`H[idx]), idx> : idx in [1..#M`H]]);
+	perm := [tup[2] : tup in dims];
+	perm_inv := [Index(perm,i) : i in [1..#M`H]];
+	// now these are in ascending order
+	M`H := [M`H[i] : i in perm];
+	// Have to reorder the genus representatives to match
+	M`genus`Representatives := [M`genus`Representatives[i] :
+				    i in perm];
+	for inv in Keys(M`genus`RepresentativesAssoc) do
+	    M`genus`RepresentativesAssoc[inv] :=
+		[<tup[1], perm_inv[tup[2]]> :
+		 tup in M`genus`RepresentativesAssoc[inv] ];
+	end for;
     end if;
 
 end procedure;

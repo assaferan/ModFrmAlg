@@ -307,6 +307,6 @@ intrinsic '@'(I::RngOrdFracIdl[FldOrd], alpha::FldAut) -> RngOrdFracIdl[FldOrd]
   L := BaseField(alpha);
   Z_L := RingOfIntegers(L);
   require Z_L eq Order(I) :
-    "Fractional ideal must be in the ring of integers of the field hte automorphism is acting on.";
+    "Fractional ideal must be in the ring of integers of the field the automorphism is acting on.";
   return ideal<Z_L | [alpha`map(g) : g in Generators(I)]>;
 end intrinsic;

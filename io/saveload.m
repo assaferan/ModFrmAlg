@@ -113,7 +113,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	// Valid dimensions for the Hecke matrices.
 	dims := Keys(M`Hecke`Ts);
 
-	// The Hecke matrice we've computed.
+	// The Hecke matrices we've computed.
 	hecke := [* *];
 
 	for dim in dims do
@@ -128,6 +128,30 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 
 		// Add this list to the ongoing list of Hecke matrices.
 		Append(~hecke, < dim, list >);
+	end for;
+
+	// The Hecke standard images we've computed.
+	hecke_images := [* *];
+	for image_idx in [1..Dimension(M)] do
+	    // dimensions for which the Hecke operators where computed
+	    image_dims := Keys(M`Hecke`standard_images[image_idx]);
+	    hecke_img_dim := [* *];
+	    for dim in image_dims do
+		// The list of Hecke images for this dimension.
+		list := [* *];
+
+		Ps := Keys(M`Hecke`standard_images[image_idx][dim]);
+		Ps := Sort([P : P in Ps]);
+		images := [M`Hecke`standard_images[image_idx][dim][P] :
+			   P in Ps];
+
+		// A coupled list of Hecke images and their ideals.
+		list := [* < Generators(Ps[i]), images[i] > : i in [1..#Ps] *];
+
+		// Add this list to the ongoing list of Hecke matrices.
+		Append(~hecke_img_dim, < dim, list >);
+	    end for;
+	    Append(~hecke_images, hecke_img_dim);
 	end for;
 
 	// Initialize the eigenforms.
@@ -209,65 +233,13 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
 		< "HECKE", hecke >,
+		< "HECKE_IMAGES", hecke_images >,
 		< "EIGENFORMS", eigenforms >
 	*];
 
 	// Write data to file.
 	Write(file, data, "Magma" : Overwrite := Overwrite);
 end intrinsic;
-
-/*
-function extract_root_datum(root_data)
-    root_array := AssociativeArray();
-
-    // Store meta data.
-    for entry in root_data do root_array[entry[1]] := entry[2]; end for;
-
-    A := root_array["SIMPLE_ROOTS"];
-    B := root_array["SIMPLE_COROOTS"];
-    Signs := root_array["SIGNS"];
-    type := eval root_array["TYPE"];
-
-    rank := Nrows(A);  dim := Ncols(A);
-    F := CoveringStructure(BaseRing(A), Rationals());
-    F := CoveringStructure(BaseRing(B), F);
-    A := Matrix(F,A);
-    B := Matrix(F,B);
-    C := Matrix( A*Transpose(B) );
-    is_c,newC := IsCoercible( MatrixAlgebra(Integers(),rank), C);
-    if is_c then C := newC; end if;
-
-    R := rootDatum( A, B, C, type, Signs);
-
-    return R;
-end function;
-
-function build_GroupOfLieType(group_data)
-    // An associative array which stores the appropriate meta data.
-    group_array := AssociativeArray();
-
-    // Store meta data.
-    for entry in group_data do group_array[entry[1]] := entry[2]; end for;	
-	
-    if (group_array["IS_TWISTED"]) then
-	root_datum := extract_root_datum(group_array["ROOT_DATUM"]);
-	base_field := group_array["BASE_FIELD"];
-	base_group := GroupOfLieType(root_datum, base_field);
-	A := AutomorphismGroup(base_group);
-	fixed_field := group_array["FIXED_FIELD"];
-	AGRP := GammaGroup(fixed_field, A);
-	grph_auts := [GraphAutomorphism(base_group, x) : x in group_array["COCYCLE_IMAGES"]];
-	c := OneCocycle(AGRP, grph_auts);
-	G := TwistedGroupOfLieType(c);
-    else
-	root_datum := extract_root_datum(group_array["ROOT_DATUM"]);
-	base_field := group_array["BASE_FIELD"];
-	G := GroupOfLieType(root_datum, base_field);
-    end if;
-    
-    return G;
-end function;
-*/
 
 intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 { Load an algebraic modular form from disk. }
@@ -336,105 +308,136 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 
 	// Assign genus representatives.
 	if IsDefined(array, "GENUS") and #array["GENUS"] ne 0 then
-		// Retrive the list of genus representatives.
-		reps := array["GENUS"];
+	    // Retrive the list of genus representatives.
+	    reps := array["GENUS"];
 
-		// Create a new genus symbol.
-		genus := New(GenusSym);
-		genus`Representatives := [];
+	    // Create a new genus symbol.
+	    genus := New(GenusSym);
+	    genus`Representatives := [];
 
-		//		if M`L`rfxSpace`deg eq 1 then
-		if Type(BaseRing(M`L)) eq FldRat then
-			// Handle the rationals separately.
-			for i in [1..#reps] do
-				// Retrieve the basis for this genus rep and
-				//  convert it to the rationals just in case.
-				basis := Matrix(reps[i]);
-				basis := ChangeRing(basis, Rationals());
+	    //		if M`L`rfxSpace`deg eq 1 then
+	    if Type(BaseRing(M`L)) eq FldRat then
+		// Handle the rationals separately.
+		for i in [1..#reps] do
+		    // Retrieve the basis for this genus rep and
+		    //  convert it to the rationals just in case.
+		    basis := Matrix(reps[i]);
+		    basis := ChangeRing(basis, Rationals());
+		    
+		    // Build genus rep as a native lattice object.
+		    L := LatticeWithBasis(basis, innerForm);
 
-				// Build genus rep as a native lattice object.
-				L := LatticeWithBasis(basis, innerForm);
+		    // Add it to the list.
+		    Append(~genus`Representatives, L);
+		end for;
+	    else
+		for i in [1..#reps] do
+		    // List of coefficient ideals.
+		    idls := [* *];
+		    
+		    // A basis of the ambient reflexive space.
+		    basis := [];
+		    
+		    // Retrive the coefficient ideals and bases.
+		    for data in reps[i] do
+			// Convert the generators to the
+			//  appropriate field.
+			gens := [ M`L`F ! x : x in data[1] ];
+			
+			// Add coefficient ideal.
+			Append(~idls, ideal< M`L`R | gens >);
+			
+			// Add basis vector.
+			Append(~basis, Vector(
+					       [ M`L`F!x : x in data[2] ]));
+		    end for;
+		    
+		    // Convert ideals to fractional ideals.
+		    idls := [ I : I in idls ];
+		    
+		    // A pseudomatrix we'll now use to construct the
+		    //  appropriate genus representative.
+		    //pmat := PseudoMatrix(idls, Matrix(basis));
+		    
+		    // Build genus representative.
+		    L := LatticeWithBasis(
+				 M`L`rfxSpace, Matrix(basis), idls);
+		    
+		    // Add lattice to the list of genus reps.
+		    Append(~genus`Representatives, L);
+		end for;
+	    end if;
 
-				// Add it to the list.
-				Append(~genus`Representatives, L);
-			end for;
-		else
-			for i in [1..#reps] do
-				// List of coefficient ideals.
-				idls := [* *];
+	    // Assign genus representative.
+	    genus`Representative := genus`Representatives[1];
 
-				// A basis of the ambient reflexive space.
-				basis := [];
+	    // Construct an associative array indexed by an invariant of
+	    //  the isometry classes.
 
-				// Retrive the coefficient ideals and bases.
-				for data in reps[i] do
-					// Convert the generators to the
-					//  appropriate field.
-					gens := [ M`L`F ! x : x in data[1] ];
-
-					// Add coefficient ideal.
-					Append(~idls, ideal< M`L`R | gens >);
-
-					// Add basis vector.
-					Append(~basis, Vector(
-						[ M`L`F!x : x in data[2] ]));
-				end for;
-
-				// Convert ideals to fractional ideals.
-				idls := [ I : I in idls ];
-
-				// A pseudomatrix we'll now use to construct the
-				//  appropriate genus representative.
-				//pmat := PseudoMatrix(idls, Matrix(basis));
-
-				// Build genus representative.
-				L := LatticeWithBasis(
-					M`L`rfxSpace, Matrix(basis), idls);
-
-				// Add lattice to the list of genus reps.
-				Append(~genus`Representatives, L);
-			end for;
-		end if;
-
-		// Assign genus representative.
-		genus`Representative := genus`Representatives[1];
-
-		// Construct an associative array indexed by an invariant of
-		//  the isometry classes.
-
-		genus := sortGenusCN1(genus);
+	    genus := sortGenusCN1(genus);
 		
-		// Assign genus symbol to the space of modular forms.
-		M`genus := genus;
+	    // Assign genus symbol to the space of modular forms.
+	    M`genus := genus;
 	end if;
 
 	// Assign Hecke matrices.
 	if IsDefined(array, "HECKE") and #array["HECKE"] ne 0 then
-		// Retrieve the list of Hecke matrices.
-		list := array["HECKE"];
+	    // Retrieve the list of Hecke matrices.
+	    list := array["HECKE"];
 
-		// Assign Hecke matrix associative array.
-		M`Hecke`Ts := AssociativeArray();
+	    // Assign Hecke matrix associative array.
+	    M`Hecke`Ts := AssociativeArray();
 
-		for data in list do
-			// The dimension of the Hecke matrices.
-			k := data[1];
-
-			// Assign an empty associative array for this dimension.
-			M`Hecke`Ts[k] := AssociativeArray();
-
-			for entry in data[2] do
-				// Generators of the prime ideal.
-				gens := [ M`L`R ! Eltseq(x) : x in entry[1] ];
-
-				// The prime ideal associated to this entry.
-				P := ideal< M`L`R | gens >;
-
-				// Assign Hecke matrix.
-				M`Hecke`Ts[k][P] := ChangeRing(entry[2],
-							       BaseRing(M`W));
-			end for;
+	    for data in list do
+		// The dimension of the Hecke matrices.
+		k := data[1];
+		
+		// Assign an empty associative array for this dimension.
+		M`Hecke`Ts[k] := AssociativeArray();
+		
+		for entry in data[2] do
+		    // Generators of the prime ideal.
+		    gens := [ M`L`R ! Eltseq(x) : x in entry[1] ];
+		    
+		    // The prime ideal associated to this entry.
+		    P := ideal< M`L`R | gens >;
+		    
+		    // Assign Hecke matrix.
+		    M`Hecke`Ts[k][P] := ChangeRing(entry[2],
+						   BaseRing(M`W));
 		end for;
+	    end for;
+	end if;
+
+	// Assign Hecke images.
+	if IsDefined(array, "HECKE_IMAGES") and #array["HECKE_IMAGES"] ne 0 then
+	    // Retrieve the list of Hecke images.
+	    list := array["HECKE_IMAGES"];
+
+	    // Assign Hecke images associative array.
+	    M`Hecke`standard_images := [AssociativeArray() : j in [1..#list]];
+
+	    for j in [1..#list] do
+		for data in list[j] do
+		    // The dimension of the Hecke images.
+		    k := data[1];
+		
+		    // Assign an empty associative array for this dimension.
+		    M`Hecke`standard_images[j][k] := AssociativeArray();
+		
+		    for entry in data[2] do
+			// Generators of the prime ideal.
+			gens := [ M`L`R ! Eltseq(x) : x in entry[1] ];
+			
+			// The prime ideal associated to this entry.
+			P := ideal< M`L`R | gens >;
+		    
+			// Assign Hecke image.
+			M`Hecke`standard_images[j][k][P] :=
+			    ChangeRing(entry[2],BaseRing(M`W));
+		    end for;
+		end for;
+	    end for;
 	end if;
 
 	if IsDefined(array, "EIGENFORMS") then

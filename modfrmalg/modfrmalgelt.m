@@ -213,16 +213,21 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	end for;
 
 	// TODO : use this for both cases, with prec the maximum
-	if prec ne 0 then
+	if (Type(prec) eq SeqEnum) or (prec ne 0) then
 	    if GetVerbose("AlgebraicModularForms") ge 2 then
 		print "Computing Hecke eigenvalues at new primes";
 	    end if;
+	 
 	    hecke_images := HeckeImages(f`M, pivot, prec, k :
 					BeCareful := BeCareful,
 					Estimate := Estimate,
 					Orbits := Orbits,
 					UseLLL := UseLLL);
-	    Ps := Sort([x : x in Keys(hecke_images)]);
+	    if Type(prec) eq SeqEnum then
+		Ps := prec;
+	    else
+		Ps := Sort([x : x in Keys(hecke_images)]);
+	    end if;
 	    for p in Ps do
 		f`Eigenvalues[k][p] :=
 		    DotProduct(f`vec, ChangeRing(hecke_images[p],
@@ -261,6 +266,15 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	// A list of cusp forms.
 	eigenforms := [* *];
 
+	// to see if they are cusp forms
+	reps := Representatives(Genus(M));
+	wts := &cat[[#AutomorphismGroup(reps[i]) : j in [1..Dimension(M`H[i])]]:
+		    i in [1..#reps]];
+	// instead of dividing by wts[i], we multiply for the case of positive
+	// characteristic
+	wt_prod := &*wts;
+	mult_wts := [wt_prod div wt : wt in wts];
+	
 	for i in [1..#spaces] do
 		// Extract the first basis vector of the eigenspace.
 		basis := Basis(spaces[i]);
@@ -276,7 +290,8 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 			mform`vec := vec;
 
 			// Flag as cuspidal?
-			mform`IsCuspidal := &+[ x : x in Eltseq(vec) ] eq 0;
+			mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+						i in [1..#wts]] eq 0;
 
 			// Cusp forms are not Eistenstein.
 			mform`IsEisenstein := not mform`IsCuspidal;
@@ -311,13 +326,21 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 		return M`Hecke`EisensteinSeries;
 	end if;
 
+	/*
 	// Compute the inverse of the size of the  automorphism groups for each
 	//  of the genus representatives.
 	auts := [ 1 / #AutomorphismGroup(L) : L in Representatives(Genus(M)) ];
 
 	// Normalized so that the first element in auts is 1.
 	vec := Vector([ auts[1]^-1 * e : e in auts ]);
+       */
+	// In order to support positive characteristic we leave the coordinates
+	// not normalized by weights.
 
+	require Dimension(M`W) eq 1 :
+		"Cannot create Eisenstein series for nontrivial weight!";
+	vec := Vector([1 : i in [1..Dimension(M)]]);
+	
 	// Create the modular form corresponding to the Eisenstein series.
 	mform := New(ModFrmAlgElt);
 	mform`M := M;

@@ -98,11 +98,12 @@ end function;
 function getNormRoot(elt, alpha)
   K := BaseField(alpha);
   F := FixedField(alpha);
+  zeta := PrimitiveElement(K);
   is_square, root := IsSquare(F!elt);
   if is_square then return root; end if;
-  is_square, root := IsSquare(F!(elt / Norm(K.1)));
+  is_square, root := IsSquare(F!(elt / Norm(zeta)));
   assert is_square;
-  return root*K.1;
+  return root*zeta;
 end function;
 
 
@@ -230,9 +231,10 @@ function SplitHyperbolicPlane(M, alpha, vec)
 
 	// Determine the appropriate scalar for clearing out the (2,2)-entry.
 	if char eq 2 then
-	      scalar := - F.1 * gram[2,2] / Trace(F.1); 
+	    // scalar := - F.1 * gram[2,2] / Trace(F.1);
+	    scalar := - F.1 * gram[2,2] / (F.1 + alpha(F.1)); 
 	else
-	      scalar := -gram[2,2] / 2;
+	    scalar := -gram[2,2] / 2;
 	end if;
 
 	// Clear the (2,2)-entry in the Gram matrix.

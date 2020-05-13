@@ -271,14 +271,16 @@ procedure __initializePivot(V, k)
 	    vec := i eq j select M[i] else M[i]+M[j];
 
 	    if IsUnitarySpace(V) then
+		FF := FixedField(FieldAutomorphism(F, V`Involution));
 		param_vars := [[],[]];
 		for idx in [1..Dimension(V)] do
 		    coeffs, monoms := CoefficientsAndMonomials(vec[idx]);
-		    param_coeffs := [Eltseq(x) : x in coeffs];
+		    param_coeffs := [Eltseq(x, FF) : x in coeffs];
 		    if vec[idx] eq 0 then
 			params := [R!0,R!0];
 		    else
-			params := [&+[param_coeffs[i][j] * monoms[i] : i in [1..#monoms]] : j in [1..2]];
+			params := [&+[param_coeffs[i][j] * monoms[i] :
+				      i in [1..#monoms]] : j in [1..2]];
 		    end if;
 		    Append(~param_vars[1], R!params[1]);
 		    Append(~param_vars[2], R!params[2]);
@@ -349,10 +351,11 @@ procedure __initializePivot(V, k)
 	for i in [1..k], j in [i..k] do
 	    vec := i eq j select M[i] else M[i]+M[j];
 	    if IsUnitarySpace(V) then
+		FF := FixedField(FieldAutomorphism(F, V`Involution));
 		param_vars := [[],[]];
 		for idx in [1..Dimension(V)] do
 		    coeffs, monoms := CoefficientsAndMonomials(Numerator(vec[idx]));
-		    param_coeffs := [Eltseq(x) : x in coeffs];
+		    param_coeffs := [Eltseq(x, FF) : x in coeffs];
 		    if vec[idx] eq 0 then
 			params := [R!0, R!0];
 		    else

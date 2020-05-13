@@ -352,7 +352,11 @@ require computing the full Hecke operator.}
 	  p in PrimesUpTo(n) |
 	  (Gcd(Integers()!Norm(Discriminant(Module(M))),p) eq 1)];
    if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
-       ps := [p : p in ps | IsSplit(p)];
+       alpha := Involution(ReflexiveSpace(Module(M)));
+       // F := FixedField(alpha);
+       // ZZ_F := Integers(F);
+       // ps := [p : p in ps | IsSplit(p)];
+       ps := [p : p in ps | alpha(p) ne p];
    end if;
    if #M`Hecke`standard_images[i][k] lt #ps then  // generate more images..
        new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
@@ -368,5 +372,49 @@ require computing the full Hecke operator.}
 	   end for;
        end for;
    end if;      
+   return M`Hecke`standard_images[i][k];       
+end intrinsic;
+
+
+intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
+				       ps::SeqEnum, k::RngIntElt :
+		      BeCareful := false,
+		      Estimate := true,
+		      Orbits := true,
+		      UseLLL := true) -> SeqEnum
+{The images of the ith standard basis vector
+ under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
+These are computed using sparse methods that don't
+require computing the full Hecke operator.}  
+   assert 1 le i and i le Dimension(M);
+   if not assigned M`Hecke`standard_images then
+       M`Hecke`standard_images :=
+	   [AssociativeArray() : j in [1..Dimension(M)]];
+   end if;
+   s := SparseRepresentation(M, VectorSpace(M).i);
+   space_idx := s[1][2];
+   start_idx := s[1][3];
+   end_idx := start_idx + Dimension(M`H[space_idx]) - 1;
+   assert start_idx le i and i le end_idx;
+   // Due to the nature of the computation, we compute an entire block together
+   if not IsDefined(M`Hecke`standard_images[i], k) then
+       for j in [start_idx..end_idx] do
+	   M`Hecke`standard_images[j][k] := AssociativeArray();
+       end for;
+   end if;
+   
+   new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
+   for p in new_ps do
+       sp_hec := HeckeOperatorCN1Sparse(M, p, k, s : BeCareful := BeCareful,
+						     Estimate := Estimate,
+						     Orbits := Orbits,
+						     UseLLL := UseLLL);
+       sp_mat := sp_hec[space_idx];
+       for j in [start_idx..end_idx] do
+	   M`Hecke`standard_images[j][k][p] :=
+	       Transpose(sp_mat)[j-start_idx+1];
+       end for;
+   end for;
+
    return M`Hecke`standard_images[i][k];       
 end intrinsic;

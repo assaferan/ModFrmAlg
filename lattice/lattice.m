@@ -385,13 +385,13 @@ end intrinsic;
 
 function pMaximalGram(L, pR : BeCareful := false, given_coeffs := [])
 	if assigned L`pMaximal then
-		// If the p-maximal data has been assigned, return it.
-		if IsDefined(L`pMaximal, pR) then
-			return L`pMaximal[pR][1], L`pMaximal[pR][2];
-		end if;
+	    // If the p-maximal data has been assigned, return it.
+	    if IsDefined(L`pMaximal, pR) then
+		return L`pMaximal[pR][1], L`pMaximal[pR][2];
+	    end if;
 	else
-		// If it consists of an empty array, create it.
-		L`pMaximal := AssociativeArray();
+	    // If it consists of an empty array, create it.
+	    L`pMaximal := AssociativeArray();
 	end if;
 
         // The coefficient ideals for this lattice.
@@ -404,31 +404,31 @@ function pMaximalGram(L, pR : BeCareful := false, given_coeffs := [])
 	vecs := [];
    
 	for i in [1..#idls] do
-		// The generators of the coefficient ideal.
-		gens := Generators(idls[i]);
+	    // The generators of the coefficient ideal.
+	    gens := Generators(idls[i]);
 
-		// Randomly choose a p-maximal vector.
-		repeat
-		    if IsEmpty(given_coeffs) then
-			coeffs := [Random(11) - 5 : g in gens];
-		    else
-			coeffs := given_coeffs[i];
-		    end if;
-
-                        vec := &+[ gens[j] * coeffs[j] :
-					 j in [1..#gens]] * basis[i];
-		until not vec in pR * Module(L);
-		// for debugging
-		if GetVerbose("AlgebraicModularForms") ge 3 then
-		    printf "coeffs = %o\n", coeffs;
-		end if;
-		// Verify that the vectors were chosen properly.
-		if BeCareful then
-			assert vec in Module(L) and not vec in pR * Module(L);
+	    // Randomly choose a p-maximal vector.
+	    repeat
+		if IsEmpty(given_coeffs) then
+		    coeffs := [Random(11) - 5 : g in gens];
+		else
+		    coeffs := given_coeffs[i];
 		end if;
 
-		// Add this vector to the list.
-		Append(~vecs, vec);
+                vec := &+[ gens[j] * coeffs[j] :
+			   j in [1..#gens]] * basis[i];
+	    until not vec in pR * Module(L);
+	    // for debugging
+	    if GetVerbose("AlgebraicModularForms") ge 3 then
+		printf "coeffs = %o\n", coeffs;
+	    end if;
+	    // Verify that the vectors were chosen properly.
+	    if BeCareful then
+		assert vec in Module(L) and not vec in pR * Module(L);
+	    end if;
+	    
+	    // Add this vector to the list.
+	    Append(~vecs, vec);
 	end for;
 
         gram := GramMatrix(L, vecs);

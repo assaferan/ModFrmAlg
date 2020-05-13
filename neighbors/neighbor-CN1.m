@@ -242,17 +242,62 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 		assert &and[ temp[i,k+j] eq (i-k+j eq 1 select 1 else 0)
 			: i,j in [1..k] ];
 	end if;
-
+	
 	// We will need to divide by 2, so we will need to consider the Gram
 	//  matrix over the base ring instead of over the ring modulo pR^2.
 	if Vpp`ch eq 2 then
-		gram := __gram(Matrix(X cat Z) : quot := false);
+	    factors := [];
+	    gram := __gram(Matrix(X cat Z) : quot := false);
+	    // !!! TODO : Check that it doesn't break anything !!!
+	    a := Involution(ReflexiveSpace(nProc`L));
+	    FF := FixedField(a);
+	    ZZ_F := Integers(FF);
+	    pR_FF := ideal<ZZ_F|Generators(nProc`pR)>;
+	    FF_bar, proj_FF := ResidueClassField(pR_FF);
+	    FF_x<x> := PolynomialRing(FF_bar);
+	    if Order(a) eq 2 then
+		K := BaseField(a);
+		ZZ_K := Integers(K);
+		ZZ_K_basis := Basis(ZZ_K);
+		possible_ds := [ZZ_F!(FF!((x-a(x))^2)) : x in ZZ_K_basis];
+		assert exists(idx){idx : idx in [1..#possible_ds] |
+			       possible_ds[idx] ne 0};
+		D := possible_ds[idx];
+		delta := ZZ_K_basis[idx] - a(ZZ_K_basis[idx]);
+		for i in [1..k] do
+		    f := proj_FF(gram[k+i,k+i]/pi)*x^2 - x +
+			 proj_FF(gram[i,i]/pi);
+		    roots := Roots(f);
+		    t2 := FF_bar!0;
+		    while IsEmpty(roots) do
+			if (t2 eq 0) then
+			    t2 := FF_bar!1;
+			else
+			    t2 *:= FF_bar.1;
+			end if;
+			f2 := f - proj_FF(gram[k+i,k+i]/pi) *
+				  proj_FF(D) * t2^2;  
+			roots := Roots(f2);
+		    end while;
+		    t1 := roots[1][1]@@proj_FF;
+		    Append(~factors, t1 + delta * (t2@@proj_FF));
+		end for;
+	    else
+		for i in [1..k] do
+		    f := proj_FF(gram[k+i,k+i]/pi)*x^2 - x +
+			 proj_FF(gram[i,i]/pi);
+		    roots := Roots(f);
+		    t1 := roots[1][1]@@proj_FF;
+		    Append(~factors, t1);
+		end for;
+	    end if;
+	else
+	    factors := [gram[i,i]/2 : i in [1..k]];
 	end if;
 
 	// Lift X so that it is isotropic modulo pR^2.
-	X := [ X[i] +
-		&+[ -(gram[i,k+1-j]) /
-			  (i+j-1 eq k select 2 else 1) * Z[j]
+	X := [ X[i] -
+		&+[(i+j-1 eq k select factors[i] else gram[i,k+1-j]) * Z[j]
 			: j in [k+1-i..k] ] : i in [1..k] ];
 
 	// Verify that X is isotropic modulo pR^2.
@@ -269,8 +314,8 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 
 	// Lift Z so that it is isotropic modulo pR^2.
 	Z := [ Z[i] -
-		&+[ alpha(gram[k+i,2*k+1-j]) /
-			 (i+j-1 eq k select 2 else 1) * X[j]
+	       &+[ alpha(gram[k+i,2*k+1-j])/
+		   (i+j-1 eq k select 2 else 1) * X[j]
 			: j in [k+1-i..k] ] : i in [1..k] ];
 
 	// Verify that Z is isotropic modulo pR^2.
@@ -284,6 +329,12 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 		// Verify all is well.
 		assert &and[ temp[i,j] eq 0 : i,j in [1..k] ];
 	end if;
+
+	// The Gram matrix thusfar.
+	gram := __gram(Matrix(X cat Z cat U));
+
+	// renormalize the vectors in X so that the off-diagonal entries are 1
+	X := [ X[i] * gram[i, k+i]^(-1) : i in [1..k] ];
 
 	// The Gram matrix thusfar.
 	gram := __gram(Matrix(X cat Z cat U));
@@ -409,6 +460,7 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 	alpha := Involution(ReflexiveSpace(nProc`L));
 	is_split := alpha(nProc`pR) ne nProc`pR;
 	if is_split then
+	    // !!! TODO : Change it to the real thing!
 	    nProc`skewDim := 0;
 	else
 	    nProc`skewDim := Integers()!(k*(k-1)/2);

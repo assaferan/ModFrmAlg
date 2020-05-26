@@ -347,10 +347,10 @@ require computing the full Hecke operator.}
    ps := [ p : p in PrimesUpTo(n, BaseRing(M)) |
 	   Gcd(Integers()!Norm(Discriminant(Module(M))),
 	       Norm(p)) eq 1 and IsSplit(p)];
-   */
-   ps := [Factorization(ideal<Integers(BaseRing(M))|p>)[1][1] :
-	  p in PrimesUpTo(n) |
-	  (Gcd(Integers()!Norm(Discriminant(Module(M))),p) eq 1)];
+  */
+   bad_modulus := Numerator(Norm(Discriminant(Module(M))));
+   ps := [Factorization(Integers(BaseRing(M)) !! p)[1][1] :
+	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
    if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
        alpha := Involution(ReflexiveSpace(Module(M)));
        // F := FixedField(alpha);

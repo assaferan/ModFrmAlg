@@ -254,9 +254,11 @@ function HeckeOperatorCN1(M, pR, k
 	    for orbit in isoOrbits do
 		skew0 := Zero(MatrixRing(F, k));
 		// Skip to the neighbor associated to this orbit.
-		SkipToNeighbor
-		    (~nProc, Basis(orbit[1]), skew0);
-		
+		SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
+		// In case it doesn't lift
+		if IsEmpty(nProc`X) then
+		    continue;
+		end if;
 		mat_gen_seq := [[gens[Index(gens_modp,
 					    Eltseq(Aut.Abs(i)))]^Sign(i) :
 				 i in Eltseq(g@@psi)] :
@@ -503,14 +505,6 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 	    // Changing the skew matrix, but not the isotrpic subspace mod p
 	    repeat
 
-	    /*
-	      processNeighborWeightSparse(~nProc, inv, ~hecke, idx, M`H,
-	      space_idx, vec_idx:
-	      BeCareful := BeCareful,
-	      UseLLL := UseLLL,
-	      weight := mat_lifts,
-	      special := IsSpecialOrthogonal(M));
-	   */
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H :
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
@@ -543,18 +537,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 	    end if;
 	end while;
     end if;
-//    end for;
-/*
-    iota := [h`embedding : h in M`H];
-   
-    vec := &cat[Eltseq(hecke[i]@@iota[i]) : i in [1..#M`H]];
 
-    empty_vec := VectorSpace(BaseRing(M`H[1]),0)![];
-    
-    if IsEmpty(vec) then return empty_vec; end if;
-    
-    return Vector(vec);
-*/
     iota := M`H[idx]`embedding;
    
     mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota) :

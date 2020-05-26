@@ -403,7 +403,7 @@ p coprime to the level of M and p<= bound. }
    alpha := Involution(AmbientSpace(Module(M)));
    F := FixedField(alpha);
    primes := PrimesUpTo(bound, F:
-			coprime_to := Norm(Discriminant(Module(M))));
+			coprime_to := Numerator(Norm(Discriminant(Module(M)))));
    prime_idx := [i : i in [1..#primes] | Norm(primes[i]) gt known][1];
    refined_decomp := &cat[Decomposition_recurse(M,MM, primes, prime_idx,
 						Proof, false :

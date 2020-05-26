@@ -70,6 +70,38 @@ function __pivots(n, aniso, k)
         return pivots1;
 end function;
 
+// allow radicals to be pivots
+// That's relevant in characteristic 2 of even dimension
+// !!! TODO : the above function is a special case when nrad = 0
+// unite them
+
+function __pivots_singular(n, aniso, k, nrad)
+    // Base case.
+    if k eq 1 then
+	return [ [i] : i in [1..n-aniso] cat [n+1..n+nrad] ];
+    end if;
+
+    // Retrieve lower-dimensional maximal pivots.
+    pivots1 := __pivots_singular(n-2, aniso, k-1, nrad);
+    pivots1 := [ [ x le n-2-aniso select x+1 else x+2 : x in data ] :
+		 data in pivots1 ];
+
+    // Determine the first set of pivots.
+    pivots1 := [ [1] cat data : data in pivots1 ] cat
+               [ Sort(data cat [n-aniso]) : data in pivots1 ];
+
+    // Add additional pivots when we're not in the maximal case.
+    if 2*k-nrad lt n-aniso then
+        pivots2 := __pivots_singular(n-2, aniso, k, nrad);
+        pivots2 := [ [ x le n-2-aniso select x+1 else x+2 : x in data ] :
+		     data in pivots2 ];
+        return pivots1 cat pivots2;
+    end if;
+    
+    return pivots1;
+    
+end function;
+
 // This is to get all lines, for the split primes in the unitary case
 intrinsic BuildTrivialReflexiveSpace(F::FldFin,
 			dim::RngIntElt) -> ModTupFld[FldFin]
@@ -125,19 +157,18 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
      end if;
 
      // Make sure we're in dimension 3 or higher.
-     // Why ???? an also it says 2 (!) ? 
+     // Why ???? and also it says 2 (!) ? 
      require Dimension(V) ge 2: "Dimension must be 3 or greater.";
 
      // Assign the Gram matrix.
      V`GramMatrix := M;
      
-     // Decompose the form into a standard form (R + H + A).
+     // Decompose the form into a standard form (H + A + R).
      if spaceType eq "Symmetric" then
  	 V`GramMatrixStd, V`Basis := Decompose(M);
-     else if spaceType eq "Hermitian" then
-	      V`GramMatrixStd, V`Basis := Decompose(M, alpha);
-	  end if;
-     end if;  
+     elif spaceType eq "Hermitian" then
+	 V`GramMatrixStd, V`Basis := Decompose(M, alpha);
+     end if;
 
      // Count the rows at the end of the matrix which are exactly zero.
      idx := Dimension(V);
@@ -158,7 +189,8 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
      V`AnisoDim := Dimension(V) - V`RadDim - idx + 1;
 
      // The number of hyperbolic planes in the Witt decomposition.
-     V`WittIndex := Integers()!((idx-1)/2);
+     // V`WittIndex := Integers()!((idx-1)/2);
+     V`WittIndex := (idx - 1) div 2;
 
      // Assign the multinomial of the reflexive form.
      // Might want to change this one to the
@@ -181,8 +213,15 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
 	 vec := Vector([ R.i + F.1 * (R.(i+Dimension(V))) :
 			 i in [1..Dimension(V)] ]);
 	 vec_bar := Vector([alpha_R(x) : x in Eltseq(vec)]);
-	 V`Q := (vec * ChangeRing(M, BaseRing(vec)), vec_bar);
-	 V`QStd := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)), vec_bar);
+	 if Characteristic(BaseRing(M)) ne 2 then
+	     V`Q := (vec * ChangeRing(M/2, BaseRing(vec)), vec_bar);
+	     V`QStd := (vec * ChangeRing(V`GramMatrixStd/2, BaseRing(vec)),
+			vec_bar);
+	 else
+	     V`Q := (vec * ChangeRing(M, BaseRing(vec)), vec_bar);
+	     V`QStd := (vec * ChangeRing(V`GramMatrixStd, BaseRing(vec)),
+			vec_bar);
+	 end if;
      end if;
 
      // Assign an ordering to the elements of the finite field.
@@ -201,191 +240,191 @@ intrinsic BuildReflexiveSpace(M::AlgMatElt[FldFin], alpha::FldAut :
 end intrinsic;
 
 procedure __initializePivot(V, k)
-	// Retrieve parameters for this dimension.
-	data := V`ParamArray[k];
+    // Retrieve parameters for this dimension.
+    data := V`ParamArray[k];
 
-	// The current pivot.
-	pivot := data`Pivots[data`PivotPtr];
+    // The current pivot.
+    pivot := data`Pivots[data`PivotPtr];
 
-	// The base field.
-	F := BaseRing(V);
+    // The base field.
+    F := BaseRing(V);
 
-	rank := k * Dimension(V);
+    rank := k * Dimension(V);
 	
-	if IsUnitarySpace(V) then
-	    // Multivariant polynomial ring used to determine parameterization.
-	    R := PolynomialRing(F, 2 * rank);
-	    gens := GeneratorsSequence(R);
-	    alpha := hom<R -> R | V`Involution, gens>;
-	    // Initialize matrix that will determine parameterization.
-	    M := Matrix(R, k, Dimension(V), [R.i + F.1 * (R.(i+rank)) : i in [1..rank] ]);
-	else
-	    // Multivariant polynomial ring used to determine parameterization.
-	    R := PolynomialRing(F, rank);
-	    alpha := hom<R -> R | IdentityFieldMorphism(F), GeneratorsSequence(R)>;
-	    // Initialize matrix that will determine parameterization.
-	    M := Matrix(R, k, Dimension(V), [ R.i : i in [1..rank] ]);
+    if IsUnitarySpace(V) then
+	// Multivariant polynomial ring used to determine parameterization.
+	R := PolynomialRing(F, 2 * rank);
+	gens := GeneratorsSequence(R);
+	alpha := hom<R -> R | V`Involution, gens>;
+	// Initialize matrix that will determine parameterization.
+	M := Matrix(R, k, Dimension(V), [R.i + F.1 * (R.(i+rank)) : i in [1..rank] ]);
+    else
+	// Multivariant polynomial ring used to determine parameterization.
+	R := PolynomialRing(F, rank);
+	alpha := hom<R -> R | IdentityFieldMorphism(F), GeneratorsSequence(R)>;
+	// Initialize matrix that will determine parameterization.
+	M := Matrix(R, k, Dimension(V), [ R.i : i in [1..rank] ]);
+    end if;
+
+    // Keep a list of non-free variables from which we will determine the
+    //  free variables when we are done.
+    remove := [];
+
+    // Setup the columns corresponding to the pivots.
+    for i in [1..k], j in [1..k] do
+	M[i,pivot[j]] := i eq j select 1 else 0;
+	Append(~remove, (i-1)*Dimension(V) + pivot[j]);
+    end for;
+
+    // Clear the rows prior to the pivot positions (but not the radical).
+    for i in [1..k], j in [1..pivot[i]-1] do
+	M[i,j] := 0;
+	Append(~remove, (i-1)*Dimension(V) + j);
+    end for;
+    
+    // Check if one or more of the anisotropic coordinates need to be zero.
+    for i in [1..k] do
+	if pivot[i] gt V`WittIndex then
+	    for j in [1..V`AnisoDim] do
+		M[i,Dimension(V)+1-V`RadDim-j] := 0;
+		Append(~remove, i*Dimension(V)+1-V`RadDim-j);
+	    end for;
 	end if;
+    end for;
 
-	// Keep a list of non-free variables from which we will determine the
-	//  free variables when we are done.
-	remove := [];
+    // Determine the number of rows of the matrix that we'll echelonize.
+    rows := Integers()!(k*(k+1)/2);
+    cols := Rank(R) + 1;
 
-	// Setup the columns corresponding to the pivots.
-	for i in [1..k], j in [1..k] do
-		M[i,pivot[j]] := i eq j select 1 else 0;
-		Append(~remove, (i-1)*Dimension(V) + pivot[j]);
-	end for;
+    // The field of fractions of the polynomial ring.
+    RF := FieldOfFractions(R);
 
-	// Clear the rows prior to the pivot positions (but not the radical).
-	for i in [1..k], j in [1..pivot[i]-1] do
-		M[i,j] := 0;
-		Append(~remove, (i-1)*Dimension(V) + j);
-	end for;
+    // The matrix that we're going to echelonize.
+    mat := Matrix(RF, rows, cols, [ 0 : i in [1..rows*cols] ]);
 
-	// Check if one or more of the anisotropic coordinates need to be zero.
-	for i in [1..k] do
-		if pivot[i] gt V`WittIndex then
-			for j in [1..V`AnisoDim] do
-				M[i,Dimension(V)+1-V`RadDim-j] := 0;
-				Append(~remove, i*Dimension(V)+1-V`RadDim-j);
-			end for;
+    // The current row to fill in in the matrix.
+    row := 1;
+
+    for i in [1..k], j in [i..k] do
+	// The appropriate vector that we want to be isotropic.
+	vec := i eq j select M[i] else M[i]+M[j];
+
+	if IsUnitarySpace(V) then
+	    FF := FixedField(FieldAutomorphism(F, V`Involution));
+	    param_vars := [[],[]];
+	    for idx in [1..Dimension(V)] do
+		coeffs, monoms := CoefficientsAndMonomials(vec[idx]);
+		param_coeffs := [Eltseq(x, FF) : x in coeffs];
+		if vec[idx] eq 0 then
+		    params := [R!0,R!0];
+		else
+		    params := [&+[param_coeffs[i][j] * monoms[i] :
+				  i in [1..#monoms]] : j in [1..2]];
 		end if;
-	end for;
-
-	// Determine the number of rows of the matrix that we'll echelonize.
-	rows := Integers()!(k*(k+1)/2);
-	cols := Rank(R) + 1;
-
-	// The field of fractions of the polynomial ring.
-	RF := FieldOfFractions(R);
-
-	// The matrix that we're going to echelonize.
-	mat := Matrix(RF, rows, cols, [ 0 : i in [1..rows*cols] ]);
-
-	// The current row to fill in in the matrix.
-	row := 1;
-
-	for i in [1..k], j in [i..k] do
-	    // The appropriate vector that we want to be isotropic.
-	    vec := i eq j select M[i] else M[i]+M[j];
-
-	    if IsUnitarySpace(V) then
-		FF := FixedField(FieldAutomorphism(F, V`Involution));
-		param_vars := [[],[]];
-		for idx in [1..Dimension(V)] do
-		    coeffs, monoms := CoefficientsAndMonomials(vec[idx]);
-		    param_coeffs := [Eltseq(x, FF) : x in coeffs];
-		    if vec[idx] eq 0 then
-			params := [R!0,R!0];
-		    else
-			params := [&+[param_coeffs[i][j] * monoms[i] :
-				      i in [1..#monoms]] : j in [1..2]];
-		    end if;
-		    Append(~param_vars[1], R!params[1]);
-		    Append(~param_vars[2], R!params[2]);
-		end for;
-		f := Evaluate(V`QStd, param_vars[1] cat param_vars[2]);
-	    else
-		f := Evaluate(V`QStd, Eltseq(vec));
-	    end if;
-
-	    // Check each term of the resulting multinomial.
-	    if f ne 0 then
-		for term in Terms(f) do
-		    if Degree(term) eq 2 then
-			// Degree 2 terms are inhomogenous.
-			mat[row][cols] -:= term;
-		    else
-			// Otherwise we have a linear term.
-			// val, mono := Contpp(term);
-			vals, monos := CoefficientsAndMonomials(term);
-			val := vals[1]; mono := monos[1];
-			coord := &+[ mono eq R.n select n else 0
-				     : n in [1..Rank(R)] ];
+		Append(~param_vars[1], R!params[1]);
+		Append(~param_vars[2], R!params[2]);
+	    end for;
+	    f := Evaluate(V`QStd, param_vars[1] cat param_vars[2]);
+	else
+	    f := Evaluate(V`QStd, Eltseq(vec));
+	end if;
+	
+	// Check each term of the resulting multinomial.
+	if f ne 0 then
+	    for term in Terms(f) do
+		if Degree(term) eq 2 then
+		    // Degree 2 terms are inhomogenous.
+		    mat[row][cols] -:= term;
+		else
+		    // Otherwise we have a linear term.
+		    // val, mono := Contpp(term);
+		    vals, monos := CoefficientsAndMonomials(term);
+		    val := vals[1]; mono := monos[1];
+		    coord := &+[ mono eq R.n select n else 0
+				 : n in [1..Rank(R)] ];
 		    
-			// And so fill in the matrix accordingly.
-			mat[row,coord] := val;
-		    end if;
-		end for;
-	    end if;
-	    
-	    // Move on to the next row.
-	    row +:= 1;
-	end for;
+		    // And so fill in the matrix accordingly.
+		    mat[row,coord] := val;
+		end if;
+	    end for;
+	end if;
+	
+	// Move on to the next row.
+	row +:= 1;
+    end for;
 
-	// Compute the Echelon form of the matrix.
-	E := EchelonForm(mat);
+    // Compute the Echelon form of the matrix.
+    E := EchelonForm(mat);
 
-	// The evaluation list for replacing variables with their dependence
-	//  relations.
-	list := [* R.i : i in [1..Rank(R)] *];
+    // The evaluation list for replacing variables with their dependence
+    //  relations.
+    list := [* R.i : i in [1..Rank(R)] *];
 
-	for i in [1..Nrows(E)] do
-		// Find the pivot in the i-th row.
-		c := 0; repeat c +:= 1;
+    for i in [1..Nrows(E)] do
+	// Find the pivot in the i-th row.
+	c := 0; repeat c +:= 1;
 		until c gt Rank(R)+1 or E[i][c] eq 1;
-
-		// Add this pivot to the list of non-free variables.
-		Append(~remove, c);
-
-		// If the pivot is equal to rank+1, we have a problem.
-		assert c ne Rank(R)+1;
-
-		// If the row is entirely zero, skip it.
-		if c gt Rank(R)+1 then continue; end if;
-
-		// Build the multinomial for which R.c is dependent.
-		f := E[i][Rank(R)+1];
-		for j in [ l : l in [1..Rank(R)] | l ne c ] do
-			f -:= E[i][j] * R.j;
-		end for;
-		list[c] := f;
-	end for;
-
-	// The matrix whose rows parameterize all isotropic subspaces.
 	
-	M := Evaluate(M, [ l : l in list ]);
-
-	// Verify that we didn't screw up somewhere along the line.
-	for i in [1..k], j in [i..k] do
-	    vec := i eq j select M[i] else M[i]+M[j];
-	    if IsUnitarySpace(V) then
-		FF := FixedField(FieldAutomorphism(F, V`Involution));
-		param_vars := [[],[]];
-		for idx in [1..Dimension(V)] do
-		    coeffs, monoms := CoefficientsAndMonomials(Numerator(vec[idx]));
-		    param_coeffs := [Eltseq(x, FF) : x in coeffs];
-		    if vec[idx] eq 0 then
-			params := [R!0, R!0];
-		    else
-			params := [&+[param_coeffs[i][j] * monoms[i] : i in [1..#monoms]] : j in [1..2]];
-		    end if;
-		    Append(~param_vars[1], R!params[1]);
-		    Append(~param_vars[2], R!params[2]);
-		end for;
-		f := Evaluate(V`QStd, param_vars[1] cat param_vars[2]);
-	    else
-		f := Evaluate(V`QStd, Eltseq(vec));
-	    end if;
-	    assert f eq 0;
-	end for;
-
-	// Determine the free variables.
-	// Note that in the unitary case, they are taken from the fixed field
-	// of the involution
-
-	remove cat:= [n : n in [1..Rank(R)] |
-		      &and [ Degree(R!M[i,j],n) le 0 : i in [1..k],
-						       j in [1..Dimension(V)] ]];
+	// Add this pivot to the list of non-free variables.
+	Append(~remove, c);
 	
-	data`FreeVars := [ n : n in [1..Rank(R)] | not n in remove ];
+	// If the pivot is equal to rank+1, we have a problem.
+	assert c ne Rank(R)+1;
 
-	// The parameterization vector for this pivot.
-	data`Params := [* 0 : i in [1..#data`FreeVars] *];
+	// If the row is entirely zero, skip it.
+	if c gt Rank(R)+1 then continue; end if;
+	
+	// Build the multinomial for which R.c is dependent.
+	f := E[i][Rank(R)+1];
+	for j in [ l : l in [1..Rank(R)] | l ne c ] do
+	    f -:= E[i][j] * R.j;
+	end for;
+	list[c] := f;
+    end for;
 
-	// Assign the parameterization of the isotropic subspaces.
-	data`IsotropicParam := M;
+    // The matrix whose rows parameterize all isotropic subspaces.
+	
+    M := Evaluate(M, [ l : l in list ]);
+
+    // Verify that we didn't screw up somewhere along the line.
+    for i in [1..k], j in [i..k] do
+	vec := i eq j select M[i] else M[i]+M[j];
+	if IsUnitarySpace(V) then
+	    FF := FixedField(FieldAutomorphism(F, V`Involution));
+	    param_vars := [[],[]];
+	    for idx in [1..Dimension(V)] do
+		coeffs, monoms := CoefficientsAndMonomials(Numerator(vec[idx]));
+		param_coeffs := [Eltseq(x, FF) : x in coeffs];
+		if vec[idx] eq 0 then
+		    params := [R!0, R!0];
+		else
+		    params := [&+[param_coeffs[i][j] * monoms[i] : i in [1..#monoms]] : j in [1..2]];
+		end if;
+		Append(~param_vars[1], R!params[1]);
+		Append(~param_vars[2], R!params[2]);
+	    end for;
+	    f := Evaluate(V`QStd, param_vars[1] cat param_vars[2]);
+	else
+	    f := Evaluate(V`QStd, Eltseq(vec));
+	end if;
+	assert f eq 0;
+    end for;
+
+    // Determine the free variables.
+    // Note that in the unitary case, they are taken from the fixed field
+    // of the involution
+
+    remove cat:= [n : n in [1..Rank(R)] |
+		  &and [ Degree(R!M[i,j],n) le 0 : i in [1..k],
+						   j in [1..Dimension(V)] ]];
+    
+    data`FreeVars := [ n : n in [1..Rank(R)] | not n in remove ];
+
+    // The parameterization vector for this pivot.
+    data`Params := [* 0 : i in [1..#data`FreeVars] *];
+
+    // Assign the parameterization of the isotropic subspaces.
+    data`IsotropicParam := M;
 end procedure;
 
 intrinsic FirstIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
@@ -397,7 +436,9 @@ intrinsic FirstIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	//  entry in the catalog.
 	if not IsDefined(V`ParamArray, k) then
 		data := New(IsoParam);
-		data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+		// data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+		data`Pivots := __pivots_singular(Dimension(V) - V`RadDim,
+						 V`AnisoDim, k, V`RadDim);
 		V`ParamArray[k] := data;
 	end if;
 
@@ -417,11 +458,13 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	// If isotropic subspaces of this dimension haven't been initialized,
 	//  then treat it as if we were requesting the first isotropic subspace.
 	if not IsDefined(V`ParamArray, k) then
-		data := New(IsoParam);
-		data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
-		data`PivotPtr := 0;
-		data`Params := [];
-		V`ParamArray[k] := data;
+	    data := New(IsoParam);
+	    // data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+	    data`Pivots := __pivots_singular(Dimension(V) - V`RadDim,
+					     V`AnisoDim, k, V`RadDim);
+	    data`PivotPtr := 0;
+	    data`Params := [];
+	    V`ParamArray[k] := data;
 	end if;
 
 	// Retrieve the parameters for the requested dimension.
@@ -429,19 +472,19 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 
 	// Check to see if we need to initialize a new pivot.
 	if #data`Params eq 0 then
-		// Move to the next pivot.
-		data`PivotPtr +:= 1;
+	    // Move to the next pivot.
+	    data`PivotPtr +:= 1;
 
-		// If we've exceeded the list of pivots, we're done.
-		if data`PivotPtr gt #data`Pivots then
-			// Reset the pivot pointer so that we can loop through
-			//  the isotropic subspaces again if needed.
-			data`PivotPtr := 0;
-			return [];
-		end if;
+	    // If we've exceeded the list of pivots, we're done.
+	    if data`PivotPtr gt #data`Pivots then
+		// Reset the pivot pointer so that we can loop through
+		//  the isotropic subspaces again if needed.
+		data`PivotPtr := 0;
+		return [];
+	    end if;
 
-		// Initialize the new pivot.
-		__initializePivot(V, k);
+	    // Initialize the new pivot.
+	    __initializePivot(V, k);
 	end if;
 
 	// The dimension of the isotropic subspace we're constructing.
@@ -457,48 +500,48 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	// Produce the isotropic subspace corresponding to the current
 	//  parameters.
 	for i in [1..#data`Params] do
-		if V`Symbolic then
-			evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
-		else
-			evalList[data`FreeVars[i]] := data`Params[i];
-		end if;
+	    if V`Symbolic then
+		evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
+	    else
+		evalList[data`FreeVars[i]] := data`Params[i];
+	    end if;
 	end for;
 
 	// The basis for the current isotropic subspace.
 	space := Rows(Evaluate(data`IsotropicParam, [ x : x in evalList]));
 
 	if #data`FreeVars ne 0 then
-		// The current position in the parameterization.
-		pos := 0;
+	    // The current position in the parameterization.
+	    pos := 0;
 
-		// Terminate loop once we found the next new subspace, or we
-		//  hit the end of the list.
-		repeat
-			// Increment position.
-			pos +:= 1;
-
-			if V`Symbolic then
-				// Increment value.
-				data`Params[pos] +:= 1;
-
-				// Check to see if we've rolled over.
-				if (data`Params[pos] mod #V`S) eq 0 then
-					// Reset value if so.
-					data`Params[pos] := 0;
-				end if;
-			else
-				// Manually move to the next element.
-				if IsPrime(#BaseRing(V)) then
-					data`Params[pos] +:= 1;
-				elif data`Params[pos] eq 0 then
-					data`Params[pos] := V`PrimitiveElement;
-				elif data`Params[pos] eq 1 then
-					data`Params[pos] := 0;
-				else
-					data`Params[pos] *:= V`PrimitiveElement;
-				end if;
-			end if;
-		until pos eq #data`FreeVars or data`Params[pos] ne 0;
+	    // Terminate loop once we found the next new subspace, or we
+	    //  hit the end of the list.
+	    repeat
+		// Increment position.
+		pos +:= 1;
+		
+		if V`Symbolic then
+		    // Increment value.
+		    data`Params[pos] +:= 1;
+		    
+		    // Check to see if we've rolled over.
+		    if (data`Params[pos] mod #V`S) eq 0 then
+			// Reset value if so.
+			data`Params[pos] := 0;
+		    end if;
+		else
+		    // Manually move to the next element.
+		    if IsPrime(#BaseRing(V)) then
+			data`Params[pos] +:= 1;
+		    elif data`Params[pos] eq 0 then
+			data`Params[pos] := V`PrimitiveElement;
+		    elif data`Params[pos] eq 1 then
+			data`Params[pos] := 0;
+		    else
+			data`Params[pos] *:= V`PrimitiveElement;
+		    end if;
+		end if;
+	    until pos eq #data`FreeVars or data`Params[pos] ne 0;
 	end if;
 
 	// If we've hit the end of the list, indicate we need to move on to the
@@ -548,11 +591,11 @@ intrinsic IsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	count := 0;
 
 	while space ne [] do
-		// Increment counter.
-		count +:= 1;
-
-		// Move on to the next subspace.
-		space := NextIsotropicSubspace(V, k);
+	    // Increment counter.
+	    count +:= 1;
+	    
+	    // Move on to the next subspace.
+	    space := NextIsotropicSubspace(V, k);
 	end while;
 
 	// Return the count.
@@ -713,7 +756,7 @@ intrinsic BuildQuadraticSpace(M::AlgMatElt[FldFin] : Symbolic := true)
 	// Assign the Gram matrix.
 	V`GramMatrix := M;
 
-	// Decompose the form into a standard form (R + H + A).
+	// Decompose the form into a standard form (H + A + R).
 	V`GramMatrixStd, V`Basis := Decompose(M);
 
 	// Count the rows at the end of the matrix which are exactly zero.
@@ -735,7 +778,8 @@ intrinsic BuildQuadraticSpace(M::AlgMatElt[FldFin] : Symbolic := true)
 	V`AnisoDim := Dimension(V) - V`RadDim - idx + 1;
 
 	// The number of hyperbolic planes in the Witt decomposition.
-	V`WittIndex := Integers()!((idx-1)/2);
+	//	V`WittIndex := Integers()!((idx-1)/2);
+	V`WittIndex := (idx - 1) div 2;
 
 	// Assign the multinomial of the quadratic form.
 	if Characteristic(BaseRing(M)) ne 2 then

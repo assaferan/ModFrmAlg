@@ -203,7 +203,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	    if IsEmpty(already_known) then
 		error "No eigenvalues have been computed for this eigenform";
 	    end if;
-	    prec := [x : x in already_known];
+	    prec := Sort([x : x in already_known]);
 	end if;
 	
 	if GetVerbose("AlgebraicModularForms") ge 2 then

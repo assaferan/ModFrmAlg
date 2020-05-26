@@ -80,10 +80,11 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	end if;
 
 	// The inner form associated to the ambient reflexive space.
-	innerForm := ChangeRing(M`L`rfxSpace`innerForm, M`L`R);
+	innerForm := ChangeRing(M`L`rfxSpace`innerForm,
+				FieldOfFractions(M`L`R));
 
 	// The defining polynomial of the number field.
-	f := DefiningPolynomial(BaseRing(innerForm));
+	f := DefiningPolynomial(M`L`R);
 
 	// The genus representatives.
 	genus := [* *];

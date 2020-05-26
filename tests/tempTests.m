@@ -1,22 +1,6 @@
 SetDebugOnError(true);
 SetHelpUseExternalBrowser(false);
 AttachSpec("spec");
-// This was done to test timings - Orbits + UseLLL is almost always the fastest
-// (lost only in examples 3 and 7 to Orbits without LLL, and by a small margin)
-/*
-M, timing := AlgebraicModularFormsTests(:num_primes := 3,
-					 Orbits := false,
-					 UseLLL := false);
-M, timing_orbits := AlgebraicModularFormsTests(:num_primes := 3,
-						Orbits := true,
-						UseLLL := false);
-M, timing_use_lll := AlgebraicModularFormsTests(:num_primes := 3,
-						 Orbits := false,
-						 UseLLL := true);
-M, timing_orbits_lll := AlgebraicModularFormsTests(:num_primes := 3,
-						    Orbits := true,
-						    UseLLL := true);
-*/
 
 if assigned AlgebraicModularFormsExamples then
     delete AlgebraicModularFormsExamples;
@@ -44,6 +28,56 @@ import "neighbors/neighbor-CN1.m" : BuildNeighborProc,
        LiftSubspace,
        GetNextNeighbor;
 
+import "neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
+import "lattice/lattice.m" : GuessMaxDet;
+
+function inspect(M)
+    Dimension(M);
+    if IsZero(Dimension(M)) then return [* *]; end if;
+    D := Decomposition(M,10);
+    eigenforms := HeckeEigenforms(M);
+    evs := [* HeckeEigensystem(f,1 : prec := 20) :  f in eigenforms *];
+    return evs;
+end function;
+
+QQ := Rationals();
+V := StandardRepresentation(GL(3,QQ));
+forms := [IdentityMatrix(QQ,3), SymmetricMatrix(QQ, [1,0,1,1/2,0,3])];
+for A in forms do
+    A;
+    SO_3 := SpecialOrthogonalGroup(A);
+    for k in [0..6] do
+	k;
+	W := SymmetricRepresentation(V,k);
+	//	M := OrthogonalModularForms(A, W);
+	M := AlgebraicModularForms(SO_3, W);
+	inspect(M);
+    end for;
+end for;
 
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
+
+/*
+upTo := 0;
+genList := [ Module(M) ];
+invs := AssociativeArray();
+invs[Invariant(Module(M))] := [ < Module(M), 1 > ];
+repeat
+    // Increment norm by 10.
+    upTo +:= 10;
+
+    // Compute a list of primes which do not divide the
+    //  discriminant of the lattice.
+    ps := [ p : p in PrimesUpTo(upTo, BaseRing(M)) |
+	    Gcd(Integers()!Norm(Discriminant(Module(M))),
+		Norm(p)) eq 1 ];
+until #ps ne 0;
+idx := 1;
+p := ps[idx];
+isoList := genList;
+isoIdx := 1;
+BeCareful := true;
+nProc := BuildNeighborProc(isoList[isoIdx], p, 1
+			: BeCareful := BeCareful);
+*/

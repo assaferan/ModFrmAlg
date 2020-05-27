@@ -9,6 +9,15 @@ freeze;
 
    Implementation file for computing p-neighbors for genus computations
 
+   05/26/20: Modified computeGenusRepsAt to support non-liftable isotropic
+             vectors mod pR.
+             Modified computeGenusRepsCN1 to use the mass formula.
+             At the moment we are still not using it as a stopping criterion,
+             to accelerate the genus computation.
+             Fixed some bugs in UnitaryMass.
+             Added code from Kirschmer's package for calculating the 
+	     orthogonal mass of a lattice.
+
    05/11/20: Updated computeGenusRepsAt, following interface change of 
              GetNextNeighbor.
 

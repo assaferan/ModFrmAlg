@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: saveload.m (Routines used for saving and loading data to/from disk.)
 
+   05/26/20: Modified save to support innerForms with coefficients in the 
+             field of fractions. (and not just in the integer ring).
+
    05/08/20: Changed reading and writing of eigenvalues to have all 
              eigenvalues in the same universe.
 

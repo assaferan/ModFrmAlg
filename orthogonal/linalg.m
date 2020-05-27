@@ -11,6 +11,8 @@ freeze;
 
    !!! TODO : move to the utils folder
 
+   05/26/20 : Updated since Discriminant can be from now on 2-integral.
+
    05/08/20 : Added functions for decomposition of the space (future use).
 
    04/08/20 : Modified to handle finite fields as well.

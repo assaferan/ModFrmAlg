@@ -9,6 +9,9 @@ freeze;
 
    Implementation file for the space of algebraic modular forms.
 
+   05/26/20: Modified the constructor to look for a maximal integral lattice
+             with respect to the form.
+
    05/04/20: Fixed a bug in ModFrmAlgInit, had to tell magma that two fields
              are isomorphic.
 

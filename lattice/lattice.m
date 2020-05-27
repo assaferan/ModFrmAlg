@@ -8,6 +8,19 @@ freeze;
 
    Implementation file for lattice routines
 
+   05/26/2020 : Modified Scale and Norm to match the 
+   	      	definitions in Kirschmer's thesis.
+                Modified AuxForms and ZLattice to return the lattice and the
+                forms multiplied by 2, since now we are allowing lattices 
+		and forms with non-integral coefficients, so these might be
+                half-integral and the code handling lattices over Z only accepts
+                integral coefficients.
+                Also modified pMaximalGram in the same manner, so that we will
+                be able to reduce modulo p, even when p divides 2.
+                Modified Discriminant to match the definition in [GV].
+                Added and adapted code from Kirschmer's package to check
+                for integrality of lattices, to find a maximal integral lattice
+
    04/27/2020 : Modified AutomorphismGroup to work also for SO 
    	      	(parameter special)
                 Fixed bug in IsIsometric when special = true.

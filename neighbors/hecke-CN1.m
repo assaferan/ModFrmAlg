@@ -7,6 +7,10 @@ freeze;
                                                                             
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
 
+   05/27/20: Fixed a bug for SO(n) - automorphism groups were wrongly built.
+             Changed default values to use orbit method and estimate, and not
+             use LLL.
+
    05/11/20: Added support for the Orbit method for k > 1, increasing
              efficiency.
 
@@ -181,8 +185,8 @@ end procedure;
 function HeckeOperatorCN1(M, pR, k
 			  : BeCareful := false,
 			    UseLLL := false,
-			    Estimate := false,
-			    Orbits := false)
+			    Estimate := true,
+			    Orbits := true)
     
     // The genus representatives.
     reps := Representatives(Genus(M));
@@ -230,7 +234,7 @@ function HeckeOperatorCN1(M, pR, k
 	    F := BaseRing(V);
 
 	    // The automorphism group restricted to the affine space.
-	    G := AutomorphismGroup(L);
+	    G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
 
 	    gens := [PullUp(Matrix(g), L, L :
 			    BeCareful := BeCareful) :
@@ -383,8 +387,8 @@ end procedure;
 function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 				     : BeCareful := false,
 				       UseLLL := false,
-				       Estimate := false,
-				       Orbits := false)
+				       Estimate := true,
+				       Orbits := true)
 /*
     if space_idx gt #M`H then
 	error "space_idx should be in the range [1..%o]", #M`H;
@@ -442,7 +446,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 	F := BaseRing(V);
 
 	// The automorphism group restricted to the affine space.
-	G := AutomorphismGroup(L);
+	G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
 
 	gens := [PullUp(Matrix(g), L, L :
 			BeCareful := BeCareful) :
@@ -567,7 +571,7 @@ end function;
 
 function HeckeOperatorCN1Sparse(M, pR, k, s
 				: BeCareful := false,
-				  UseLLL := true,
+				  UseLLL := false,
 				  Estimate := true,
 				  Orbits := true)
     ret := [* KMatrixSpace(BaseRing(M`H[1]),Dimension(M),Dimension(h))!0 :
@@ -586,209 +590,3 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
     end for;
     return ret;
 end function;
-/* 
-old code:
-
-procedure processNeighbor(~nProc, invs, ~hecke, idx :
-			  BeCareful := true, UseLLL := false, weight := 1)
-    // Build the neighbor lattice corresponding to the
-    //  current state of nProc.
-    nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
-
-    // Compute the invariant of the neighbor lattice.
-    inv := Invariant(nLat);
-
-    // Retrieve the array of isometry classes matching this
-    //  invariant.
-    array := invs[inv];
-
-    // Isometry testing is only necessary if the array has
-    //  length larger than 1.
-    if #array ne 1 then
-	// Flag to determine whether an isometry class
-	//  was actually found. This is a failsafe.
-	found := false;
-	
-	for j in [1..#array] do
-	    // Check for isometry.
-	    iso := IsIsometric(nLat, array[j][1]);
-	    
-	    // If isometric, flag as found,
-	    //  increment Hecke matrix, and move on.
-	    if iso then
-		found := true;
-		hecke[array[j][2]][idx] +:= weight;
-		continue;
-	    end if;
-	end for;
-
-	// Verify that the neighbor was indeed isometric
-	//  to something in our list.
-	assert found;
-    else
-	// Array length is one, and therefore conclude
-	//  that nLat is isometric to the only entry in
-	//  the array.
-	hecke[array[1][2]][idx] +:= weight;
-    end if;
-    
-    // Update nProc in preparation for the next neighbor
-    //  lattice.
-    nProc := GetNextNeighbor(nProc
-			     : BeCareful := BeCareful);
-end procedure;
-
-
-function HeckeOperatorTrivialWeightCN1(M, pR, k
-				       : BeCareful := true,
-					 UseLLL := false,
-				         Estimate := false,
-				         Orbits := false)
-	// The genus representatives.
-	reps := Representatives(Genus(M));
-
-	// The dimension of the Hecke matrix.
-	dim := #reps;
-
-	// Initialize the Hecke matrix.
-	hecke := Zero(MatrixRing(Integers(), dim));
-
-	// An associative array indexed by a specified invariant of an isometry
-	//  class. This data structure allows us to bypass a number of isometry
-	//  tests by filtering out those isometry classes whose invariant
-	//  differs from the one specified.
-	invs := M`genus`RepresentativesAssoc;
-
-	Q := ReflexiveSpace(Module(M));
-	n := Dimension(Q);
-
-	fullCount := dim * NumberOfNeighbors(M, pR, k);
-	count := 0;
-	elapsed := 0;
-	start := Realtime();
-	
-	for idx in [1..dim] do
-		// The current isometry class under consideration.
-		L := reps[idx];
-
-		// Build neighboring procedure for this lattice.
-		nProc := BuildNeighborProc(L, pR, k
-					   : BeCareful := BeCareful);
-
-		if GetVerbose("AlgebraicModularForms") ge 1 then
-		    printf "Computing %o%o-neighbors for isometry class "
-			cat "representiative #%o...\n", pR,
-			   k eq 1 select "" else "^" cat IntegerToString(k),
-			   idx;
-		end if;
-
-		if Orbits then
-		    // The affine vector space.
-		    V := nProc`L`Vpp[pR]`V;
-
-		    // The base field.
-		    F := BaseRing(V);
-
-		    // The automorphism group restricted to the affine space.
-		    G := AutomorphismGroup(L);
-
-		    gens := [PullUp(Matrix(g), L, L :
-				    BeCareful := BeCareful) :
-			     g in Generators(G)];
-
-		    pMaximalBasis :=
-			ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
-
-		    gens := [pMaximalBasis * g * pMaximalBasis^(-1) :
-			     g in gens];
-
-		    gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]
-				  : g in gens];
-		 
-		    Aut := sub<GL(n, F) | gens_modp>;
-
-		    // The isotropic orbit data.
-		    isoOrbits := IsotropicOrbits(V, Aut, k);
-
-		    for orbit in isoOrbits do
-			// Skip to the neighbor associated to this orbit.
-			nProc := SkipToNeighbor(nProc, Basis(orbit[1]));
-			processNeighbor(~nProc, invs, ~hecke, idx :
-					BeCareful := BeCareful,
-					UseLLL := UseLLL,
-					weight := orbit[2]);
-			// !!! TODO : Estimate by the total number of orbits
-			if Estimate then
-			    printEstimate(start, ~count, ~elapsed,
-					  fullCount, pR, k
-					 : increment := orbit[2]);
-			end if;
-		    end for;
-		else
-		    while nProc`isoSubspace ne [] do
-			processNeighbor(~nProc, invs, ~hecke, idx :
-					BeCareful := BeCareful,
-					UseLLL := UseLLL);
-			
-			if Estimate then
-			    printEstimate(start, ~count, ~elapsed,
-					  fullCount, pR, k);
-			end if;
-		    end while;
-		end if;
-	end for;
-
-	return hecke;
-end function;
-
-procedure processNeighborDebug(~nProc, invs, ~iso_classes :
-			  BeCareful := true)
-    // Build the neighbor lattice corresponding to the
-    //  current state of nProc.
-    nLat := BuildNeighbor(nProc : BeCareful := BeCareful);
-
-    // Compute the invariant of the neighbor lattice.
-    inv := Invariant(nLat);
-
-    // Retrieve the array of isometry classes matching this
-    //  invariant.
-    array := invs[inv];
-
-    // Isometry testing is only necessary if the array has
-    //  length larger than 1.
-    if #array ne 1 then
-	// Flag to determine whether an isometry class
-	//  was actually found. This is a failsafe.
-	found := false;
-	
-	for j in [1..#array] do
-	    // Check for isometry.
-	    iso := IsIsometric(nLat, array[j][1]);
-	    
-	    // If isometric, flag as found,
- 	    //  increment Hecke matrix, and move on.
-	    if iso then
-		found := true;
-		iso_classes[nProc`isoSubspace] :=  array[j][2];
-		continue;
-	    end if;
-	end for;
-
-	// Verify that the neighbor was indeed isometric
-	//  to something in our list.
-	assert found;
-    else
-	// Array length is one, and therefore conclude
-	//  that nLat is isometric to the only entry in
-	//  the array.
-	iso_classes[nProc`isoSubspace] := array[1][2];
-    end if;
-    
-    // Update nProc in preparation for the next neighbor
-    //  lattice.
-    nProc := GetNextNeighbor(nProc
-			     : BeCareful := BeCareful);
-end procedure;
-
-
-*/

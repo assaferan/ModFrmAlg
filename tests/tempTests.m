@@ -41,43 +41,35 @@ function inspect(M)
 end function;
 
 QQ := Rationals();
-V := StandardRepresentation(GL(3,QQ));
-forms := [IdentityMatrix(QQ,3), SymmetricMatrix(QQ, [1,0,1,1/2,0,3])];
-for A in forms do
-    A;
-    SO_3 := SpecialOrthogonalGroup(A);
-    for k in [0..6] do
-	k;
-	W := SymmetricRepresentation(V,k);
-	//	M := OrthogonalModularForms(A, W);
-	M := AlgebraicModularForms(SO_3, W);
-	inspect(M);
+std_reps := AssociativeArray();
+forms := AssociativeArray();
+std_reps[3] := StandardRepresentation(GL(3,QQ));
+std_reps[5] := StandardRepresentation(GL(5,QQ));
+forms[3] := [IdentityMatrix(QQ,3),
+	  SymmetricMatrix(QQ, [1,0,1,1/2,0,3]),
+	  SymmetricMatrix(QQ, [2,-1/2,2,-1/2,0,6]) // Alok Shukla's example
+	  ];
+forms[5] := [
+	  IdentityMatrix(QQ,5),
+	  SymmetricMatrix(QQ, [1,0,1,0,0,1,0,0,0,1,1/2,0,0,0,3]),
+	  SymmetricMatrix(QQ, [1,0,1,0,0,1,0,1/2,0,1,1/2,0,0,0,3])
+];
+/*
+for dim in [3,5] do
+    for A in forms[dim] do
+	A;
+	G := SpecialOrthogonalGroup(A);
+	// maybe should make k depend on the dimension
+	for k in [0..6] do
+	    k;
+	    W := SymmetricRepresentation(std_reps[dim],k);
+	    //	M := OrthogonalModularForms(A, W);
+	    M := AlgebraicModularForms(G, W);
+	    inspect(M);
+	end for;
     end for;
 end for;
-
+*/
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
 
-/*
-upTo := 0;
-genList := [ Module(M) ];
-invs := AssociativeArray();
-invs[Invariant(Module(M))] := [ < Module(M), 1 > ];
-repeat
-    // Increment norm by 10.
-    upTo +:= 10;
-
-    // Compute a list of primes which do not divide the
-    //  discriminant of the lattice.
-    ps := [ p : p in PrimesUpTo(upTo, BaseRing(M)) |
-	    Gcd(Integers()!Norm(Discriminant(Module(M))),
-		Norm(p)) eq 1 ];
-until #ps ne 0;
-idx := 1;
-p := ps[idx];
-isoList := genList;
-isoIdx := 1;
-BeCareful := true;
-nProc := BuildNeighborProc(isoList[isoIdx], p, 1
-			: BeCareful := BeCareful);
-*/

@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 
+   05/27/20: Updated LiftSubspace to handle the case of isotropic vectors
+             mod pR that do not lift modulo pR * alpha(pR). 
+
    05/11/20: Updated SkipToNeighbor to be able to specify the skew-matrix for 
              p mod p^2.
              Took out code chunks from GetNextNeighbor to form UpdateSkewMatrix
@@ -150,10 +153,10 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	AddColumn(~basis, sp[i][j], j, pivots[i]);
     end for;
 
-    alpha := Vpp`inv_pR;
+    alpha_pR := Vpp`inv_pR;
 
     // Extract our target isotropic subspace modulo pR.
-    X := [ MVM(basis, V.i, alpha) : i in pivots ];
+    X := [ MVM(basis, V.i, alpha_pR) : i in pivots ];
 
     if Vpp`splitting_type eq "split" then
 	X := [ Vector([ proj(e @@ map) : e in Eltseq(x) ]) : x in X ];
@@ -176,11 +179,11 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	end if;
     end for;
 	
-    Z := [ MVM(basis, V.i, alpha) : i in paired ];
+    Z := [ MVM(basis, V.i, alpha_pR) : i in paired ];
 
     // Extract the remaining basis vectors.
     exclude := pivots cat paired;
-    U := [ MVM(basis, V.i, alpha) : i in [1..dim] | not i in exclude ];
+    U := [ MVM(basis, V.i, alpha_pR) : i in [1..dim] | not i in exclude ];
     B := Matrix(X cat Z cat U);
 
     // Convert to coordinates modulo pR^2.
@@ -197,13 +200,13 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     // Build the coordinate matrix.
     B := Matrix(X cat Z cat U);
 
-    alpha := Vpp`inv_pR2;
+    alpha_pR2 := Vpp`inv_pR2;
 
     function __gram(B : quot := true)
 	// In odd characteristic, things are exactly as we expect
-	alpha := Vpp`inv_pR2;
+	alpha_pR2 := Vpp`inv_pR2;
 
-        alpha_B := Parent(B)![[alpha(B[i,j]) :
+        alpha_B := Parent(B)![[alpha_pR2(B[i,j]) :
 			       j in [1..Ncols(B)]]
 			      : i in [1..Nrows(B)]];
 
@@ -214,9 +217,9 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	// Promote the basis to the number ring.
 	B := ChangeRing(B, nProc`L`R);
 
-        alpha := nProc`inv_R;
+        alpha_R := nProc`inv_R;
 
-        alpha_B := Parent(B)![[alpha(B[i,j]) :
+        alpha_B := Parent(B)![[alpha_R(B[i,j]) :
 			       j in [1..Ncols(B)]]
 			      : i in [1..Nrows(B)]];
 
@@ -234,17 +237,23 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	    return gram;
 	end if;
     end function;
-
+    
     for i in [1..k] do
 	if pivots[i] gt hDim then
 	    gram := __gram(Matrix(X[i]) : quot := false)[1,1];
-	    alpha := Involution(ReflexiveSpace(nProc`L));
-	    if gram notin 2 * nProc`pR * alpha(nProc`pR) then
+	    if Vpp`ch eq 2 then
+		if gram notin 2 * nProc`pR * alpha(nProc`pR) then
 		// This can't lift to an isotropic subspace modulo pR*alpha(pR)
-		return [],[],[];
+		    return [],[],[];
+		end if;
+	    else
+		if not IsZero(gram) then
+		    return [],[],[];
+		end if;
 	    end if;
 	end if;
     end for;
+    
     
     // Compute the Gram matrix of the subspace with respect to the spaces
     //  we will perform the following computations upon.
@@ -253,7 +262,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     // Lift Z so that it is in a hyperbolic pair with X modulo pR * alpha(pR).
     Z := [ Z[i] +
 	   &+[ ((i eq j select 1 else 0) -
-		alpha(gram[k+1-j,i+k])) * Z[j]
+		alpha_pR2(gram[k+1-j,i+k])) * Z[j]
 	       : j in [1..k] ] : i in [1..k] ];
 
     // Verify that X and Z form a hyperbolic pair.
@@ -339,7 +348,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 
     // Lift Z so that it is isotropic modulo pR*alpha(pR).
     Z := [ Z[i] -
-	   &+[ alpha(gram[k+i,2*k+1-j])/
+	   &+[ alpha_pR2(gram[k+i,2*k+1-j])/
 	       (i+j-1 eq k select 2 else 1) * X[j]
 	       : j in [k+1-i..k] ] : i in [1..k] ];
 
@@ -374,11 +383,11 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     // Make U orthogonal to X+Z.
     for i in [1..k], j in [1..dim-2*k] do
 	// Clear components corresponding to X.
-	scalar := alpha(gram[2*k+1-i,2*k+j]);
+	scalar := alpha_pR2(gram[2*k+1-i,2*k+j]);
 	U[j] -:= scalar * X[i];
 
 	// Clear components corresponding to Z.
-        scalar := alpha(gram[k+1-i,2*k+j]);
+        scalar := alpha_pR2(gram[k+1-i,2*k+j]);
 	U[j] -:= scalar * Z[i];
     end for;
 

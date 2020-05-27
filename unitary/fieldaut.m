@@ -33,6 +33,7 @@ freeze;
 declare type FldAut;
 declare attributes FldAut :
   L,   // the field (or etale quadratic extension of a field)
+  fixed, // the fixed field of the automorphism
   map, // the mapping
   elt, // the element in the automorphism group
   isom; // the isomorphism between the group and the set of maps
@@ -203,13 +204,18 @@ end intrinsic;
 
 intrinsic FixedField(alpha::FldAut) -> Fld
 {.}
-  // maybe better for all cases:
-  // sub<alpha`L | [alpha`L.i + alpha(alpha`L.i) : i in [1..Ngens(alpha`L)]]>
+  if assigned alpha`fixed then return alpha`fixed; end if;
   if IsFinite(alpha`L) or
      ((Type(alpha`L) eq AlgAss) and IsFinite(BaseRing(alpha`L))) then
     return sub<alpha`L|[x : x in alpha`L | alpha(x) eq x]>;
   end if;
-  return FixedField(alpha`L, [alpha`map]);
+  F := FixedField(alpha`L, [alpha`map]);
+  if Type(F) eq FldRat and Degree(alpha`L) eq 1 then
+      F := QNF();
+  end if;
+  assert IsSubfield(F,alpha`L);
+  alpha`fixed := F;
+  return alpha`fixed;
 end intrinsic;
 
 intrinsic Automorphism(alpha::FldAut) -> Map[Fld, Fld]
@@ -307,6 +313,14 @@ intrinsic '@'(I::RngOrdFracIdl[FldOrd], alpha::FldAut) -> RngOrdFracIdl[FldOrd]
   L := BaseField(alpha);
   Z_L := RingOfIntegers(L);
   require Z_L eq Order(I) :
-    "Fractional ideal must be in the ring of integers of the field hte automorphism is acting on.";
+    "Fractional ideal must be in the ring of integers of the field the automorphism is acting on.";
   return ideal<Z_L | [alpha`map(g) : g in Generators(I)]>;
+  end intrinsic;
+
+intrinsic '@'(x::RngOrdElt, alpha::FldAut) -> RngOrdElt
+{.}
+  L := BaseField(alpha);
+  require IsCoercible(L,x) :
+    "element must be in the field the automorphism is acting on.";
+  return Parent(x)!(alpha(L!x));
 end intrinsic;

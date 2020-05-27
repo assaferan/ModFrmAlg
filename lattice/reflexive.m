@@ -125,7 +125,11 @@ declare attributes RfxSpaceAff:
 	quotGram,
 
 	// The form modulo pR^2.
-	Q_pR2;
+	Q_pR2,
+
+	// The splitting type of pR in the unitary case
+	// Important for lifting modulo pR^2
+	splitting_type;
 
 // printing
 
@@ -335,18 +339,19 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 
   // Assign the reflexive form.
   rfxSpace`Q := ReflexiveForm(innerForm, alpha);
-  
+  /*
   if SpaceType(rfxSpace) eq "Symmetric" then
       rfxSpace`Q := QuadraticForm(innerForm) / 2;
   end if;
-  
+  */
   // Assign the dimension.
   rfxSpace`dim := Nrows(innerForm);
 
   // Assign the standard lattice for this reflexive space.
+  
   if Type(F) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
       rfxSpace`stdLat := StandardLattice(rfxSpace);
   end if;
-
+  
   return rfxSpace;
 end intrinsic;

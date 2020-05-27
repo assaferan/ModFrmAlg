@@ -30,12 +30,13 @@ ExampleRF := recformat< name : MonStgElt,
 			timing : SeqEnum,
 		        evs : List>;
 
-inner_form_7_2 := Matrix([[2,0,1],[0,2,0],[1,0,6]]);
+inner_form_7_2 := Matrix([[1,0,1/2],[0,1,0],[1/2,0,3]]);
 ps_7_2 := PrimesUpTo(100);
 eis_7_2 := [[ p eq 11 select 0 else p+1 : p in ps_7_2 ]];
+newform := Newforms(ModularForms(11))[1][1];
 cusp_7_2 := 
     [[ p eq 11 select 0 else
-     Coefficient(Newforms(ModularForms(11))[1][1], p) : p in ps_7_2 ]];
+     Coefficient(newform, p) : p in ps_7_2 ]];
 Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 				group := "Orthogonal",
 				field := Rationals(),
@@ -47,7 +48,7 @@ Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 				timing := [],
 				evs := [* eis_7_2, cusp_7_2 *] >;
 
-inner_form_7_3 := Matrix([[2,0,0,1],[0,2,1,0],[0,1,6,0],[1,0,0,6]]);
+inner_form_7_3 := Matrix([[1,0,0,1/2],[0,1,1/2,0],[0,1/2,3,0],[1/2,0,0,3]]);
 eis_7_3 := [[ x^2 : x in eis_7_2[1] ], [2*x*(x-1) : x in eis_7_2[1]]];
 a_7_3 := [[ x^2 : x in cusp_7_2[1] ],
 	  [ ps_7_2[i] eq 11 select 0 else

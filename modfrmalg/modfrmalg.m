@@ -167,7 +167,10 @@ intrinsic AlgebraicModularForms(G::GrpRed,
 	V := InnerForm(G,1);
 
 	// Retrieve the standard lattice for this reflexive space.
-	L := StandardLattice(V);
+	// L := StandardLattice(V);
+
+	// Here we set the level to a maximal level
+	L := MaximalIntegralLattice(V);
 
 	// Initialize the space of algebraic modular forms.
 	M := New(ModFrmAlg);
@@ -185,35 +188,13 @@ intrinsic AlgebraicModularForms(G::GrpRed,
 	return M;
 end intrinsic;
 
-intrinsic AlgebraicModularForms(G::GrpRed /*,
-				innerForm::AlgMatElt[Rng] */) -> ModFrmAlg
+intrinsic AlgebraicModularForms(G::GrpRed) -> ModFrmAlg
 {.}
   K := SplittingField(G); // wants G to be a subgroup of GL(n,K)
-  // n := Nrows(innerForm);
   n := Dimension(G);
   weight := TrivialRepresentation(GL(n, K), K);
-  return AlgebraicModularForms(G,/* innerForm, */ weight);
+  return AlgebraicModularForms(G, weight);
 end intrinsic;
-/*
-intrinsic AlgebraicModularForms(G::GrpRed,
-				innerForm::AlgMatElt[Fld]) -> ModFrmAlg
-{ Builds the space of algebraic modular forms with respect to the Lie group G, with inner form given by the isometry class of a specific matrix. }
-        K := SplittingField(G);
-        require IsField(K) : "Lie group must be defined over a field";
-
-	// The integers as a maximal order.
-	R := Integers(K);
-	try
-		// Attempt to coerce the inner form to the maximal order.
-	  innerForm := ChangeRing(Denominator(innerForm)*innerForm, R);
-	catch e
-		require false: "Inner form must be given by a matrix over the 
-                                same field as the Lie group";
-	end try;
-
-        return AlgebraicModularForms(G, innerForm);
-end intrinsic;
-*/
 
 function normalizeField(R)
     K := AbsoluteField(FieldOfFractions(R));

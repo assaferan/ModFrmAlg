@@ -11,6 +11,9 @@ freeze;
    Class for managing the Hecke operators on a space of algebraic 
    modular forms.
 
+   05/27/20: Changed default values to use orbits and estimate, but not
+             use LLL, as it doesn't work well with SO(n)
+
    05/08/20: Added the attribute decomposition for future use.
 
    05/04/20: Modified HeckeOperator to use orbits if instructed to, 
@@ -119,10 +122,10 @@ end intrinsic;
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 			: BeCareful := false,
 			  Force := false,
-			  Estimate := false,
+			  Estimate := true,
 			  UseLLL := true,
 			  Fast := false,
-			  Orbits := false) -> AlgMatElt
+			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator. }
 	// Initialize the space of algebraic modular forms, if needed.
 	ModFrmAlgInit(M : Orbits := Orbits);
@@ -243,10 +246,10 @@ end intrinsic;
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt, k::RngIntElt
 			: BeCareful := false,
 			  Force := false,
-			  Estimate := false,
-			  UseLLL := true,
+			  Estimate := true,
+			  UseLLL := false,
 			  Fast := false,
-			  Orbits := false) -> AlgMatElt
+			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator under the assumption that the base
 number field is the rationals. }
         pR := Factorization(ideal< BaseRing(Module(M)) | p >)[1][1];
@@ -262,8 +265,8 @@ end intrinsic;
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt
 			: BeCareful := false,
 			  Force := false,
-			  Estimate := false,
-			  UseLLL := true,
+			  Estimate := true,
+			  UseLLL := false,
 			  Fast := false,
 			  Orbits := true) -> AlgMatElt
 { Computes the requested Hecke operator with isotropic dimension 1, under the
@@ -347,10 +350,10 @@ require computing the full Hecke operator.}
    ps := [ p : p in PrimesUpTo(n, BaseRing(M)) |
 	   Gcd(Integers()!Norm(Discriminant(Module(M))),
 	       Norm(p)) eq 1 and IsSplit(p)];
-   */
-   ps := [Factorization(ideal<Integers(BaseRing(M))|p>)[1][1] :
-	  p in PrimesUpTo(n) |
-	  (Gcd(Integers()!Norm(Discriminant(Module(M))),p) eq 1)];
+  */
+   bad_modulus := Numerator(Norm(Discriminant(Module(M))));
+   ps := [Factorization(Integers(BaseRing(M)) !! p)[1][1] :
+	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
    if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
        alpha := Involution(ReflexiveSpace(Module(M)));
        // F := FixedField(alpha);
@@ -381,7 +384,7 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 		      BeCareful := false,
 		      Estimate := true,
 		      Orbits := true,
-		      UseLLL := true) -> SeqEnum
+		      UseLLL := false) -> SeqEnum
 {The images of the ith standard basis vector
  under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
 These are computed using sparse methods that don't

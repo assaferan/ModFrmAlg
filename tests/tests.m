@@ -19,17 +19,20 @@ freeze;
 
 import "examples.m" : AlgebraicModularFormsExamples;
 import "../io/path.m" : path;
+import "../neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
 
 forward testExample;
+forward testUnitaryMassFormula;
 
 intrinsic AlgebraicModularFormsTests(: num_primes := 0,
 				       use_existing := false,
 				       orbits := true,
 				       useLLL := true,
-				       decomposition := false) ->
+				       decomposition := true) ->
 	  SeqEnum[ModFrmAlg], SeqEnum
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting num_primes.}
 
+  testUnitaryMassFormula();
   all_spaces := [];
   all_timings := [];
   for example in AlgebraicModularFormsExamples do
@@ -172,7 +175,7 @@ end function;
 
 function testExample(example : num_primes := 0, use_existing := false,
 			       orbits := true, useLLL := true,
-			       decomposition := false)
+			       decomposition := true)
     fname := Sprintf("Example_%o.dat", example`name);
     if use_existing and FileExists(path() cat fname) then
 	M := AlgebraicModularForms(fname);
@@ -235,3 +238,14 @@ function testExample(example : num_primes := 0, use_existing := false,
 
     return M, timings;
 end function;
+
+
+procedure testUnitaryMassFormula()
+    for d in [1,2,3,7,11] do
+	F := QuadraticField(-d);
+	M := UnitaryModularForms(F,2);
+	reps := Representatives(Genus(M));
+	mass := &+[#AutomorphismGroup(r)^(-1) : r in reps];
+	assert mass eq UnitaryMass(F,2);
+    end for;
+end procedure;

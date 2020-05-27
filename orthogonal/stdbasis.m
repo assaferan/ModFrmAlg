@@ -207,14 +207,15 @@ function SplitHyperbolicPlane(M, vec)
 
 	// Make a copy of the Gram matrix.
 	gram := M;
-
+	
 	// Set the diagonal entries to zero when in characteristic 2.
+	// This is because we are decomposing the associated bilinear form
 	if char eq 2 then
-		for i in [1..dim] do
-			gram[i,i] := 0;
-		end for;
+	    for i in [1..dim] do
+		gram[i,i] := 0;
+	    end for;
 	end if;
-
+	
 	// Save a copy of the original Gram matrix.
 	originalGram := gram;
 
@@ -229,9 +230,9 @@ function SplitHyperbolicPlane(M, vec)
 	MultiplyColumn(~gram, vec[pivot], pivot);
 	MultiplyRow(~gram, vec[pivot], pivot);
 	for i in [pivot+1..dim] do
-		AddRow(~basis, vec[i], i, pivot);
-		AddColumn(~gram, vec[i], i, pivot);
-		AddRow(~gram, vec[i], i, pivot);
+	    AddRow(~basis, vec[i], i, pivot);
+	    AddColumn(~gram, vec[i], i, pivot);
+	    AddRow(~gram, vec[i], i, pivot);
 	end for;
 	SwapRows(~basis, 1, pivot);
 	SwapColumns(~gram, 1, pivot);
@@ -240,16 +241,20 @@ function SplitHyperbolicPlane(M, vec)
 	// If the first row is entirely zero, then this vector belongs to the
 	//  radical of the form.
 	if gram[1] eq Zero(V) then
-		if char eq 2 then
-			// The quadratic form.
-			Q := QF2(M);
+	    
+	    if char eq 2 then
+		
+		// The quadratic form.
+		Q := QF2(M);
 
-			// Recover the quadratic form along the diagonal.
-			for i in [1..dim] do
-				gram[i,i] := Evaluate(Q, Eltseq(basis[i]));
-			end for;
-		end if;
-		return gram, basis;
+		// Recover the quadratic form along the diagonal.
+		for i in [1..dim] do
+		    gram[i,i] := Evaluate(Q, Eltseq(basis[i]));
+		end for;
+	       
+	    end if;
+	    
+	    return gram, basis;
 	end if;
 
 	// Find a basis vector which is not orthogonal to our isotropic vector.
@@ -270,9 +275,9 @@ function SplitHyperbolicPlane(M, vec)
 
 	// Determine the appropriate scalar for clearing out the (2,2)-entry.
 	if char eq 2 then
-		scalar := Evaluate(QF2(M), Eltseq(basis[2]));
+	    scalar := Evaluate(QF2(M), Eltseq(basis[2]));
 	else
-		scalar := -gram[2,2] / 2;
+	    scalar := -gram[2,2] / 2;
 	end if;
 
 	// Clear the (2,2)-entry in the Gram matrix.
@@ -282,17 +287,17 @@ function SplitHyperbolicPlane(M, vec)
 
 	// Clear the remaining entries in the Gram matrix.
 	for i in [3..dim] do
-		// Clear first row/column.
-		scalar := -gram[1,i];
-		AddRow(~basis, scalar, 2, i);
-		AddColumn(~gram, scalar, 2, i);
-		AddRow(~gram, scalar, 2, i);
+	    // Clear first row/column.
+	    scalar := -gram[1,i];
+	    AddRow(~basis, scalar, 2, i);
+	    AddColumn(~gram, scalar, 2, i);
+	    AddRow(~gram, scalar, 2, i);
 
-		// Clear second row/column.
-		scalar := -gram[2,i];
-		AddRow(~basis, scalar, 1, i);
-		AddColumn(~gram, scalar, 1, i);
-		AddRow(~gram, scalar, 1, i);
+	    // Clear second row/column.
+	    scalar := -gram[2,i];
+	    AddRow(~basis, scalar, 1, i);
+	    AddColumn(~gram, scalar, 1, i);
+	    AddRow(~gram, scalar, 1, i);
 	end for;
 
 	// Make sure we haven't made any mistakes.
@@ -300,145 +305,148 @@ function SplitHyperbolicPlane(M, vec)
 
 	// In characteristic 2, we need to recover the diagonal entries by
 	//  evaluating the basis via the quadratic form.
+	
 	if char eq 2 then
-		// The quadratic form.
-		Q := QF2(M);
-		for i in [1..dim] do
-			gram[i,i] := Evaluate(Q, Eltseq(basis[i]));
-		end for;
+	    
+	    // The quadratic form.
+	    Q := QF2(M);
+	    for i in [1..dim] do
+		gram[i,i] := Evaluate(Q, Eltseq(basis[i]));
+	    end for;
+	  
 	end if;
-
+       
 	return gram, basis;
 end function;
 
 function HyperbolizeForm(M : Deterministic := true)
-	// Verify that the supplied matrix has the proper credentials and save
-	//  some of its properties for later use.
-	F, V, char, dim := VerifyMatrix(M);
+    // Verify that the supplied matrix has the proper credentials and save
+    //  some of its properties for later use.
+    F, V, char, dim := VerifyMatrix(M);
 
-	// Find an isotropic vector if one exists.
-	found, vec := FindIsotropicVector(M : Deterministic := Deterministic);
+    // Find an isotropic vector if one exists.
+    found, vec := FindIsotropicVector(M : Deterministic := Deterministic);
 
-	// The space is anisotropic.
-	if not found then
-		// Change of basis matrix realizing the isometry.
-		basis := Id(GL(V));
+    // The space is anisotropic.
+    if not found then
+	// Change of basis matrix realizing the isometry.
+	basis := Id(GL(V));
 
-		// Make a copy of the Gram matrix.
-		gram := M;
+	// Make a copy of the Gram matrix.
+	gram := M;
+	
+	if dim eq 1 then
+	    // Check if the (1,1)-entry is a square.
+	    sq, d := IsSquare(gram[1,1]);
 
-		if dim eq 1 then
-			// Check if the (1,1)-entry is a square.
-			sq, d := IsSquare(gram[1,1]);
+	    // If so, make it a 1.
+	    if sq then
+		MultiplyRow(~basis, 1/d, 1);
+		MultiplyColumn(~gram, 1/d, 1);
+		MultiplyRow(~gram, 1/d, 1);
+	    end if;
 
-			// If so, make it a 1.
-			if sq then
-				MultiplyRow(~basis, 1/d, 1);
-				MultiplyColumn(~gram, 1/d, 1);
-				MultiplyRow(~gram, 1/d, 1);
-			end if;
+	    return gram, basis;
+	elif char eq 2 then
+	    // Make the (1,1)-entry equal to 1.
+	    _, d := IsSquare(gram[1,1]);
+	    MultiplyRow(~basis, 1/d, 1);
+	    MultiplyColumn(~gram, 1/d, 1);
+	    MultiplyRow(~gram, 1/d, 1);
+	    
+	    // Make the (1,2)-entry equal to 1.
+	    scalar := 1/gram[1,2];
+	    MultiplyRow(~basis, scalar, 2);
+	    MultiplyColumn(~gram, scalar, 2);
+	    MultiplyRow(~gram, scalar, 2);
 
-			return gram, basis;
-		elif char eq 2 then
-			// Make the (1,1)-entry equal to 1.
-			_, d := IsSquare(gram[1,1]);
-			MultiplyRow(~basis, 1/d, 1);
-			MultiplyColumn(~gram, 1/d, 1);
-			MultiplyRow(~gram, 1/d, 1);
-
-			// Make the (1,2)-entry equal to 1.
-			scalar := 1/gram[1,2];
-			MultiplyRow(~basis, scalar, 2);
-			MultiplyColumn(~gram, scalar, 2);
-			MultiplyRow(~gram, scalar, 2);
-
-			return gram, basis;
-		end if;
-
-		// Clear the (1,2)-entry.
-		scalar := -gram[1,2] / gram[1,1];
-		AddRow(~basis, scalar, 1, 2);
-		AddColumn(~gram, scalar, 1, 2);
-		AddRow(~gram, scalar, 1, 2);
-
-		// If the (2,2)-entry is a square, make it the first entry.
-		sqB, d := IsSquare(gram[2,2]);
-		if sqB then
-			SwapRows(~basis, 1, 2);
-			SwapColumns(~gram, 1, 2);
-			SwapRows(~gram, 1, 2);
-		end if;
-
-		// Check if the (1,1)-entry is a square then clear it, if so.
-		sqA, d := IsSquare(gram[1,1]);
-		if sqA then
-			MultiplyRow(~basis, 1/d, 1);
-			MultiplyColumn(~gram, 1/d, 1);
-			MultiplyRow(~gram, 1/d, 1);
-		end if;
-
-		// Check if M[2,2] is a square then clear it, if so..
-		sqB, d := IsSquare(gram[2,2]);
-		if sqB then
-			MultiplyRow(~basis, 1/d, 2);
-			MultiplyColumn(~gram, 1/d, 2);
-			MultiplyRow(~gram, 1/d, 2);
-		end if;
-
-		// If neither are squares, make them -1 (note that this occurs
-		//  if and only if -1 is not a square).
-		if not sqA and not sqB then
-			_, da := IsSquare(-gram[1,1]);
-			_, db := IsSquare(-gram[2,2]);
-
-			// Make the (1,1)-entry equal to -1.
-			MultiplyRow(~basis, 1/da, 1);
-			MultiplyColumn(~gram, 1/da, 1);
-			MultiplyRow(~gram, 1/da, 1);
-
-			// Make the (2,2)-entry equal to -1.
-			MultiplyRow(~basis, 1/db, 2);
-			MultiplyColumn(~gram, 1/db, 2);
-			MultiplyRow(~gram, 1/db, 2);
-		end if;
-
-		return gram, basis;
+	    return gram, basis;
 	end if;
 
-	// The quadratic form.
-	Q := char eq 2 select QF2(M) else QuadraticForm(M);
+	// Clear the (1,2)-entry.
+	scalar := -gram[1,2] / gram[1,1];
+	AddRow(~basis, scalar, 1, 2);
+	AddColumn(~gram, scalar, 1, 2);
+	AddRow(~gram, scalar, 1, 2);
 
-	// Make sure the vector we found is isotropic.
-	assert Evaluate(Q, Eltseq(vec)) eq 0;
-
-	// Attempt to split a hyperbolic plane from the form.
-	gram, basis := SplitHyperbolicPlane(M, vec);
-
-	// Determine how many dimensions we need to split off.
-	lowerDim := gram[1] eq Zero(V) select 1 else 2;
-
-	if dim ge lowerDim + 1 then
-		// Split the hyperbolic plane from the form.
-		subM := Submatrix(gram, [lowerDim+1..dim], [lowerDim+1..dim]);
-
-		// Iterate on the space orthogonal to the hyperbolic plane we
-		//  just split off.
-		subGram, subBasis :=
-			HyperbolizeForm(subM : Deterministic := Deterministic);
-
-		// Superimpose the lower-dimensional Gram matrix onto the
-		//  original Gram matrix.
-		gram := InsertBlock(gram, subGram, lowerDim+1, lowerDim+1);
-
-		// Lift the subBasis to a higher-dimensional basis so that it
-		//  preserves the previously computed bases.
-		newBasis := Id(GL(V));
-		newBasis :=
-			InsertBlock(newBasis, subBasis, lowerDim+1, lowerDim+1);
-		basis := newBasis * basis;
+	// If the (2,2)-entry is a square, make it the first entry.
+	sqB, d := IsSquare(gram[2,2]);
+	if sqB then
+	    SwapRows(~basis, 1, 2);
+	    SwapColumns(~gram, 1, 2);
+	    SwapRows(~gram, 1, 2);
 	end if;
 
+	// Check if the (1,1)-entry is a square then clear it, if so.
+	sqA, d := IsSquare(gram[1,1]);
+	if sqA then
+	    MultiplyRow(~basis, 1/d, 1);
+	    MultiplyColumn(~gram, 1/d, 1);
+	    MultiplyRow(~gram, 1/d, 1);
+	end if;
+
+	// Check if M[2,2] is a square then clear it, if so..
+	sqB, d := IsSquare(gram[2,2]);
+	if sqB then
+	    MultiplyRow(~basis, 1/d, 2);
+	    MultiplyColumn(~gram, 1/d, 2);
+	    MultiplyRow(~gram, 1/d, 2);
+	end if;
+
+	// If neither are squares, make them -1 (note that this occurs
+	//  if and only if -1 is not a square).
+	if not sqA and not sqB then
+	    _, da := IsSquare(-gram[1,1]);
+	    _, db := IsSquare(-gram[2,2]);
+
+	    // Make the (1,1)-entry equal to -1.
+	    MultiplyRow(~basis, 1/da, 1);
+	    MultiplyColumn(~gram, 1/da, 1);
+	    MultiplyRow(~gram, 1/da, 1);
+
+	    // Make the (2,2)-entry equal to -1.
+	    MultiplyRow(~basis, 1/db, 2);
+	    MultiplyColumn(~gram, 1/db, 2);
+	    MultiplyRow(~gram, 1/db, 2);
+	end if;
+	
 	return gram, basis;
+    end if;
+
+    // The quadratic form.
+    Q := char eq 2 select QF2(M) else QuadraticForm(M);
+    
+    // Make sure the vector we found is isotropic.
+    assert Evaluate(Q, Eltseq(vec)) eq 0;
+
+    // Attempt to split a hyperbolic plane from the form.
+    gram, basis := SplitHyperbolicPlane(M, vec);
+    
+    // Determine how many dimensions we need to split off.
+    lowerDim := gram[1] eq Zero(V) select 1 else 2;
+    
+    if dim ge lowerDim + 1 then
+	// Split the hyperbolic plane from the form.
+	subM := Submatrix(gram, [lowerDim+1..dim], [lowerDim+1..dim]);
+
+	// Iterate on the space orthogonal to the hyperbolic plane we
+	//  just split off.
+	subGram, subBasis :=
+	    HyperbolizeForm(subM : Deterministic := Deterministic);
+
+	// Superimpose the lower-dimensional Gram matrix onto the
+	//  original Gram matrix.
+	gram := InsertBlock(gram, subGram, lowerDim+1, lowerDim+1);
+
+	// Lift the subBasis to a higher-dimensional basis so that it
+	//  preserves the previously computed bases.
+	newBasis := Id(GL(V));
+	newBasis :=
+	    InsertBlock(newBasis, subBasis, lowerDim+1, lowerDim+1);
+	basis := newBasis * basis;
+    end if;
+    
+    return gram, basis;
 end function;
 
 intrinsic Decompose(M::ModMatFldElt[FldFin]
@@ -467,41 +475,45 @@ change-of-basis matrix which performs this transformation. }
 	gram, basis := HyperbolizeForm(M : Deterministic := Deterministic);
 
 	// Verify that everyhing we've done is correct.
+	
 	if char eq 2 then
-		// The quadratic form.
-		Q := QF2(M);
+	  
+	    // The quadratic form.
+	    Q := QF2(M);
 
-		// Verify that the basis evaluates correctly on the form.
-		assert &and[ Evaluate(Q, Eltseq(basis[i])) eq gram[i,i]
-			: i in [1..dim] ];
-
-		// Zero out the diagonal to verify the bilinear form is correct.
-		temp1 := gram; temp2 := M;
-		for i in [1..dim] do
-			temp1[i,i] := 0; temp2[i,i] := 0;
-		end for;
+	    // Verify that the basis evaluates correctly on the form.
+	    assert &and[ Evaluate(Q, Eltseq(basis[i])) eq gram[i,i]
+			 : i in [1..dim] ];
+	    
+	    // Zero out the diagonal to verify the bilinear form is correct.
+	    // Recall that in characteristic 2, the associated bilinear form
+	    // is b_q(x,y) = q(x+y) - q(x) - q(y), with zeros on the diagonal
+	    temp1 := gram; temp2 := M;
+	    for i in [1..dim] do
+		temp1[i,i] := 0; temp2[i,i] := 0;
+	    end for;
 	else
-		temp1 := gram;
-		temp2 := M;
+	    temp1 := gram;
+	    temp2 := M;
 	end if;
 
 	// Verify that the bilinear forms are similar.
 	assert basis * temp2 * Transpose(basis) eq temp1;
-
+       
 	// Let's bubble the basis vectors which belong to the radical to the
 	//  end of the basis list.
 	rad := 0;
 	pos := dim;
 	while pos ge 1 do
-		if gram[pos] eq Zero(V) then
-			rad +:= 1;
-			for i in [pos+1..dim] do
-				SwapRows(~basis, i-1, i);
-				SwapColumns(~gram, i-1, i);
-				SwapRows(~gram, i-1, i);
-			end for;
-		end if;
-		pos -:= 1;
+	    if gram[pos] eq Zero(V) then
+		rad +:= 1;
+		for i in [pos+1..dim] do
+		    SwapRows(~basis, i-1, i);
+		    SwapColumns(~gram, i-1, i);
+		    SwapRows(~gram, i-1, i);
+		end for;
+	    end if;
+	    pos -:= 1;
 	end while;
 
 	// Let's put the hyperbolic planes in our standard antidiagonal form.
@@ -518,11 +530,11 @@ change-of-basis matrix which performs this transformation. }
 	// Keep swapping basis vectors until j is less than or equal to i. Note
 	//  that if there are no hyperbolic planes, this does nothing.
 	while i lt j do
-		SwapRows(~basis, i, j);
-		SwapColumns(~gram, i, j);
-		SwapRows(~gram, i, j);
+	    SwapRows(~basis, i, j);
+	    SwapColumns(~gram, i, j);
+	    SwapRows(~gram, i, j);
 
-		i +:= 2; j -:= 2;
+	    i +:= 2; j -:= 2;
 	end while;
 
 	// Since we did everything with row vectors, we need to transpose the

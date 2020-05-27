@@ -6,6 +6,9 @@ freeze;
                                                                             
    FILE: examples.m (data for examples to test on)
 
+   05/26/20: Modified the inner forms in the orthogonal examples to match
+             the current implementation.
+
    05/08/20: Changed examples to have eigenvalues in the same universe.
 
    04/14/20: Created an array of examples to be exported.

@@ -14,6 +14,8 @@ freeze;
    05/27/20: Changed default values to use orbits and estimate, but not
              use LLL, as it doesn't work well with SO(n)
 
+   05/26/20: Modified the bad modulus, as discriminant might be 2-integral
+
    05/08/20: Added the attribute decomposition for future use.
 
    05/04/20: Modified HeckeOperator to use orbits if instructed to, 

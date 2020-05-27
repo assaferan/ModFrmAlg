@@ -6,6 +6,9 @@ freeze;
                                                                             
    FILE: tests.m (functions for testing examples)
 
+   05/26/20: Added a test for the unitary mass formula.
+             Changed default value of decomposition to be true.
+
    05/11/20: Modified the tests to use Orbits for k > 1
 
    05/08/20: Modified testExample to test for eigenvalues in the same universe

@@ -11,6 +11,8 @@ freeze;
              Changed default values to use orbit method and estimate, and not
              use LLL.
 
+   05/26/20: Modified HeckeOperatorCN1 to support non-liftable isotropic vectors
+
    05/11/20: Added support for the Orbit method for k > 1, increasing
              efficiency.
 

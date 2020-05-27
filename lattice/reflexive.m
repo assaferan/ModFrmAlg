@@ -8,6 +8,9 @@ freeze;
 
    Implementation file for ambient reflexive space
 
+   05/26/2020 : Added the attribute splitting_type for the space
+                for lifting modulo pR * alpha(pR)
+
    05/04/2020 : Added support for the case of 2-dimensional etale algebra 
 
    04/24/2020 : Modified Print to include Magma level printing.

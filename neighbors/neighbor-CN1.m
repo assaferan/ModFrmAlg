@@ -10,6 +10,18 @@ freeze;
    05/27/20: Updated LiftSubspace to handle the case of isotropic vectors
              mod pR that do not lift modulo pR * alpha(pR). 
 
+   05/26/20: Modified BuildNeighborProc to determine splitting type of the
+             prime, and accordingly modify the gram matrix in characteristic 2, 
+             and set the skew variables.
+             Also modified it to return with the first liftable isotropic 
+	     subspace.
+             Modified UpdateSkewMatrix to handle the unitary case as well, for 
+             inert and ramified primes.
+             Modified UpdateSkewSpace to verify that the skew space is
+             isotropic.
+             Updated GetNextNeighbor to use the new UpdateSkewMatrix, and 
+             return only the next liftable isotropic vector.
+
    05/11/20: Updated SkipToNeighbor to be able to specify the skew-matrix for 
              p mod p^2.
              Took out code chunks from GetNextNeighbor to form UpdateSkewMatrix

@@ -12,6 +12,10 @@ freeze;
    Maybe should also write a structure for the group itself, 
    so far it is not eneded.
 
+   05/26/2020: Added the fixed field of the automorphism as an attribute,
+               so that all calls will reference the same object.
+               Added evaluation at a ring element.
+
    05/04/2020 : Added support in 2 dimensional etale algebras
 
    04/27/2020 : Fixed bug in constructor to handle construction from io.

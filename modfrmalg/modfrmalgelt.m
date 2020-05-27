@@ -10,6 +10,8 @@ freeze;
    Implementation file for elements belong to the space of algebraic modular
    forms. the space of algebraic modular forms.
 
+   05/26/20: Modified HeckeEigensystem to return the results sorted
+
    05/11/20: Added the intrinsic LPolynomials, which returns the L-polynomials
              of f, up to a specified precision. At the moment, only supports 
              SO(n) for 3<=n<=8.

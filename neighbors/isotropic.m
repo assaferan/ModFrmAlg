@@ -7,6 +7,10 @@ freeze;
                                                                             
    FILE: isotropic.m (class for tracking computation of isotropic subspaces)
 
+   05/26/20: Added __pivots_singular, allowing to choose vectors from the 
+             radical as part of the isotropic subspace.
+             Modified the construction of the hermitian form in char 2.
+
    05/08/20: relaxed the condition k = 1, to catch the problems in
              Orbits for k > 1 for future use.
 

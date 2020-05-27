@@ -211,12 +211,12 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	if GetVerbose("AlgebraicModularForms") ge 2 then
 	    print "Computing Hecke eigenvalues at new primes";
 	end if;
-	 
+	use_lll := UseLLL and (not IsSpecialOrthogonal(f`M));
 	hecke_images := HeckeImages(f`M, pivot, prec, k :
 				    BeCareful := BeCareful,
 				    Estimate := Estimate,
 				    Orbits := Orbits,
-				    UseLLL := UseLLL);
+				    UseLLL := use_lll);
 	if Type(prec) eq SeqEnum then
 	    Ps := prec;
 	else

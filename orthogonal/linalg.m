@@ -340,25 +340,22 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 	 W_is_irreducible(M,W,a,random_op select Norm(pR) else 0 :
 			  estimate := estimate, orbits := orbits,
 			  useLLL := useLLL) then
-	 W_irred := true;
          Append(~D,W); 
       else
-         if not assigned W_irred then
-             if prime_idx lt #primes then
-		 q_idx   := Dimension(W) eq Dimension(V) select
-			    prime_idx + 1 else 1;
-		 Sub  := Decomposition_recurse(M, W, primes, q_idx, 
-                                               proof, random_op :
-					       useLLL := useLLL,
-					       orbits := orbits,
-					       estimate := estimate); 
-               for WW in Sub do 
+          if prime_idx lt #primes then
+	      q_idx   := Dimension(W) eq Dimension(V) select
+			 prime_idx + 1 else 1;
+	      Sub  := Decomposition_recurse(M, W, primes, q_idx, 
+                                            proof, random_op :
+					    useLLL := useLLL,
+					    orbits := orbits,
+					    estimate := estimate); 
+              for WW in Sub do 
                   Append(~D, WW);
-               end for;
-            else
-               Append(~D,W);
-            end if;
-         end if;
+              end for;
+          else
+              Append(~D,W);
+          end if;
       end if;
    end for;
    return D;
@@ -374,7 +371,8 @@ intrinsic Decomposition(M::ModFrmAlg, bound::RngIntElt :
 			useLLL := true,
 			orbits := true,
 			estimate := true,
-			Proof := true) -> SeqEnum
+			Proof := true,
+		        Force := false) -> SeqEnum
 {Decomposition of M with respect to the Hecke operators T_p with
 p coprime to the level of M and p<= bound. }
 
@@ -382,7 +380,7 @@ p coprime to the level of M and p<= bound. }
       return [];
    end if;
 
-   if not assigned M`Hecke`decomposition then   
+   if Force or (not assigned M`Hecke`decomposition) then   
 
       RF := recformat <
       bound  : RngIntElt, // bound so far
@@ -407,9 +405,10 @@ p coprime to the level of M and p<= bound. }
    primes := PrimesUpTo(bound, F:
 			coprime_to := Numerator(Norm(Discriminant(Module(M)))));
    prime_idx := [i : i in [1..#primes] | Norm(primes[i]) gt known][1];
+   use_LLL := useLLL and (not IsSpecialOrthogonal(M));
    refined_decomp := &cat[Decomposition_recurse(M,MM, primes, prime_idx,
 						Proof, false :
-						useLLL := useLLL,
+						useLLL := use_LLL,
 						orbits := orbits,
 						estimate := estimate) :
                           MM in decomp];

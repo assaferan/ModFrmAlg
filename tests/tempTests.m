@@ -34,7 +34,7 @@ import "lattice/lattice.m" : GuessMaxDet;
 function inspect(M)
     Dimension(M);
     if IsZero(Dimension(M)) then return [* *]; end if;
-    D := Decomposition(M,10);
+    D := Decomposition(M,100);
     eigenforms := HeckeEigenforms(M);
     evs := [* HeckeEigensystem(f,1 : prec := 20) :  f in eigenforms *];
     return evs;
@@ -70,6 +70,7 @@ for dim in [3,5] do
     end for;
 end for;
 */
+/*
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
-
+*/

@@ -527,7 +527,9 @@ function OrthogonalMass(L)
   D:= Decomposition(R, 2);
   for d in D do
       if not IsMaximalIntegral(L, d[1]) then
-	  error "The lattice must be maximal at primes over 2";
+	  // commented out for it not to interfere at the moment.
+	  // error "The lattice must be maximal at primes over 2";
+	  return 0;
       end if;
   end for;
 

@@ -31,13 +31,14 @@ import "neighbors/neighbor-CN1.m" : BuildNeighborProc,
 import "neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
 import "lattice/lattice.m" : GuessMaxDet;
 
-function inspect(M)
+function inspect(M : prec := 20)
     Dimension(M);
     if IsZero(Dimension(M)) then return [* *]; end if;
     D := Decomposition(M,100);
     eigenforms := HeckeEigenforms(M);
-    evs := [* HeckeEigensystem(f,1 : prec := 20) :  f in eigenforms *];
-    return evs;
+    evs := [* HeckeEigensystem(f,1 : prec := prec) :  f in eigenforms *];
+    lpolys := [* LPolynomials(f : prec := prec) : f in eigenforms *];
+    return evs, lpolys;
 end function;
 
 QQ := Rationals();
@@ -54,6 +55,7 @@ forms[5] := [
 	  SymmetricMatrix(QQ, [1,0,1,0,0,1,0,0,0,1,1/2,0,0,0,3]),
 	  SymmetricMatrix(QQ, [1,0,1,0,0,1,0,1/2,0,1,1/2,0,0,0,3])
 ];
+// understand which of these examples is suitable to become a test
 /*
 for dim in [3,5] do
     for A in forms[dim] do
@@ -70,7 +72,12 @@ for dim in [3,5] do
     end for;
 end for;
 */
-/*
+
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
-*/
+
+A := forms[5][2];
+G := SpecialOrthogonalGroup(A);
+W := SymmetricRepresentation(std_reps[5], 2);
+M := AlgebraicModularForms(G,W);
+inspect(M : prec := 4);

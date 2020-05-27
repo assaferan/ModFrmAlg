@@ -184,14 +184,14 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     paired := [];
     for i in [1..k] do
 	if pivots[i] le hDim then
-	    Append(~paired, hDim+1-pivots[k+1-i]);
+	    Append(~paired, hDim+1-pivots[i]);
 	else
 	    num_non_paired +:= 1;
 	    Append(~paired, hDim+num_non_paired);
 	end if;
     end for;
 	
-    Z := [ MVM(basis, V.i, alpha_pR) : i in paired ];
+    Z := [ MVM(basis, V.i, alpha_pR) : i in Reverse(paired) ];
 
     // Extract the remaining basis vectors.
     exclude := pivots cat paired;

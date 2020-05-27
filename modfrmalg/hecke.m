@@ -325,7 +325,7 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 		      BeCareful := false,
 		      Estimate := true,
 		      Orbits := true,
-		      UseLLL := true) -> SeqEnum
+		      UseLLL := false) -> SeqEnum
 {The images of the ith standard basis vector
  under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
 These are computed using sparse methods that don't

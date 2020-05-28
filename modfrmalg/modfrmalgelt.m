@@ -525,7 +525,7 @@ end intrinsic;
 intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
 					 Estimate := true,
 					 Orbits := true) -> RngUPolElt
-{Compute the L-polynomial of f at pR.}
+{Compute the L-polynomials of f at primes up to norm precision.}
   require IsSpecialOrthogonal(f`M) : "Currently implemented only for SO_n";
 
   n := Dimension(ReflexiveSpace(Module(f`M)));

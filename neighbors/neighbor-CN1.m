@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 
+   05/29/20: Fixed a bug in lifting vectors from the radical.
+
    05/27/20: Updated LiftSubspace to handle the case of isotropic vectors
              mod pR that do not lift modulo pR * alpha(pR). 
 
@@ -182,15 +184,18 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     // arbitrary other vector to pair with
     num_non_paired := 0;
     paired := [];
-    for i in [1..k] do
-	if pivots[i] le hDim then
-	    Append(~paired, hDim+1-pivots[i]);
-	else
-	    num_non_paired +:= 1;
-	    Append(~paired, hDim+num_non_paired);
-	end if;
+    // recall that pivots is sorted
+    ns_pivots := [pivots[i] : i in [1..k] | pivots[i] le hDim];
+    sing_pivots := [pivots[i] : i in [1..k] | pivots[i] gt hDim];
+    for pivot in ns_pivots do
+	Append(~paired, hDim+1-pivot);
     end for;
-	
+    exclude := pivots cat paired;
+    remain := [i : i in [1..dim] | not i in exclude];
+    for pivot in sing_pivots do
+	num_non_paired +:= 1;
+	Append(~paired, remain[num_non_paired]);
+    end for;
     Z := [ MVM(basis, V.i, alpha_pR) : i in Reverse(paired) ];
 
     // Extract the remaining basis vectors.
@@ -278,6 +283,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	       : j in [1..k] ] : i in [1..k] ];
 
     // Verify that X and Z form a hyperbolic pair.
+    // Note - this will not work when lifting from the radical
     if BeCareful then
 	// Compute the Gram matrix thusfar.
 	B := Matrix(X cat Z cat U);
@@ -387,7 +393,12 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     gram := __gram(Matrix(X cat Z cat U));
 
     // renormalize the vectors in X so that the off-diagonal entries are 1
-    X := [ X[i] * gram[i, 2*k+1-i]^(-1) : i in [1..k] ];
+    // X := [ X[i] * gram[i, 2*k+1-i]^(-1) : i in [1..k] ];
+    for i in [1..k] do
+	if not IsZero(gram[i, 2*k+1-i]) then
+	    X[i] := X[i] * gram[i, 2*k+1-i]^(-1);
+	end if;
+    end for;
 
     // The Gram matrix thusfar.
     gram := __gram(Matrix(X cat Z cat U));
@@ -404,6 +415,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     end for;
 
     // Verify that U is now orthogonal to X+Z.
+    // Note - this also would not work when lifting from the radical
     if BeCareful then
 	// The basis.
 	B := Matrix(X cat Z cat U);
@@ -832,7 +844,7 @@ procedure SkipToNeighbor(~nProc, space, skew : BeCareful := false)
 						Override := true);
     nProc`X_skew := [ x : x in nProc`X ];
     // Update the skew matrix (only for k ge 2).
-    if nProc`skewDim ne 0 then
+    if (nProc`skewDim ne 0) and (not IsEmpty(nProc`X)) then
 	nProc`skew := skew;
 	UpdateSkewSpace(~nProc);
     end if;

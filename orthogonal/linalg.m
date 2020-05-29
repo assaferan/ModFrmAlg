@@ -11,6 +11,9 @@ freeze;
 
    !!! TODO : move to the utils folder
 
+   05/29/20 : Modified Decomposition to use also Hecke operators at primes
+              dividing the level.
+
    05/26/20 : Updated since Discriminant can be from now on 2-integral.
 
    05/08/20 : Added functions for decomposition of the space (future use).
@@ -402,8 +405,11 @@ p coprime to the level of M and p<= bound. }
    // refine decomp
    alpha := Involution(AmbientSpace(Module(M)));
    F := FixedField(alpha);
+   /*
    primes := PrimesUpTo(bound, F:
 			coprime_to := Numerator(Norm(Discriminant(Module(M)))));
+   */
+   primes := PrimesUpTo(bound, F);
    prime_idx := [i : i in [1..#primes] | Norm(primes[i]) gt known][1];
    use_LLL := useLLL and (not IsSpecialOrthogonal(M));
    refined_decomp := &cat[Decomposition_recurse(M,MM, primes, prime_idx,

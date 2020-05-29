@@ -10,6 +10,8 @@ freeze;
    Implementation file for elements belong to the space of algebraic modular
    forms. the space of algebraic modular forms.
 
+   05/29/20: Normalized the L-polynomials, and extended their use to O(n)
+
    05/26/20: Modified HeckeEigensystem to return the results sorted
 
    05/11/20: Added the intrinsic LPolynomials, which returns the L-polynomials
@@ -288,6 +290,10 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 
 	// to see if they are cusp forms
 	reps := Representatives(Genus(M));
+	// !!! TODO :
+	// Replace this by an actual bilinear form compatible with the group
+	// Add handling the case when the narrow class group of the field
+	// is nontrivial.
 	wts := &cat[[#AutomorphismGroup(reps[i]) : j in [1..Dimension(M`H[i])]]:
 		    i in [1..#reps]];
 	// instead of dividing by wts[i], we multiply for the case of positive
@@ -525,8 +531,8 @@ end intrinsic;
 intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
 					 Estimate := true,
 					 Orbits := true) -> RngUPolElt
-{Compute the L-polynomial of f at pR.}
-  require IsSpecialOrthogonal(f`M) : "Currently implemented only for SO_n";
+{Compute the L-polynomials of f at primes up to norm precision.}
+  require IsOrthogonal(f`M) : "Currently implemented only for orthogonal group";
 
   n := Dimension(ReflexiveSpace(Module(f`M)));
 
@@ -551,6 +557,8 @@ intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
       K_x<x> := PolynomialRing(K);
       // Have to check what it should be when the base field is not QQ!!!
       p := Norm(P);
+      // pre-normalization code
+      /*
       if n mod 2 eq 1 then
 	  is_p_square, sqrt_p := IsSquare(K!p);
 	  if not is_p_square then
@@ -558,35 +566,65 @@ intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
 	      L_x<x> := PolynomialRing(L);
 	  end if;
       end if;
+      */
       case n:
       when 3:
-	  L_poly := x^2 - (evs[1]/sqrt_p)*x+1;
+	  // this was the version from Murphy's thesis
+	  // L_poly := x^2 - (evs[1]/sqrt_p)*x+1;
+	  // Here we normalize (multiply by sqrt_p)
+	  L_poly := p*x^2 - evs[1]*x+1;
       when 4:
-	  L_poly := x^4 - (evs[1]/p)*x^3 +
-		    ((2+evs[2])/p)*x^2 - (evs[1]/p)*x + 1;
+	  // L_poly := x^4 - (evs[1]/p)*x^3 +
+	  //	    ((2+evs[2])/p)*x^2 - (evs[1]/p)*x + 1;
+	  // normalization - multiplying by p
+	  L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
+		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
       when 5:
-	  L_poly := x^4 - (evs[1]/sqrt_p^3)*x^3 +
-		    ((evs[2] + p^2 + 1)/p^2)*x^2 -
-		    (evs[1]/sqrt_p^3)*x + 1;
+	  // L_poly := x^4 - (evs[1]/sqrt_p^3)*x^3 +
+		//    ((evs[2] + p^2 + 1)/p^2)*x^2 -
+	  //  (evs[1]/sqrt_p^3)*x + 1;
+	  // normalization - multiplying by sqrt_p^3
+	  L_poly := p^6*x^4 - (evs[1]*p^3)*x^3 +
+		    ((evs[2] + p^2 + 1)*p)*x^2 -
+		    evs[1]*x + 1;
       when 6:
-	  L_poly := x^6 - (evs[1]/p^2)*x^5 +
-		    ((1+p+p^2+evs[2])/p^3)*x^4 -
-		    ((2*evs[1]+evs[3])/p^3)*x^3 +
-		    ((1+p+p^2+evs[2])/p^3)*x^2 - (evs[1]/p^2)*x + 1;
+	  // L_poly := x^6 - (evs[1]/p^2)*x^5 +
+	//	    ((1+p+p^2+evs[2])/p^3)*x^4 -
+	//	    ((2*evs[1]+evs[3])/p^3)*x^3 +
+	//	    ((1+p+p^2+evs[2])/p^3)*x^2 - (evs[1]/p^2)*x + 1;
+	  // normalization - multiplying by p^2
+	  L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
+		    ((1+p+p^2+evs[2])*p^5)*x^4 -
+		    ((2*evs[1]+evs[3])*p^3)*x^3 +
+		    ((1+p+p^2+evs[2])*p)*x^2 - evs[1]*x + 1;
       when 7:
-	  L_poly := x^6 - (evs[1]/sqrt_p^5)*x^5 +
-		    ((evs[2]+1+p^2+p^4)/p^4)*x^4 -
-		    (((p^2+1)*evs[1]+evs[3])/sqrt_p^9)*x^3 +
-		    ((evs[2]+1+p^2+p^4)/p^4)*x^2 -
-		    (evs[1]/sqrt_p^5) * x + 1;
+	 // L_poly := x^6 - (evs[1]/sqrt_p^5)*x^5 +
+	//	    ((evs[2]+1+p^2+p^4)/p^4)*x^4 -
+	//	    (((p^2+1)*evs[1]+evs[3])/sqrt_p^9)*x^3 +
+	//	    ((evs[2]+1+p^2+p^4)/p^4)*x^2 -
+	//	    (evs[1]/sqrt_p^5) * x + 1;
+	  // normalization - multiplying by sqrt_p^5
+	  L_poly := p^15*x^6 - (evs[1]*p^10)*x^5 +
+		    ((evs[2]+1+p^2+p^4)*p^6)*x^4 -
+		    (((p^2+1)*evs[1]+evs[3])*p^3)*x^3 +
+		    ((evs[2]+1+p^2+p^4)*p)*x^2 -
+		    evs[1]*x + 1;
       when 8:
-	  L_poly := x^8 - (evs[1]/p^3)*x^7 +
-		    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^6 -
-		    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^5 +
-		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)/p^6)*x^4-
-		    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^3 +
-		    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^2 -
-		    (evs[1]/p^3)*x + 1;
+	  //L_poly := x^8 - (evs[1]/p^3)*x^7 +
+	//	    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^6 -
+	//	    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^5 +
+	//	    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)/p^6)*x^4-
+	//	    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^3 +
+	//	    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^2 -
+	  //	    (evs[1]/p^3)*x + 1;
+	  // normalization - multiplying by p^3
+	  L_poly := p^24*x^8 - (evs[1]*p^18)*x^7 +
+		    ((evs[2]+p^4 + 2*p^2 +1)*p^13)*x^6 -
+		    ((evs[3] + evs[1]*(p^2+p+1))*p^9)*x^5 +
+		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)*p^6)*x^4-
+		    ((evs[3] + evs[1]*(p^2+p+1))*p^3)*x^3 +
+		    ((evs[2]+p^4 + 2*p^2 +1)*p)*x^2 -
+		    evs[1]*x + 1;
       end case;
       Append(~L_polys, L_poly);
   end for;

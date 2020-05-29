@@ -7,6 +7,8 @@ freeze;
                                                                             
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
 
+   05/29/20: Modified SkipToNeighbor to handle non-liftable isotropic subspaces
+
    05/27/20: Fixed a bug for SO(n) - automorphism groups were wrongly built.
              Changed default values to use orbit method and estimate, and not
              use LLL.
@@ -497,7 +499,10 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, /* space_idx, vec_idx */ idx
 	    skew0 := Zero(MatrixRing(F, k));
 	    // Skip to the neighbor associated to this orbit.
 	    SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
-
+	    // In case it doesn't lift
+	    if IsEmpty(nProc`X) then
+		continue;
+	    end if;
 	    mat_gen_seq := [[
 				   gens[Index(gens_modp,
 					      Eltseq(Aut.Abs(i)))]^Sign(i) :

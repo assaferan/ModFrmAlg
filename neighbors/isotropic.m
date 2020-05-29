@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: isotropic.m (class for tracking computation of isotropic subspaces)
 
+   05/29/20: Reverted last update. We don't want vectors from the radical,
+             they contribtute to isotropic subsapces, but not to neighbors.
+
    05/26/20: Added __pivots_singular, allowing to choose vectors from the 
              radical as part of the isotropic subspace.
              Modified the construction of the hermitian form in char 2.
@@ -440,9 +443,9 @@ intrinsic FirstIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	//  entry in the catalog.
 	if not IsDefined(V`ParamArray, k) then
 		data := New(IsoParam);
-		// data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
-		data`Pivots := __pivots_singular(Dimension(V) - V`RadDim,
-						 V`AnisoDim, k, V`RadDim);
+		data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+		// data`Pivots := __pivots_singular(Dimension(V) - V`RadDim,
+			//			 V`AnisoDim, k, V`RadDim);
 		V`ParamArray[k] := data;
 	end if;
 
@@ -463,9 +466,9 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	//  then treat it as if we were requesting the first isotropic subspace.
 	if not IsDefined(V`ParamArray, k) then
 	    data := New(IsoParam);
-	    // data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
-	    data`Pivots := __pivots_singular(Dimension(V) - V`RadDim,
-					     V`AnisoDim, k, V`RadDim);
+	    data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+	    // data`Pivots := __pivots_singular(Dimension(V) - V`RadDim,
+		//			     V`AnisoDim, k, V`RadDim);
 	    data`PivotPtr := 0;
 	    data`Params := [];
 	    V`ParamArray[k] := data;

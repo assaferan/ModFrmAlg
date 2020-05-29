@@ -81,3 +81,43 @@ G := SpecialOrthogonalGroup(A);
 W := SymmetricRepresentation(std_reps[5], 2);
 M := AlgebraicModularForms(G,W);
 inspect(M : prec := 4);
+
+// This code is for checking the image of the Galois representation
+// Later put it in a relevant place
+
+function getGaloisImage(L_p, l, psi, fp_hom)
+    a := Coefficients(L_p);
+    K := Universe(a);
+    K_x<x> := Parent(L_p);
+    _, phi := IsSquare(a[1]/a[5]);
+    a := [a[2]/a[5], a[3]/a[5]];
+    zero := MatrixRing(K,2)!0;
+    A := CompanionMatrix(x^2);
+    B := zero;
+    B[2,2] := -phi^(-2);
+    C := zero;
+    C[1,1] := phi^3;
+    C[1,2] := phi * a[1];
+    D := zero;
+    D[1,2] := -phi^(-1) * a[2];
+    D[2,1] := phi;
+    D[2,2] := -phi^(-1) * a[1];
+    // This is a symplectic similtude matrix
+    // (with the correct similitiude factor)
+    // with characteristic polynomial L_p
+    mat := BlockMatrix([[A,B],[C,D]]);
+    mat_mod_l := GL(4,l)!mat;
+    g := (mat_mod_l @@ fp_hom) @ psi;
+    return g;
+end function;
+
+function getGaloisImages(lpolys, l)
+    a := PrimitiveElement(GF(l));
+    zero := MatrixRing(GF(l),2)!0;
+    one := MatrixRing(GF(l),2)!1;
+    Q := BlockMatrix([[a*one, zero], [zero, one]]);
+    CSp_4_l := sub<GL(4,l)|Sp(4,l),Q>;
+    fp_grp, fp_hom := FPGroup(CSp_4_l);
+    csp_4, psi := PermutationGroup(fp_grp);
+    return [getGaloisImage(L_p, l, psi, fp_hom) : L_p in lpolys];
+end function;

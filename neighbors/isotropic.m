@@ -740,8 +740,10 @@ intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	// The size of the residue class field.
         q := #ResidueClassField(pR);
 
+	alpha := Involution(ReflexiveSpace(Module(M)));
 	// Compute the number of p^k-neighbors.
-	if IsOrthogonal(M) then
+	if IsOrthogonal(M) or (alpha(pR) ne pR) then
+	    // Either orthogonal or split unitary case
 	    return n * q^(Integers()!(k*(k-1)/2));
 	else
 	    return n * q^(k*(k+1) div 2);

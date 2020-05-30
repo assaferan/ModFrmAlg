@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: isotropic.m (class for tracking computation of isotropic subspaces)
 
+   05/29/20: Modified NumberOfNeighbors to return the right answer also in the
+             unitary case.
+
    05/29/20: Reverted last update. We don't want vectors from the radical,
              they contribtute to isotropic subsapces, but not to neighbors.
 
@@ -735,10 +738,16 @@ intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	n := NumberOfIsotropicSubspaces(M, pR, k);
 
 	// The size of the residue class field.
-	q := #ResidueClassField(pR);
+        q := #ResidueClassField(pR);
 
+	alpha := Involution(ReflexiveSpace(Module(M)));
 	// Compute the number of p^k-neighbors.
-	return n * q^(Integers()!(k*(k-1)/2));
+	if IsOrthogonal(M) or (alpha(pR) ne pR) then
+	    // Either orthogonal or split unitary case
+	    return n * q^(Integers()!(k*(k-1)/2));
+	else
+	    return n * q^(k*(k+1) div 2);
+	end if;
 end intrinsic;
 
 // for backward compatibility

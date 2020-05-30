@@ -8,6 +8,9 @@ freeze;
 
    Implementation file for lattice routines
 
+   05/29/2020 : Fixed a bug in IsIntegral - used to work only for orthogonal
+                and not for hermitian.
+
    05/26/2020 : Modified Scale and Norm to match the 
    	      	definitions in Kirschmer's thesis.
                 Modified AuxForms and ZLattice to return the lattice and the
@@ -1182,9 +1185,10 @@ intrinsic IsIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt
   val2:= Valuation(BaseRing(L)!2, p);
   G, C := GramMatrixOfBasis(L);
   D := Diagonal(G);
-  min_diag := Minimum([2*Valuation(C[i],p) + Valuation(D[i],p) :
-		       i in [1..#C]]);
-  min_val := Minimum([Valuation(C[i],p) + Valuation(C[j],p)
+  alpha := Involution(ReflexiveSpace(L));
+  min_diag := Minimum([Valuation(C[i],p) + Valuation(alpha(C[i]),p) +
+		       Valuation(D[i],p) : i in [1..#C]]);
+  min_val := Minimum([Valuation(C[i],p) + Valuation(alpha(C[j]),p)
 		      + Valuation(G[i,j],p) : i, j in [1..#C]]);
   return (min_val ge -val2) and (min_diag ge 0);
 end intrinsic;

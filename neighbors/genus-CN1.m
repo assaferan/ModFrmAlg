@@ -9,6 +9,9 @@ freeze;
 
    Implementation file for computing p-neighbors for genus computations
 
+   05/29/20: Modified computeGenusRepsAt - added a BeCareful when calling
+             checkNextNeighbor.
+
    05/26/20: Modified computeGenusRepsAt to support non-liftable isotropic
              vectors mod pR.
              Modified computeGenusRepsCN1 to use the mass formula.
@@ -90,7 +93,7 @@ function computeGenusRepsAt(p, isoList, invs
 
 	while nProc`isoSubspace ne [] do
 	    checkNextNeighbor(nProc, BuildNeighbor,
-			      ~invs, ~isoList);
+			      ~invs, ~isoList : BeCareful := BeCareful);
 	    // Move on to the next neighbor lattice.
 	    GetNextNeighbor(~nProc
 			    : BeCareful := BeCareful);

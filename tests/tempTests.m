@@ -75,12 +75,17 @@ end for;
 
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
-
 A := forms[5][2];
 G := SpecialOrthogonalGroup(A);
 W := SymmetricRepresentation(std_reps[5], 2);
 M := AlgebraicModularForms(G,W);
 inspect(M : prec := 4);
+
+example := AlgebraicModularFormsExamples[3];
+M, timing := testExample(example : num_primes := 3);
+T2 := HeckeOperator(M,2);
+T3 := HeckeOperator(M,3);
+assert T2*T3 eq T3*T2;
 
 // This code is for checking the image of the Galois representation
 // Later put it in a relevant place

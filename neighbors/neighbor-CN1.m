@@ -7,6 +7,9 @@ freeze;
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 
+   05/29/20: Fixed bugs when handling inert primes, and when updating the skew 
+             matrix along the anti-diagonal for the unitary case.
+
    05/29/20: Fixed a bug in lifting vectors from the radical.
 
    05/27/20: Updated LiftSubspace to handle the case of isotropic vectors
@@ -210,7 +213,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 
     // In these cases, we are not going to bother with
     // making X and Z isotropic here
-    if Vpp`splitting_type in ["ramified", "inert"] then
+    if Vpp`splitting_type eq "ramified" then
 	return X,Z,U;
     end if;
 	
@@ -630,7 +633,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
     // If one lifts ZZ and UU correctly, then the orthogonal
     // way should work, at least for inert and ramified ones
     
-    if Vpp`splitting_type ne "none" then // the hermitian case
+    if Vpp`splitting_type in ["split","ramified"] then
 	pb := PseudoBasis(L);
 	local_basis := [];
 	for i in [1..dim] do
@@ -729,7 +732,9 @@ procedure UpdateSkewMatrix(~nProc, ~row, ~col, overflow)
 	
 	// Update the coefficient of the skew matrix reflected
 	//  across the anti-diagonal.
-	nProc`skew[k-col+1,k-row+1] := -nProc`skew[row,col];
+	if (row + col ne k+1) then
+	    nProc`skew[k-col+1,k-row+1] := -nProc`skew[row,col];
+	end if;
 	
 	// If we've rolled over, move on to the next position.
 	if nProc`skew[row,col] eq 0 then
@@ -762,8 +767,16 @@ procedure UpdateSkewSpace(~nProc : BeCareful := false)
     proj := Vpp`proj_pR2;
     // A nonzero element modulo pR^2 which is 0 modulo pR.
     pElt := Vpp`proj_pR2(Vpp`pElt);
+    F := Parent(Vpp`V`PrimitiveElement);
+    q := #F;
+    // In the inert case we have to multiply by an element of trace zero.
+    if Vpp`splitting_type eq "inert" and IsOdd(q) then
+	factor := proj(((BaseRing(Vpp`V).1)^((q+1) div 2)) @@ map);
+    else
+	factor := 1;
+    end if;
     // Update the skew space.
-    nProc`X_skew := [ nProc`X[i] + pElt *
+    nProc`X_skew := [ nProc`X[i] + pElt * factor *
 				   &+[ proj(nProc`skew[i,j] @@ map) * nProc`Z[j]
 				       : j in [1..k] ] : i in [1..k] ];
     if BeCareful then

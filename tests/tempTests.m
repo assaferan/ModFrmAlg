@@ -72,6 +72,7 @@ for dim in [3,5] do
     end for;
 end for;
 */
+/*
 
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
@@ -81,6 +82,12 @@ G := SpecialOrthogonalGroup(A);
 W := SymmetricRepresentation(std_reps[5], 2);
 M := AlgebraicModularForms(G,W);
 inspect(M : prec := 4);
+*/
+
+example := AlgebraicModularFormsExamples[3];
+M, timing := testExample(example : num_primes := 3);
+T2 := HeckeOperator(M,2);
+T3 := HeckeOperator(M,3 : BeCareful := true);
 
 // This code is for checking the image of the Galois representation
 // Later put it in a relevant place

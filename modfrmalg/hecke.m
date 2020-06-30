@@ -353,9 +353,10 @@ require computing the full Hecke operator.}
 	   Gcd(Integers()!Norm(Discriminant(Module(M))),
 	       Norm(p)) eq 1 and IsSplit(p)];
   */
-   bad_modulus := Numerator(Norm(Discriminant(Module(M))));
+   // bad_modulus := Numerator(Norm(Discriminant(Module(M))));
    ps := [Factorization(Integers(BaseRing(M)) !! p)[1][1] :
-	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
+	  //	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
+	  p in PrimesUpTo(n, Rationals())];
    if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
        alpha := Involution(ReflexiveSpace(Module(M)));
        // F := FixedField(alpha);

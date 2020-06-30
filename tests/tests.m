@@ -35,7 +35,10 @@ intrinsic AlgebraicModularFormsTests(: num_primes := 0,
 	  SeqEnum[ModFrmAlg], SeqEnum
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting num_primes.}
 
+  // Testing the unitary mass formula
   testUnitaryMassFormula();
+  // Testing Example 9 from Rama Tornaria - non-lift paramodular form.
+  testRamaTornaria9();
   all_spaces := [];
   all_timings := [];
   for example in AlgebraicModularFormsExamples do
@@ -251,4 +254,26 @@ procedure testUnitaryMassFormula()
 	mass := &+[#AutomorphismGroup(r)^(-1) : r in reps];
 	assert mass eq UnitaryMass(F,2);
     end for;
+end procedure;
+
+procedure testRamaTornaria9()
+    A := SymmetricMatrix([1,1/2,1,0,0,1,0,0,0,2,-1/2,-1/2,0,-1/2,3]);
+    G := OrthogonalGroup(A);
+    W := TrivialRepresentation(GL(5,Rationals()), Rationals());
+    level := IdentityMatrix(Rationals(),5);
+    M := AlgebraicModularForms(G, W, level);
+    D := Decomposition(M, 100);
+    eigenforms := HeckeEigenforms(M);
+    reps := Representatives(Genus(M));
+    weights := [#AutomorphismGroup(rep)^(-1) : rep in reps];
+    invs := [Invariant(rep) : rep in reps];
+    thetas := [&+[weights[i]*f`vec[i] * PowerSeriesRing(BaseRing(f`vec))!invs[i]
+		  : i in [1..#reps]] : f in eigenforms];
+    assert exists(i){i : i in [1..#thetas] | IsEmpty(Coefficients(thetas[i]))};
+    f := eigenforms[i];
+    lpolys := [lpoly : lpoly in LPolynomials(f : prec := 5)];
+    x := Universe(lpolys).1;
+    assert lpolys[1] eq 64*x^4 + 56*x^3 + 24*x^2 + 7*x + 1;
+    assert lpolys[2] eq 729*x^4 + 81*x^3 + 3*x^2 + 3*x + 1;
+    assert lpolys[3] eq 15625*x^4 - 375*x^3 + 85*x^2 - 3*x + 1;
 end procedure;

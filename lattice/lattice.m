@@ -84,6 +84,9 @@ declare attributes ModDedLat:
 	// The automorphism group as a lattice over Z.
 	AutomorphismGroup,
 
+	// The special automorphism group as a lattice over Z.
+	SpecialAutomorphismGroup,
+
 	// The scale of the lattice.
 	Scale,
 
@@ -742,8 +745,20 @@ end intrinsic;
 intrinsic AutomorphismGroup(lat::ModDedLat : Special := false) -> SeqEnum
 { Computes the automorphism group of the specified lattice. }
   if Special then
+      if assigned lat`SpecialAutomorphismGroup then
+	  return lat`SpecialAutomorphismGroup;
+      end if;
       aut := AutomorphismGroup(lat);
-      return sub<aut |[x : x in aut | Determinant(x) eq 1]>;
+      // Problem - this takes too long
+      // return sub<aut |[x : x in aut | Determinant(x) eq 1]>;
+      // This is to get the group {+-1}
+      C2, phi := UnitGroup(Integers());
+      det_gens := [Determinant(x) : x in Generators(aut)];
+      det := hom<aut -> C2 | [x @@ phi : x in det_gens]>;
+      special_aut := Kernel(det);
+      // Save it for further use.
+      lat`SpecialAutomorphismGroup := special_aut;
+      return special_aut;
   end if;
 
   // Return the automorphism group if it has already been computed.

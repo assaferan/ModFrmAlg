@@ -621,7 +621,17 @@ end intrinsic;
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngInt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of isotropic subspaces. }
-	// Consider the rationals as a number field.
+     // These general formulae don't exactly work when we have
+     // a non-trivial radical. Check later how to fix that.
+     // Meanwhile, we just count them.
+     L := Module(M);
+     nProc := BuildNeighborProc(L, pR, k);
+     V := nProc`L`Vpp[pR]`V;
+     l := AllIsotropicSubspaces(V, k);
+     return #l;
+
+        // Consider the rationals as a number field.
+
 	K := RationalsAsNumberField();
 
 	// The ring of integers as an order.

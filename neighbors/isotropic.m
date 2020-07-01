@@ -57,6 +57,9 @@ declare attributes IsoParam:
 	//  subspaces.
 	IsotropicParam;
 
+
+import "neighbor-CN1.m" : BuildNeighborProc;
+
 // A helper function for computing valid pivots.
 function __pivots(n, aniso, k)
         // Base case.

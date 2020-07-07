@@ -49,8 +49,11 @@ function Decompose(T, t)
 	if Degree(data[1]) eq 1 then
 	    eig := -Evaluate(data[1], 0);
 	else
-	    eig := K.1;
+	    // That fails when K is the fraction field of an order
+	    // eig := K.1;
+	    eig := GeneratorsSequence(K)[1];
 	end if;
+	assert Evaluate(data[1], eig) eq 0;
 
 	// If the field K is not the rationals, try to optimize it as
 	//  long as the degree of the field isn't too large.

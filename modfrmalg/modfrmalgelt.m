@@ -282,9 +282,13 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
 
 	// Decompose eigenspace.
-	spaces, reducible :=
+	spaces, reducible := 
 		EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
 
+	// This is not enough yet, since the spaces aren't the eigenvectors.
+	// !!! TODO - replace this 100 by a well chosen bound
+//	spaces := Decomposition(M, 100);
+	
 	// A list of cusp forms.
 	eigenforms := [* *];
 
@@ -302,38 +306,40 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	mult_wts := [wt_prod div wt : wt in wts];
 	
 	for i in [1..#spaces] do
-		// Extract the first basis vector of the eigenspace.
-		basis := Basis(spaces[i]);
+	    // Extract the first basis vector of the eigenspace.
+	    vec := Basis(spaces[i])[1];
+	    
+	    //		for vec in basis do
+	    // Construct an element of the modular space.
+	    mform := New(ModFrmAlgElt);
 
-		for vec in basis do
-			// Construct an element of the modular space.
-			mform := New(ModFrmAlgElt);
+	    // Assign parent modular space.
+	    mform`M := M;
 
-			// Assign parent modular space.
-			mform`M := M;
+	    // Assign vector.
+	    mform`vec := vec;
 
-			// Assign vector.
-			mform`vec := vec;
+	    // Flag as cuspidal?
+	    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+				    i in [1..#wts]] eq 0;
 
-			// Flag as cuspidal?
-			mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
-						i in [1..#wts]] eq 0;
+	    // Cusp forms are not Eistenstein.
+	    mform`IsEisenstein := not mform`IsCuspidal;
 
-			// Cusp forms are not Eistenstein.
-			mform`IsEisenstein := not mform`IsCuspidal;
+	    // This shouldn't happen if we fully decomposed the space.
+	    // This is an eigenform if and only if the size
+	    //  of the subspace has dimension 1.
+	    mform`IsEigenform := not i in reducible;
+	    // mform`IsEigenform := true;
 
-			// This is an eigenform if and only if the size
-			//  of the subspace has dimension 1.
-			mform`IsEigenform := not i in reducible;
-
-			// Add to list.
-			Append(~eigenforms, mform);
-
-			// Store the Eisenstein series in memory.
-			if mform`IsEisenstein then
-				M`Hecke`EisensteinSeries := mform;
-			end if;
-		end for;
+	    // Add to list.
+	    Append(~eigenforms, mform);
+		
+	    // Store the Eisenstein series in memory.
+	    if mform`IsEisenstein then
+		M`Hecke`EisensteinSeries := mform;
+	    end if;
+	    // end for;
 	end for;
 
 	// Assign Hecke eigenforms.
@@ -528,9 +534,10 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
   return true;
 end intrinsic;
 
+// Currently only implemented for good L-factors
 intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
 					 Estimate := true,
-					 Orbits := true) -> RngUPolElt
+					 Orbits := true) -> SeqEnum[RngUPolElt]
 {Compute the L-polynomials of f at primes up to norm precision.}
   require IsOrthogonal(f`M) : "Currently implemented only for orthogonal group";
 
@@ -550,7 +557,7 @@ intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
 	  Append(~all_evs[p], evs[j]);
       end for;
   end for;
-  L_polys := [* *];
+  L_polys := [];
   for P in ps do
       evs := all_evs[P];
       K := Universe(evs);

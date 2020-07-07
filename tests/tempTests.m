@@ -88,6 +88,31 @@ T2 := HeckeOperator(M,2);
 T3 := HeckeOperator(M,3);
 assert T2*T3 eq T3*T2;
 
+// Checking the 305 
+a := Split("1   1   1   1  26   0   0   0   1   0   0   0   0   1   1", " ");
+a := [eval(x) : x in a];
+tmp := [a[1],a[6],a[2]] cat a[7..8] cat [a[3]] cat a[9..11] cat [a[4]] cat 
+       a[12..15] cat [a[5]];
+A := SymmetricMatrix(tmp);
+A := 1/2*(A + DiagonalMatrix(Diagonal(A)));
+Determinant(A);
+d := 1;
+G := OrthogonalGroup(A);
+W := SpinorNormRepresentation(G, d);
+M := AlgebraicModularForms(G, W);
+D := Decomposition(M, 100);
+eigenforms := HeckeEigenforms(M);
+
+function load_Nipp(Nipp_str)
+    a := Split(Nipp_str, " ");
+    a := [eval(x) : x in a];
+    tmp := [a[1],a[6],a[2]] cat a[7..8] cat [a[3]] cat a[9..11] cat [a[4]] cat 
+	   a[12..15] cat [a[5]];
+    A := SymmetricMatrix(tmp);
+    A := 1/2*(A + DiagonalMatrix(Diagonal(A)));
+    return A;
+end function;
+
 // This code is for checking the image of the Galois representation
 // Later put it in a relevant place
 

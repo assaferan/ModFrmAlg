@@ -23,9 +23,11 @@ freeze;
 import "examples.m" : AlgebraicModularFormsExamples;
 import "../io/path.m" : path;
 import "../neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
+import "../neighbors/inv-CN1.m" : Invariant;
 
 forward testExample;
 forward testUnitaryMassFormula;
+forward testRamaTornaria9;
 
 intrinsic AlgebraicModularFormsTests(: num_primes := 0,
 				       use_existing := false,
@@ -267,8 +269,9 @@ procedure testRamaTornaria9()
     reps := Representatives(Genus(M));
     weights := [#AutomorphismGroup(rep)^(-1) : rep in reps];
     invs := [Invariant(rep) : rep in reps];
-    thetas := [&+[weights[i]*f`vec[i] * PowerSeriesRing(BaseRing(f`vec))!invs[i]
-		  : i in [1..#reps]] : f in eigenforms];
+    thetas := [* &+[weights[i]*f`vec[i] *
+		    PowerSeriesRing(BaseRing(f`vec))!invs[i]
+		  : i in [1..#reps]] : f in eigenforms *];
     assert exists(i){i : i in [1..#thetas] | IsEmpty(Coefficients(thetas[i]))};
     f := eigenforms[i];
     lpolys := [lpoly : lpoly in LPolynomials(f : prec := 5)];

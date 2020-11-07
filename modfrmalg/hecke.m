@@ -353,9 +353,10 @@ require computing the full Hecke operator.}
 	   Gcd(Integers()!Norm(Discriminant(Module(M))),
 	       Norm(p)) eq 1 and IsSplit(p)];
   */
-   bad_modulus := Numerator(Norm(Discriminant(Module(M))));
+   // bad_modulus := Numerator(Norm(Discriminant(Module(M))));
    ps := [Factorization(Integers(BaseRing(M)) !! p)[1][1] :
-	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
+	  //	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
+	  p in PrimesUpTo(n, Rationals())];
    if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
        alpha := Involution(ReflexiveSpace(Module(M)));
        // F := FixedField(alpha);
@@ -363,20 +364,19 @@ require computing the full Hecke operator.}
        // ps := [p : p in ps | IsSplit(p)];
        ps := [p : p in ps | alpha(p) ne p];
    end if;
-   if #M`Hecke`standard_images[i][k] lt #ps then  // generate more images..
-       new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
-       for p in new_ps do
-	   sp_hec := HeckeOperatorCN1Sparse(M, p, k, s : BeCareful := BeCareful,
-							 Estimate := Estimate,
-							 Orbits := Orbits,
-							 UseLLL := UseLLL);
-	   sp_mat := sp_hec[space_idx];
-	   for j in [start_idx..end_idx] do
-	       M`Hecke`standard_images[j][k][p] :=
-		   Transpose(sp_mat)[j-start_idx+1];
-	   end for;
+   // generate more images..
+   new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
+   for p in new_ps do
+       sp_hec := HeckeOperatorCN1Sparse(M, p, k, s : BeCareful := BeCareful,
+						     Estimate := Estimate,
+						     Orbits := Orbits,
+						     UseLLL := UseLLL);
+       sp_mat := sp_hec[space_idx];
+       for j in [start_idx..end_idx] do
+	   M`Hecke`standard_images[j][k][p] :=
+	       Transpose(sp_mat)[j-start_idx+1];
        end for;
-   end if;      
+   end for;
    return M`Hecke`standard_images[i][k];       
 end intrinsic;
 

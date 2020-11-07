@@ -86,6 +86,11 @@ end intrinsic;
 
 // access
 
+intrinsic HeckeEigenvalues(f::ModFrmAlgElt, p::RngIntElt) -> SeqEnum
+{Returns a list of all Hecke eigenvalues at the specified prime.}
+     return HeckeEigenvalues(f, BaseRing(Module(f`M))!!p);
+end intrinsic;
+
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngInt) -> SeqEnum
 { Returns a list of all Hecke eigenvalues at the specified prime. }
 	return HeckeEigenvalues(f, ideal< BaseRing(Module(f`M)) | Norm(pR) >);
@@ -97,7 +102,9 @@ intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngOrdIdl) -> SeqEnum
 	if not f`IsEigenform then return []; end if;
 
 	// The largest possible type of Hecke operator to look at.
-	max := Floor(Dimension(QuadraticSpace(f`M)) / 2);
+	// max := Floor(Dimension(QuadraticSpace(f`M)) / 2);
+
+        max := Floor(Dimension(ReflexiveSpace(Module(f`M))) / 2);
 
 	// Compute the Hecke eigenvalues.
 	for i in [1..max] do _, _ := HeckeEigensystem(f, i); end for;
@@ -172,11 +179,27 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt) -> List, SeqEnum
 	return HeckeEigensystem(f, 1);
 end intrinsic;
 
+procedure updatePrecision(f, k, ~Precision)
+  if IsZero(Precision) then
+    already_known := {};
+    if IsDefined(f`M`Hecke`Ts, k) then
+       already_known := already_known join Keys(f`M`Hecke`Ts[k]);
+    end if;
+    if IsDefined(f`Eigenvalues, k) then
+       already_known := already_known join Keys(f`Eigenvalues[k]);
+    end if;
+    if IsEmpty(already_known) then
+       error "No eigenvalues have been computed for this eigenform";
+    end if;
+    Precision := Sort([x : x in already_known]);
+  end if;
+end procedure;
+
 intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
-			   prec := 0, BeCareful := false,
+			   Precision := 0, BeCareful := false,
 			   Estimate := true, Orbits := true,
 			   UseLLL := true) -> List, SeqEnum
-{ Computes the eigenvalues at various primes associated to this eigenform, for primes up to norm prec. If prec = 0, computes the eigenvalues only for precomputed hecke operators }
+{ Computes the eigenvalues at various primes associated to this eigenform, for primes up to norm Precision. If Precision = 0, computes the eigenvalues only for precomputed hecke operators }
 	// Check whether this element is an eigenform.
 	if not f`IsEigenform then return []; end if;
 
@@ -195,8 +218,8 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	pivot := 0;
 	repeat pivot +:= 1;
 	until f`vec[pivot] ne 0;
-
-	if IsZero(prec) then
+/*
+	if IsZero(Precision) then
 	    already_known := {};
 	    if IsDefined(f`M`Hecke`Ts, k) then
 		already_known := already_known join Keys(f`M`Hecke`Ts[k]);
@@ -207,20 +230,22 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	    if IsEmpty(already_known) then
 		error "No eigenvalues have been computed for this eigenform";
 	    end if;
-	    prec := Sort([x : x in already_known]);
+	    Precision := Sort([x : x in already_known]);
 	end if;
+*/
+        updatePrecision(f, k, ~Precision);
 	
 	if GetVerbose("AlgebraicModularForms") ge 2 then
 	    print "Computing Hecke eigenvalues at new primes";
 	end if;
 	use_lll := UseLLL and (not IsSpecialOrthogonal(f`M));
-	hecke_images := HeckeImages(f`M, pivot, prec, k :
+	hecke_images := HeckeImages(f`M, pivot, Precision, k :
 				    BeCareful := BeCareful,
 				    Estimate := Estimate,
 				    Orbits := Orbits,
 				    UseLLL := use_lll);
-	if Type(prec) eq SeqEnum then
-	    Ps := prec;
+	if Type(Precision) eq SeqEnum then
+	    Ps := Precision;
 	else
 	    Ps := Sort([x : x in Keys(hecke_images)]);
 	end if;
@@ -282,9 +307,13 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
 
 	// Decompose eigenspace.
-	spaces, reducible :=
+	spaces, reducible := 
 		EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
 
+	// This is not enough yet, since the spaces aren't the eigenvectors.
+	// !!! TODO - replace this 100 by a well chosen bound
+//	spaces := Decomposition(M, 100);
+	
 	// A list of cusp forms.
 	eigenforms := [* *];
 
@@ -302,38 +331,40 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	mult_wts := [wt_prod div wt : wt in wts];
 	
 	for i in [1..#spaces] do
-		// Extract the first basis vector of the eigenspace.
-		basis := Basis(spaces[i]);
+	    // Extract the first basis vector of the eigenspace.
+	    vec := Basis(spaces[i])[1];
+	    
+	    //		for vec in basis do
+	    // Construct an element of the modular space.
+	    mform := New(ModFrmAlgElt);
 
-		for vec in basis do
-			// Construct an element of the modular space.
-			mform := New(ModFrmAlgElt);
+	    // Assign parent modular space.
+	    mform`M := M;
 
-			// Assign parent modular space.
-			mform`M := M;
+	    // Assign vector.
+	    mform`vec := vec;
 
-			// Assign vector.
-			mform`vec := vec;
+	    // Flag as cuspidal?
+	    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+				    i in [1..#wts]] eq 0;
 
-			// Flag as cuspidal?
-			mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
-						i in [1..#wts]] eq 0;
+	    // Cusp forms are not Eistenstein.
+	    mform`IsEisenstein := not mform`IsCuspidal;
 
-			// Cusp forms are not Eistenstein.
-			mform`IsEisenstein := not mform`IsCuspidal;
+	    // This shouldn't happen if we fully decomposed the space.
+	    // This is an eigenform if and only if the size
+	    //  of the subspace has dimension 1.
+	    mform`IsEigenform := not i in reducible;
+	    // mform`IsEigenform := true;
 
-			// This is an eigenform if and only if the size
-			//  of the subspace has dimension 1.
-			mform`IsEigenform := not i in reducible;
-
-			// Add to list.
-			Append(~eigenforms, mform);
-
-			// Store the Eisenstein series in memory.
-			if mform`IsEisenstein then
-				M`Hecke`EisensteinSeries := mform;
-			end if;
-		end for;
+	    // Add to list.
+	    Append(~eigenforms, mform);
+		
+	    // Store the Eisenstein series in memory.
+	    if mform`IsEisenstein then
+		M`Hecke`EisensteinSeries := mform;
+	    end if;
+	    // end for;
 	end for;
 
 	// Assign Hecke eigenforms.
@@ -528,9 +559,82 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
   return true;
 end intrinsic;
 
-intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
+import "../representation/representation.m" : nu;
+
+// Currently only implemented for good L-factors
+intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
+		      Estimate := true, Orbits := true) -> RngUPolElt
+{Compute the L-polynomial of f at the prime p up to precision x^d.}
+  n := Dimension(ReflexiveSpace(Module(f`M)));
+
+  require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
+
+  n_evs := Minimum(d, n div 2);
+
+  evs, _ := [HeckeEigensystem(f, k : Precision := [BaseRing(Module(f`M))!!p],
+			      Estimate := Estimate,
+			      Orbits := Orbits)[1] : k in [1..n_evs]];
+  if n_evs lt n div 2 then
+    evs cat:= [0 : i in [n_evs+1..n div 2]];
+  end if;
+  K := Universe(evs);
+// K_x<x> := PolynomialRing(K);
+  K_x<x> := PowerSeriesRing(K);
+  D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
+  name := f`M`W`M`names[1];
+  if Type(name) eq MonStgElt then
+     w := 1;
+  else
+    w := Degree(name);
+  end if;
+  dim := Degree(K);
+  case n:
+      when 3:
+	  L_poly := p*x^2 - evs[1]*x+1;
+      when 4:
+	  L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
+		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
+      when 5:
+          if D mod p ne 0 then
+	     L_poly := p^6*x^4 - (evs[1]*p^3)*x^3 +
+		    ((evs[2] + p^2 + 1)*p)*x^2 -
+		    evs[1]*x + 1;
+          else
+	     L := Module(f`M);
+	     eps_p := WittInvariant(L,BaseRing(L)!!p);
+             L_poly := p^3*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*x+1;
+             L_poly *:= eps_p*p*x+1;
+	  end if;
+      when 6:
+	  L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
+		    ((1+p+p^2+evs[2])*p^5)*x^4 -
+		    ((2*evs[1]+evs[3])*p^3)*x^3 +
+		    ((1+p+p^2+evs[2])*p)*x^2 - evs[1]*x + 1;
+      when 7:
+	  L_poly := p^15*x^6 - (evs[1]*p^10)*x^5 +
+		    ((evs[2]+1+p^2+p^4)*p^6)*x^4 -
+		    (((p^2+1)*evs[1]+evs[3])*p^3)*x^3 +
+		    ((evs[2]+1+p^2+p^4)*p)*x^2 -
+		    evs[1]*x + 1;
+      when 8:
+	  L_poly := p^24*x^8 - (evs[1]*p^18)*x^7 +
+		    ((evs[2]+p^4 + 2*p^2 +1)*p^13)*x^6 -
+		    ((evs[3] + evs[1]*(p^2+p+1))*p^9)*x^5 +
+		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)*p^6)*x^4-
+		    ((evs[3] + evs[1]*(p^2+p+1))*p^3)*x^3 +
+		    ((evs[2]+p^4 + 2*p^2 +1)*p)*x^2 -
+		    evs[1]*x + 1;
+   end case;
+   if d ge 2*(n div 2) then
+      K_x<x> := PolynomialRing(K);
+      return K_x!Eltseq(L_poly);
+   end if;
+   return L_poly + O(x^(d+1));
+end intrinsic;
+
+intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
 					 Estimate := true,
-					 Orbits := true) -> RngUPolElt
+					 Orbits := true) -> SeqEnum[RngUPolElt]
 {Compute the L-polynomials of f at primes up to norm precision.}
   require IsOrthogonal(f`M) : "Currently implemented only for orthogonal group";
 
@@ -539,94 +643,41 @@ intrinsic LPolynomials(f::ModFrmAlgElt : prec := 0,
   require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
 
   m := n div 2;
-  all_evs := AssociativeArray();
-  for i in [1..m] do
-      evs, ps := HeckeEigensystem(f, i : prec := prec,
-					 Estimate := Estimate,
-					 Orbits := Orbits);
-      for j in [1..#ps] do
-	  p := ps[j];
-	  if not IsDefined(all_evs, p) then all_evs[p] := []; end if;
-	  Append(~all_evs[p], evs[j]);
-      end for;
-  end for;
-  L_polys := [* *];
-  for P in ps do
-      evs := all_evs[P];
-      K := Universe(evs);
-      K_x<x> := PolynomialRing(K);
-      // Have to check what it should be when the base field is not QQ!!!
+
+  if (Precision eq 0) then
+    Ps := [p : p in Keys(f`Eigenvalues[1])
+	   | &and[p in Keys(f`Eigenvalues[j]) : j in [1..m]]];
+  else
+    Ps := [Factorization(Integers(BaseRing(f`M)) !! p)[1][1] :
+			p in PrimesUpTo(Precision, Rationals())];
+  end if;
+  L_polys := AssociativeArray();
+  for P in Ps do
       p := Norm(P);
-      // pre-normalization code
-      /*
-      if n mod 2 eq 1 then
-	  is_p_square, sqrt_p := IsSquare(K!p);
-	  if not is_p_square then
-	      L<sqrt_p> := ext< K | x^2 - p>;
-	      L_x<x> := PolynomialRing(L);
-	  end if;
-      end if;
-      */
-      case n:
-      when 3:
-	  // this was the version from Murphy's thesis
-	  // L_poly := x^2 - (evs[1]/sqrt_p)*x+1;
-	  // Here we normalize (multiply by sqrt_p)
-	  L_poly := p*x^2 - evs[1]*x+1;
-      when 4:
-	  // L_poly := x^4 - (evs[1]/p)*x^3 +
-	  //	    ((2+evs[2])/p)*x^2 - (evs[1]/p)*x + 1;
-	  // normalization - multiplying by p
-	  L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
-		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
-      when 5:
-	  // L_poly := x^4 - (evs[1]/sqrt_p^3)*x^3 +
-		//    ((evs[2] + p^2 + 1)/p^2)*x^2 -
-	  //  (evs[1]/sqrt_p^3)*x + 1;
-	  // normalization - multiplying by sqrt_p^3
-	  L_poly := p^6*x^4 - (evs[1]*p^3)*x^3 +
-		    ((evs[2] + p^2 + 1)*p)*x^2 -
-		    evs[1]*x + 1;
-      when 6:
-	  // L_poly := x^6 - (evs[1]/p^2)*x^5 +
-	//	    ((1+p+p^2+evs[2])/p^3)*x^4 -
-	//	    ((2*evs[1]+evs[3])/p^3)*x^3 +
-	//	    ((1+p+p^2+evs[2])/p^3)*x^2 - (evs[1]/p^2)*x + 1;
-	  // normalization - multiplying by p^2
-	  L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
-		    ((1+p+p^2+evs[2])*p^5)*x^4 -
-		    ((2*evs[1]+evs[3])*p^3)*x^3 +
-		    ((1+p+p^2+evs[2])*p)*x^2 - evs[1]*x + 1;
-      when 7:
-	 // L_poly := x^6 - (evs[1]/sqrt_p^5)*x^5 +
-	//	    ((evs[2]+1+p^2+p^4)/p^4)*x^4 -
-	//	    (((p^2+1)*evs[1]+evs[3])/sqrt_p^9)*x^3 +
-	//	    ((evs[2]+1+p^2+p^4)/p^4)*x^2 -
-	//	    (evs[1]/sqrt_p^5) * x + 1;
-	  // normalization - multiplying by sqrt_p^5
-	  L_poly := p^15*x^6 - (evs[1]*p^10)*x^5 +
-		    ((evs[2]+1+p^2+p^4)*p^6)*x^4 -
-		    (((p^2+1)*evs[1]+evs[3])*p^3)*x^3 +
-		    ((evs[2]+1+p^2+p^4)*p)*x^2 -
-		    evs[1]*x + 1;
-      when 8:
-	  //L_poly := x^8 - (evs[1]/p^3)*x^7 +
-	//	    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^6 -
-	//	    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^5 +
-	//	    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)/p^6)*x^4-
-	//	    ((evs[3] + evs[1]*(p^2+p+1))/p^6)*x^3 +
-	//	    ((evs[2]+p^4 + 2*p^2 +1)/p^5)*x^2 -
-	  //	    (evs[1]/p^3)*x + 1;
-	  // normalization - multiplying by p^3
-	  L_poly := p^24*x^8 - (evs[1]*p^18)*x^7 +
-		    ((evs[2]+p^4 + 2*p^2 +1)*p^13)*x^6 -
-		    ((evs[3] + evs[1]*(p^2+p+1))*p^9)*x^5 +
-		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)*p^6)*x^4-
-		    ((evs[3] + evs[1]*(p^2+p+1))*p^3)*x^3 +
-		    ((evs[2]+p^4 + 2*p^2 +1)*p)*x^2 -
-		    evs[1]*x + 1;
-      end case;
-      Append(~L_polys, L_poly);
+      L_polys[p] := LPolynomial(f, p, n);
   end for;
   return L_polys;
+end intrinsic;
+
+// TODO - add directly LSeries(ModFrmAlgElt) so that it will compute
+// the coefficients it needs
+
+intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
+{Build the L-series corresponding to f.}
+  function local_factor(p,d)
+    return LPolynomial(f, p, d);
+  end function;
+  n := Dimension(ReflexiveSpace(Module(f`M)));
+  D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
+  name := f`M`W`M`names[1];
+  if Type(name) eq MonStgElt then
+     w := 1;
+  else
+    w := Degree(name);
+  end if;
+  // Change this to correspond to the correct weight
+  // should be (??)
+  // LSeries(2*n+4, [-n-1,-n,0,1], D) ?? doesn't make sense. look more closely
+  return LSeries(4, [-w-1,-w,0,1], D, local_factor :
+		 Precision := Precision);
 end intrinsic;

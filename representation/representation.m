@@ -70,7 +70,10 @@ freeze;
  
  ***************************************************************************/
 
+import "../orthogonal/linalg.m" : Restrict;
+
 forward projLocalization;
+forward spinor_norm_rho;
 
 // This should have been done using GModule
 // But for some reason, it's really terrible, so we are doing our own
@@ -273,6 +276,18 @@ intrinsic StandardRepresentation(G::GrpMat : name := "x") -> GrpRep
   return action;
   ");
   return GroupRepresentation(G, M, a : params := [* <"STANDARD", true> *]);
+end intrinsic;
+
+intrinsic DeterminantRepresentation(G::GrpMat : k := 1, name := "v") -> GrpRep
+{Constructs the 1-dimensional representation, where G acts via det.}
+  M := CombinatorialFreeModule(BaseRing(G), [name]);
+  a := Sprintf("
+    function action(g,m,V)
+       return (V`M)!((Determinant(g)^(%o))*((V`M).m)`vec);
+    end function;
+    return action;
+  ", k);
+  return GroupRepresentation(G, M, a);
 end intrinsic;
 
 intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
@@ -1044,3 +1059,147 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
 		 x :-> action(x[1], x[2], V)>;
   return V;
 end intrinsic;	  
+
+function build_reflection(y, A)
+    dim := Nrows(A);
+    R := BaseRing(A);
+    A_y := Matrix(y*A);
+    return IdentityMatrix(R,dim)-(2/(y*A,y))*Transpose(A_y)*Matrix(y);
+end function;
+
+function get_aniso_vec(subspace, A)
+    B := Basis(subspace);
+    BM := BasisMatrix(subspace);
+    A_res := BM*A*Transpose(BM);
+    if A_res eq 0 then
+	return false, _;
+    end if;
+    diag := Diagonal(A_res);
+    dim := Dimension(subspace);
+    aniso := exists(i){i : i in [1..dim] | diag[i] ne 0};
+    if aniso then
+	x := B[i];
+    else
+	// This should be true because A_res is nonzero
+	assert exists(ij){[i,j] : i,j in [1..2] |
+			  A_res[i,j] ne 0 and i lt j};
+	i := ij[1]; j := ij[2];
+	// Now this is anisotropic
+	x := B[i] + B[j];
+    end if;
+    return true, x;
+end function;
+
+// reflections with respect to A - Cartan-Dieudonne
+function find_reflection_pts(sigma, A)
+    // assert Transpose(sigma)*A*sigma eq A;
+    assert sigma*A*Transpose(sigma) eq A;
+    if sigma eq IdentityMatrix(BaseRing(A), Nrows(A)) then
+	return [];
+    end if;
+    if (Nrows(A) eq 1) and (sigma[1,1] eq -1) then
+	return [Vector([1])];
+    end if;
+    fixed := Eigenspace(sigma,1);
+    aniso_fixed, x := get_aniso_vec(fixed, A);
+    if aniso_fixed then
+	// case 1
+	H := Kernel(Transpose(Matrix(x*A)));
+	sigma_H := Restrict(sigma, H);
+	A_H := BasisMatrix(H)*A*Transpose(BasisMatrix(H));
+	refls_pts_H := find_reflection_pts(sigma_H, A_H);
+	refls_pts := [y*BasisMatrix(H) : y in refls_pts_H];
+    else
+	// For now this works, since A is positive definite.
+	// In general, should find a way to find y such that x is aniso
+	aniso, y := get_aniso_vec(Image(sigma-1), A);
+//	x := Solution(sigma-1,y);
+//	assert (x*A, x) ne 0;
+	if aniso then
+	    // case 2
+	    tau := build_reflection(y,A);
+	    refls_pts := [y] cat find_reflection_pts(tau*sigma, A);
+	else
+	    // case 3
+	    n := Nrows(A);
+	    // from step 1
+	    assert (n ge 4) and IsEven(n) and (Determinant(sigma) eq 1);
+	    aniso, y := get_aniso_vec(RowSpace(A), A);
+	    assert aniso; // else A = 0, which doesn't make sense
+	    tau := build_reflection(y,A);
+	    refls_pts := [y] cat find_reflection_pts(tau*sigma, A);
+	end if;
+    end if;
+    assert &*[build_reflection(y, A) : y in refls_pts] eq sigma;
+    return refls_pts;
+end function;
+
+function spinor_norm(sigma, A)
+    refl_pts := find_reflection_pts(sigma, A);
+    if #refl_pts eq 0 then return 1; end if;
+    return &*[(x*A, x) : x in refl_pts];
+end function;
+
+function nu(d,r)
+    fac_num := Factorization(ideal<Integers(Parent(r)) | Numerator(r)>);
+    fac_den := Factorization(ideal<Integers(Parent(r)) | Denominator(r)>);
+    fac := fac_num cat fac_den;
+    ret := 1;
+    for p_e in fac do
+	p, e := Explode(p_e);
+	if IsOdd(e) and (Order(p)!d in p) then
+	    ret := -ret;
+	end if;
+    end for;
+    return ret;
+end function;
+
+function rho(d, sigma, A)
+    // assert Transpose(sigma)*A*sigma eq A;
+    assert sigma * A * Transpose(sigma) eq A;
+    if (Determinant(sigma) eq -1) then
+	return rho(d, -sigma, A);
+    end if;
+    return nu(d, spinor_norm(sigma, A));
+end function;
+
+// Is this the spinor norm of sigma or of its transpose???
+function spinor_norm_rho(d, sigma, A)
+    return rho(d, ChangeRing(Transpose(Matrix(sigma)), BaseRing(A)), A);
+end function;
+
+intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
+				   name := "x") -> GrpRep
+{Constructs the spinor norm representation of the matrix group G.}
+  A := InnerForm(InnerForm(G,1)); 
+  K := BaseRing(A);
+  Z_K := Integers(K);
+  D := Numerator(Determinant(A));
+  require Z_K!D in Z_K!!d :
+		"d should divide the discriminant";
+  n := Nrows(A);
+  M := CombinatorialFreeModule(K, [name]);
+  a := Sprintf("
+  function action(g,m,V)
+  	return spinor_norm_rho(%m, g, %m)*(V`M).m;   
+  end function;
+  return action;
+  ", d, A);
+  return GroupRepresentation(GL(n,K), M, a);
+end intrinsic;
+
+intrinsic Rho(G::GrpMat, k::RngIntElt, j::RngIntElt) -> GrpRep
+{Constructs the representation det^k \otimes Sym_j}
+  det := DeterminantRepresentation(G : k := k);
+  std := StandardRepresentation(G);
+  sym := SymmetricRepresentation(std, j);
+  return TensorProduct(det, sym);
+end intrinsic;
+
+intrinsic RhoSpinor(G::GrpMat, d::RngIntElt, j::RngIntElt) -> GrpRep
+{Constructs the representation spin_d \otimes Sym_j}
+  spin := SpinorNormRepresentation(G, d);
+  std := StandardRepresentation(G);
+  sym := SymmetricRepresentation(std, j);
+  return TensorProduct(spin, sym);
+end intrinsic;

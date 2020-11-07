@@ -455,53 +455,6 @@ intrinsic Dimension(M::ModFrmAlg) -> RngIntElt
 	return &+[Dimension(h) : h in M`H];
 end intrinsic;
 
-intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
-{ Returns a list of cusp forms associated to this space. }
-	// Initialize space of modular forms if needed.
-	ModFrmAlgInit(M);	
-
-	// Display an error if no Hecke matrices have been computed yet.
-	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
-
-	// Decompose eigenspace.
-	spaces, reducible :=
-		EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
-
-	// A list of cusp forms.
-	cuspForms := [* *];
-
-	for space in spaces do
-		// Extract the first basis vector of the eigenspace.
-		basis := Basis(space);
-
-		for vec in basis do
-			// Construct an element of the modular space.
-			mform := New(ModFrmAlgElt);
-
-			// Assign parent modular space.
-			mform`M := M;
-
-			// Assign vector.
-			mform`vec := vec;
-
-			// Flag as cuspidal?
-			mform`IsCuspidal := &+[ x : x in Eltseq(vec) ] eq 0;
-
-			// Cusp forms are not Eistenstein.
-			mform`IsEisenstein := not mform`IsCuspidal;
-
-			// This is an eigenform if and only if the size
-			//  of the subspace has dimension 1.
-			mform`IsEigenform := #basis eq 1;
-
-			// Add to list.
-			Append(~cuspForms, mform);
-		end for;
-	end for;
-
-	return cuspForms;
-end intrinsic;
-
 intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 { Computes the cuspidal subspace of M. }
 	// Initialize the space of algebraic modular forms.

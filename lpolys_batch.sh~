@@ -1,0 +1,2 @@
+for 
+magma -b idx:=1 wt:=0 lpolys_single_job.m

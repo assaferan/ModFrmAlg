@@ -57,6 +57,9 @@ declare attributes IsoParam:
 	//  subspaces.
 	IsotropicParam;
 
+
+import "neighbor-CN1.m" : BuildNeighborProc;
+
 // A helper function for computing valid pivots.
 function __pivots(n, aniso, k)
         // Base case.
@@ -621,7 +624,9 @@ end intrinsic;
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngInt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of isotropic subspaces. }
-	// Consider the rationals as a number field.
+
+        // Consider the rationals as a number field.
+
 	K := RationalsAsNumberField();
 
 	// The ring of integers as an order.
@@ -641,6 +646,15 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	// Verify that the ideal is prime.
 	require IsPrime(pR): "Specified ideal must be prime.";
 
+	// These general formulae don't exactly work when we have
+	// a non-trivial radical. Check later how to fix that.
+	// Meanwhile, we just count them.
+	L := Module(M);
+	nProc := BuildNeighborProc(L, pR, k);
+	V := nProc`L`Vpp[pR]`V;
+	l := AllIsotropicSubspaces(V, k);
+	return #l;
+     
 	// Compute the residue class field.
 	F := ResidueClassField(pR);
 

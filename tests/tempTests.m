@@ -36,9 +36,10 @@ function inspect(M : prec := 20)
     if IsZero(Dimension(M)) then return [* *]; end if;
     D := Decomposition(M,100);
     eigenforms := HeckeEigenforms(M);
-    evs := [* HeckeEigensystem(f,1 : prec := prec) :  f in eigenforms *];
-    lpolys := [* LPolynomials(f : prec := prec) : f in eigenforms *];
-    return evs, lpolys;
+    evs := [* HeckeEigensystem(f,1 : Precision := prec) :  f in eigenforms *];
+    lpolys := [* LPolynomials(f : Precision := prec) : f in eigenforms *];
+    lps :=  [* [Factorization(lp[p]) : p in PrimesUpTo(prec)] : lp in lpolys *];
+    return evs, lps;
 end function;
 
 QQ := Rationals();

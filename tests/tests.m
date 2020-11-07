@@ -24,6 +24,7 @@ import "examples.m" : AlgebraicModularFormsExamples;
 import "../io/path.m" : path;
 import "../neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
 import "../neighbors/inv-CN1.m" : Invariant;
+import "../nipp_parse.m" : parseNippFile, NippToForm;
 
 forward testExample;
 forward testUnitaryMassFormula;
@@ -164,7 +165,7 @@ function testDecomposition(M, example, ps, N, useLLL, orbits :
 	    evs_f := [];
 	    for dim in [1..#example`evs[1]] do
 		t := Cputime();
-		Append(~evs_f, HeckeEigensystem(f, dim : prec := ps[1..N],
+		Append(~evs_f, HeckeEigensystem(f, dim : Precision := ps[1..N],
 							 Estimate := true,
 							 UseLLL := useLLL,
 							 Orbits := orbits));
@@ -274,9 +275,45 @@ procedure testRamaTornaria9()
 		  : i in [1..#reps]] : f in eigenforms *];
     assert exists(i){i : i in [1..#thetas] | IsEmpty(Coefficients(thetas[i]))};
     f := eigenforms[i];
-    lpolys := [lpoly : lpoly in LPolynomials(f : prec := 5)];
+    lpolys := LPolynomials(f : Precision := 5);
+    lpolys := [lpolys[p] : p in [2,3,5]];
     x := Universe(lpolys).1;
     assert lpolys[1] eq 64*x^4 + 56*x^3 + 24*x^2 + 7*x + 1;
     assert lpolys[2] eq 729*x^4 + 81*x^3 + 3*x^2 + 3*x + 1;
     assert lpolys[3] eq 15625*x^4 - 375*x^3 + 85*x^2 - 3*x + 1;
+end procedure;
+
+// In order to find out interesting things
+// Right now focus on disc le 256
+// wt is the power of the symmetric representation
+// (2*k+j-6 for paramodular P_{k,j})
+procedure get_lpolys(nipp_idx, wt : prec := 10)
+  nipp := parseNippFile("nipp1-256.txt");
+  disc := nipp[nipp_idx]`D;
+  g := nipp[nipp_idx]`genus;
+  A := NippToForm(nipp[nipp_idx]);
+  G := SpecialOrthogonalGroup(A);
+  std := StandardRepresentation(GL(5, Rationals()));
+  W := SymmetricRepresentation(std, wt);
+  M := AlgebraicModularForms(G, W);
+  D := Decomposition(M, 100);
+  fs := HeckeEigenforms(M);
+  lpolys := [LPolynomials(f : Precision := prec) : f in fs];
+  nonlift_idxs := [];
+  for idx in [1..#fs] do
+    lpolys_f := lpolys[idx];
+    nonlift := &and[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
+		    | disc mod p ne 0];
+    if nonlift then
+      Append(~nonlift_idxs, idx);
+    end if;
+  end for;
+  id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o.amf", prec, disc, g, wt);
+  if not IsEmpty(nonlift_idxs) then
+    nonlift_str := "nonlifts" cat &cat [Sprintf("_%o", i) : i in nonlift_idxs];
+  else
+    nonlift_str := "";
+  end if;
+  fname := id_str cat nonlift_str; 
+  Save(M, fname);
 end procedure;

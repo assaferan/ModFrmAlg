@@ -278,6 +278,18 @@ intrinsic StandardRepresentation(G::GrpMat : name := "x") -> GrpRep
   return GroupRepresentation(G, M, a : params := [* <"STANDARD", true> *]);
 end intrinsic;
 
+intrinsic DeterminantRepresentation(G::GrpMat : k := 1, name := "v") -> GrpRep
+{Constructs the 1-dimensional representation, where G acts via det.}
+  M := CombinatorialFreeModule(BaseRing(G), [name]);
+  a := Sprintf("
+    function action(g,m,V)
+       return (V`M)!((Determinant(g)^(%o))*((V`M).m)`vec);
+    end function;
+    return action;
+  ", k);
+  return GroupRepresentation(G, M, a);
+end intrinsic;
+
 intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
 {Constructs the representation Sym(V).}
     R := BaseRing(V);	  
@@ -1174,4 +1186,20 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
   return action;
   ", d, A);
   return GroupRepresentation(GL(n,K), M, a);
+end intrinsic;
+
+intrinsic Rho(G::GrpMat, k::RngIntElt, j::RngIntElt) -> GrpRep
+{Constructs the representation det^k \otimes Sym_j}
+  det := DeterminantRepresentation(G : k := k);
+  std := StandardRepresentation(G);
+  sym := SymmetricRepresentation(std, j);
+  return TensorProduct(det, sym);
+end intrinsic;
+
+intrinsic RhoSpinor(G::GrpMat, d::RngIntElt, j::RngIntElt) -> GrpRep
+{Constructs the representation spin_d \otimes Sym_j}
+  spin := SpinorNormRepresentation(G, d);
+  std := StandardRepresentation(G);
+  sym := SymmetricRepresentation(std, j);
+  return TensorProduct(spin, sym);
 end intrinsic;

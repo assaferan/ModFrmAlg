@@ -300,8 +300,14 @@ function HeckeOperatorCN1(M, pR, k
     // The genus representatives.
     reps := Representatives(Genus(M));
 
-    hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] :
+//    rep_idxs := [idx : idx in [1..#reps] | Dimension(M`H[idx]) ne 0];
+//    rep_spaces := [M`H[idx] : idx in rep_idxs];
+
+   hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]] :
 	       h in M`H];
+
+//    hecke := [ [ [* M`W!0 : idx in rep_idxs *] : vec_idx in [1..Dimension(h)]] :
+//	       h in rep_spaces];
 
     // Keeping track of the gamma_i_j
     //  isom := [ [[] : h1 in H] : h2 in H ];
@@ -316,13 +322,16 @@ function HeckeOperatorCN1(M, pR, k
     n := Dimension(Q);
 
     fullCount := #M`H * NumberOfNeighbors(M, pR, k);
+//    fullCount := #rep_idxs * NumberOfNeighbors(M, pR, k);
     count := 0;
     elapsed := 0;
     start := Realtime();
 	
     for idx in [1..#M`H] do
+	   //   for idx in [1..#rep_idxs] do
 	// The current isometry class under consideration.
 	L := reps[idx];
+//L := reps[rep_idxs[idx]];
 
 	// Build neighboring procedure for this lattice.
 	nProc := BuildNeighborProc(L, pR, k
@@ -332,7 +341,8 @@ function HeckeOperatorCN1(M, pR, k
 	    printf "Computing %o%o-neighbors for isometry class "
 		   cat "representative #%o...\n", pR,
 		   k eq 1 select "" else "^" cat IntegerToString(k),
-		   idx;
+					   //		   reps_idxs[idx];
+					   idx;
 	end if;
 	
 	if Orbits then
@@ -419,11 +429,17 @@ function HeckeOperatorCN1(M, pR, k
     end for;
 
     iota := [h`embedding : h in M`H];
-   
+//    iota := [h`embedding : h in rep_spaces];
+
+
     mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
 		      vec_idx in [1..Dimension(M`H[space_idx])]] :
-	      space_idx in [1..#M`H]] : idx in [1..#M`H]];
-
+           space_idx in [1..#M`H]] : idx in [1..#M`H]];
+/*
+     mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
+		      vec_idx in [1..Dimension(rep_spaces[space_idx])]] :
+           space_idx in [1..#rep_idxs]] : idx in [1..#rep_idxs]];
+*/
     vert_blocks := [&cat mat : mat in mats];
 
     empty_operator := MatrixAlgebra(BaseRing(M),0)![];

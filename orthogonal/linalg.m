@@ -42,8 +42,10 @@ function Decompose(T, t)
 
     for data in fs do
 	// Number field associated to one of the irreducible factors.
-	
-	K := ext< BaseRing(data[1]) | data[1] >;
+
+	// This started throwing errors when base ring is a FldOrd
+	// K := ext< BaseRing(data[1]) | data[1] >;
+	K := ext< NumberField(BaseRing(data[1])) | data[1] >;
 
 	// The eigenvalue associated to this factor.
 	if Degree(data[1]) eq 1 then

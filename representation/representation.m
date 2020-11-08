@@ -1196,10 +1196,18 @@ intrinsic Rho(G::GrpMat, k::RngIntElt, j::RngIntElt) -> GrpRep
   return TensorProduct(det, sym);
 end intrinsic;
 
-intrinsic RhoSpinor(G::GrpMat, d::RngIntElt, j::RngIntElt) -> GrpRep
+intrinsic RhoSpinor(G::GrpRed, d::RngIntElt, j::RngIntElt) -> GrpRep
 {Constructs the representation spin_d \otimes Sym_j}
   spin := SpinorNormRepresentation(G, d);
-  std := StandardRepresentation(G);
+  A := InnerForm(InnerForm(G,1));
+  n := Nrows(A);
+  K := BaseRing(A);
+  if (Degree(K) eq 1) then
+    K := Rationals();
+  end if;
+  std := StandardRepresentation(GL(n,K));
   sym := SymmetricRepresentation(std, j);
-  return TensorProduct(spin, sym);
+  W := TensorProduct(spin, sym);
+  W`weight := <d,j>;
+  return W;
 end intrinsic;

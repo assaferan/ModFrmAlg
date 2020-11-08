@@ -677,15 +677,17 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
   n := Dimension(ReflexiveSpace(Module(f`M)));
   D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
   if assigned Weight(f`M)`weight then
+     d := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];
   else
     // In this case, we don't really know the weight.
     // We guess it is trivial. Could we infer it from W?
+     d := 1;
      w := 0;
   end if;
   // Change this to correspond to the correct weight
   // should be (??)
   // LSeries(2*n+4, [-n-1,-n,0,1], D) ?? doesn't make sense. look more closely
   return LSeries(2*w+4, [-w-1,-w,0,1], D, local_factor :
-		 Precision := Precision);
+		 Sign := (-1)^w*nu(D,d), Precision := Precision);
 end intrinsic;

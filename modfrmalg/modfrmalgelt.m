@@ -581,7 +581,13 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 // K_x<x> := PolynomialRing(K);
   K_x<x> := PowerSeriesRing(K);
   D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
-  w := Weight(f`M)`weight[2];
+  if assigned Weight(f`M)`weight then
+     w := Weight(f`M)`weight[2];
+  else
+    // In this case, we don't really know the weight.
+    // We guess it is trivial. Could we infer it from W?
+     w := 0;
+  end if;
   dim := Degree(K);
   case n:
       when 3:
@@ -597,8 +603,8 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
           else
 	     L := Module(f`M);
 	     eps_p := WittInvariant(L,BaseRing(L)!!p);
-             L_poly := p^3*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*x+1;
-             L_poly *:= eps_p*p*x+1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*p^w*x+1;
+             L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:
 	  L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
@@ -670,7 +676,13 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
   D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
-  w := Weight(f`M)`weight[2];
+  if assigned Weight(f`M)`weight then
+     w := Weight(f`M)`weight[2];
+  else
+    // In this case, we don't really know the weight.
+    // We guess it is trivial. Could we infer it from W?
+     w := 0;
+  end if;
   // Change this to correspond to the correct weight
   // should be (??)
   // LSeries(2*n+4, [-n-1,-n,0,1], D) ?? doesn't make sense. look more closely

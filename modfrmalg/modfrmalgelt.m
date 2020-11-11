@@ -581,11 +581,12 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 // K_x<x> := PolynomialRing(K);
   K_x<x> := PowerSeriesRing(K);
   D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
-  name := f`M`W`M`names[1];
-  if Type(name) eq MonStgElt then
-     w := 1;
+  if assigned Weight(f`M)`weight then
+     w := Weight(f`M)`weight[2];
   else
-    w := Degree(name);
+    // In this case, we don't really know the weight.
+    // We guess it is trivial. Could we infer it from W?
+     w := 0;
   end if;
   dim := Degree(K);
   case n:
@@ -596,14 +597,14 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
       when 5:
           if D mod p ne 0 then
-	     L_poly := p^6*x^4 - (evs[1]*p^3)*x^3 +
-		    ((evs[2] + p^2 + 1)*p)*x^2 -
-		    evs[1]*x + 1;
+	     L_poly := p^(6+4*w)*x^4 - (evs[1]*p^(3+3*w))*x^3 +
+	            ((evs[2] + p^2 + 1)*p^(1+2*w))*x^2 -
+		    evs[1]*p^w*x + 1;
           else
 	     L := Module(f`M);
 	     eps_p := WittInvariant(L,BaseRing(L)!!p);
-             L_poly := p^3*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*x+1;
-             L_poly *:= eps_p*p*x+1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*p^w*x+1;
+             L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:
 	  L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
@@ -665,19 +666,30 @@ end intrinsic;
 intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
 {Build the L-series corresponding to f.}
   function local_factor(p,d)
-    return LPolynomial(f, p, d);
+    poly := LPolynomial(f, p, d);
+    CC := ComplexField();
+    CC_x := PowerSeriesRing(CC);
+    K := BaseRing(Parent(poly));
+    r := Roots(DefiningPolynomial(K),CC)[1][1];
+    h := hom<K -> CC | r>;    
+    return CC_x![h(c) : c in Eltseq(poly)];
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
   D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
-  name := f`M`W`M`names[1];
-  if Type(name) eq MonStgElt then
-     w := 1;
+  if assigned Weight(f`M)`weight then
+     d := Weight(f`M)`weight[1];
+     w := Weight(f`M)`weight[2];
+     j := Weight(f`M)`weight[3];
   else
-    w := Degree(name);
+    // In this case, we don't really know the weight.
+    // We guess it is trivial. Could we infer it from W?
+     d := 1;
+     w := 0;
+     j := 0;
   end if;
   // Change this to correspond to the correct weight
   // should be (??)
   // LSeries(2*n+4, [-n-1,-n,0,1], D) ?? doesn't make sense. look more closely
-  return LSeries(4, [-w-1,-w,0,1], D, local_factor :
-		 Precision := Precision);
+  return LSeries(2*w+4, [-w-1+j,-w+j,j,j+1], D, local_factor :
+		 Sign := (-1)^w*nu(D,d), Precision := Precision);
 end intrinsic;

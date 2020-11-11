@@ -102,12 +102,15 @@ declare attributes GrpRep :
 	known_grps,
 	// This is assigned only if our representation is a tensor product, since
 	// in this case we can compute the action matrix easily by computing the
+        // !!!! TODO - uniformize this treatment to "base representation data"
 	// dual representation
 	dual,
 	// standard representation
 	standard,
 	// symmetric representation
-	symmetric, 
+	symmetric,
+        // alternating representation
+        alternating,
 	// tensor product of the matrices.
 	tensor_product,
 	// This is assigned only if our representation is a pullback
@@ -174,6 +177,10 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
 
   if IsDefined(param_array, "SYMMETRIC") then
       V`symmetric := param_array["SYMMETRIC"];
+  end if;
+
+  if IsDefined(param_array, "ALTERNATING") then
+      V`alternating := param_array["ALTERNATING"];
   end if;
 
   if IsDefined(param_array, "WEIGHT") then
@@ -291,7 +298,7 @@ intrinsic DeterminantRepresentation(G::GrpMat : k := 1, name := "v") -> GrpRep
 end intrinsic;
 
 intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
-{Constructs the representation Sym(V).}
+{Constructs the representation Sym^n(V).}
     R := BaseRing(V);	  
     R_X := PolynomialRing(R, Rank(V));
     AssignNames(~R_X, V`M`names);
@@ -311,6 +318,34 @@ intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
   return action;
   ");
   return GroupRepresentation(V`G, M, a : params := [* <"SYMMETRIC", V> *]);
+end intrinsic;
+
+function make_wedge_str(names, seq)
+  ret := Sprintf("%o", names[seq[1]]);
+  for i in [2..#seq] do
+    ret cat:= Sprintf("^%o", names[seq[i]]);
+  end for;
+  return ret;
+end function;
+
+// Should display those better...
+intrinsic AlternatingRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
+{Constructs the representation Alt^n(V).}
+  R := BaseRing(V);
+  indices := Sort([SetToSequence(s) : s in Subsets(Set([1..Dimension(V)]),n)]);
+  keys := {@ make_wedge_str(V`M`names, s) : s in indices @};
+  M := CombinatorialFreeModule(R, keys);
+  a := Sprintf("
+  function action(g,m,V)
+       base_names := Split(V`M`names[m], \"^\");
+       idxs := [Index(V`alternating`M`names, name) : name in base_names];
+       vs := [V`alternating.i : i in idxs];
+       mat := Matrix([Eltseq((V`alternating`G!g)*v) : v in vs]);
+       return M!Reverse(Minors(mat,%o)); 
+       end function;
+  return action;
+  ", n);
+  return GroupRepresentation(V`G, M, a : params := [* <"ALTERNATING", V> *]);
 end intrinsic;
 
 intrinsic DualRepresentation(V::GrpRep) -> GrpRep
@@ -426,6 +461,9 @@ function build_rep_params(V)
     end if;
     if assigned V`symmetric then
 	Append(~params, < "SYMMETRIC", V`symmetric >);
+    end if;
+    if assigned V`alternating then
+	Append(~params, < "ALTERNATING", V`alternating >);
     end if;
     if assigned V`pullback then
 	Append(~params, < "PULLBACK", V`pullback >);
@@ -1196,10 +1234,34 @@ intrinsic Rho(G::GrpMat, k::RngIntElt, j::RngIntElt) -> GrpRep
   return TensorProduct(det, sym);
 end intrinsic;
 
-intrinsic RhoSpinor(G::GrpMat, d::RngIntElt, j::RngIntElt) -> GrpRep
-{Constructs the representation spin_d \otimes Sym_j}
+intrinsic SymSpinor(G::GrpRed, d::RngIntElt, k::RngIntElt) -> GrpRep
+{Constructs the representation spin_d \otimes Sym_k}
   spin := SpinorNormRepresentation(G, d);
-  std := StandardRepresentation(G);
-  sym := SymmetricRepresentation(std, j);
-  return TensorProduct(spin, sym);
+  A := InnerForm(InnerForm(G,1));
+  n := Nrows(A);
+  K := BaseRing(A);
+  if (Degree(K) eq 1) then
+    K := Rationals();
+  end if;
+  std := StandardRepresentation(GL(n,K));
+  sym := SymmetricRepresentation(std, k);
+  W := TensorProduct(spin, sym);
+  W`weight := <d,k,0>;
+  return W;
+end intrinsic;
+
+intrinsic AltSpinor(G::GrpRed, d::RngIntElt, j::RngIntElt) -> GrpRep
+{Constructs the representation spin_d \otimes Alt_j}
+  spin := SpinorNormRepresentation(G, d);
+  A := InnerForm(InnerForm(G,1));
+  n := Nrows(A);
+  K := BaseRing(A);
+  if (Degree(K) eq 1) then
+    K := Rationals();
+  end if;
+  std := StandardRepresentation(GL(n,K));
+  sym := AlternatingRepresentation(std, j);
+  W := TensorProduct(spin, sym);
+  W`weight := <d,0,j div 2>;
+  return W;
 end intrinsic;

@@ -745,17 +745,28 @@ end intrinsic;
 intrinsic AutomorphismGroup(lat::ModDedLat : Special := false) -> SeqEnum
 { Computes the automorphism group of the specified lattice. }
   if Special then
+      vprintf AlgebraicModularForms, 2:
+         "In AutomorphismGroup, with Special flag.\n";
       if assigned lat`SpecialAutomorphismGroup then
 	  return lat`SpecialAutomorphismGroup;
       end if;
+      vprintf AlgebraicModularForms, 2:
+	"Computing the regular automorphism group.\n";
       aut := AutomorphismGroup(lat);
       // Problem - this takes too long
       // return sub<aut |[x : x in aut | Determinant(x) eq 1]>;
       // This is to get the group {+-1}
       C2, phi := UnitGroup(Integers());
-      det_gens := [Determinant(x) : x in Generators(aut)];
+      vprintf AlgebraicModularForms, 2:
+	"Defining determinant.\n"; 
+// det_gens := [Determinant(x) : x in Generators(aut)];
+      det_gens := [Determinant(aut.i) : i in [1..NumberOfGenerators(aut)]]; 
       det := hom<aut -> C2 | [x @@ phi : x in det_gens]>;
+      vprintf AlgebraicModularForms, 2:
+	"Finding kernel.\n"; 
       special_aut := Kernel(det);
+      vprintf AlgebraicModularForms, 2:
+	"Done. Saving and returning.\n";
       // Save it for further use.
       lat`SpecialAutomorphismGroup := special_aut;
       return special_aut;

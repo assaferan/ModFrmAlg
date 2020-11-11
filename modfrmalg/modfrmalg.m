@@ -574,3 +574,8 @@ intrinsic VectorSpace(M::ModFrmAlg) -> ModtupFld
 {.}
   return Representation(M);
 end intrinsic;
+
+intrinsic Weight(M::ModFrmAlg) -> GrpRep
+{The representation which serves at the weight of M.}
+  return M`W;
+end intrinsic;

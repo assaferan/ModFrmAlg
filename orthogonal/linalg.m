@@ -45,7 +45,12 @@ function Decompose(T, t)
 
 	// This started throwing errors when base ring is a FldOrd
 	// K := ext< BaseRing(data[1]) | data[1] >;
-	K := ext< NumberField(BaseRing(data[1])) | data[1] >;
+	K0 := BaseRing(data[1]);
+	if Type(K0) eq FldOrd then
+	  K := ext< NumberField(K0) | data[1] >;
+	else
+	  K := ext< K0 | data[1] >;
+        end if;
 
 	// The eigenvalue associated to this factor.
 	if Degree(data[1]) eq 1 then

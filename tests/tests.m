@@ -303,12 +303,12 @@ procedure get_lpolys(nipp_idx, wt : prec := 10)
 // M := AlgebraicModularForms(G, W);
   M := OrthogonalModularForms(A, W);
 // D := Decomposition(M, 100);
-  fs := HeckeEigenforms(M);
-  lpolys := [LPolynomials(f : Precision := prec) : f in fs];
+  fs := HeckeEigenforms(M : Estimate := false);
+  lpolys := [LPolynomials(f : Estimate := false, Precision := prec) : f in fs];
   nonlift_idxs := [];
   for idx in [1..#fs] do
     lpolys_f := lpolys[idx];
-    nonlift := &and[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
+    nonlift := &or[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
 		    | disc mod p ne 0];
     if nonlift then
       Append(~nonlift_idxs, idx);

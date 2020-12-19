@@ -269,7 +269,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	return [ f`Eigenvalues[k][P] : P in Ps ], [ P : P in Ps ];
 end intrinsic;
 
-intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
+intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true) -> List
 { Returns a list of cusp forms associated to this space. }
 	// Initialize space of modular forms if needed.
 	ModFrmAlgInit(M);	
@@ -292,7 +292,7 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
 */
         // Decompose the spaceto eigenspaces
-        D := Decomposition(M);
+        D := Decomposition(M : Estimate := Estimate);
 
         // This actually repeats the previous to get the also the eigenvectors.
         // Since main computation is Hecke operators, we let it go for now
@@ -649,7 +649,9 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
   L_polys := AssociativeArray();
   for P in Ps do
       p := Norm(P);
-      L_polys[p] := LPolynomial(f, p, n);
+      L_polys[p] := LPolynomial(f, p, n :
+				Estimate := Estimate,
+				Orbits := Orbits);
   end for;
   return L_polys;
 end intrinsic;

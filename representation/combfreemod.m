@@ -118,12 +118,14 @@ end function;
 
 intrinsic Rank(CFM::CombFreeMod) -> RngIntElt
 {Return the rank of CFM.}
-  return #Basis(CFM);	  
+// return #Basis(CFM);
+   return Rank(CFM`M);
 end intrinsic;
 
 intrinsic Dimension(CFM::CombFreeMod) -> RngIntElt
 {Return the rank of CFM.}
-  return Rank(CFM);	  
+// return Rank(CFM);
+  return Dimension(CFM`M);
 end intrinsic;
 
 intrinsic Ngens(CFM::CombFreeMod) -> RngIntElt

@@ -213,7 +213,7 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
 
   K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
-  weight`G := GL(n,K);
+// weight`G := GL(n,K);
   O_n := OrthogonalGroup(ChangeRing(innerForm, K));
   return AlgebraicModularForms(O_n, weight);
 end intrinsic;

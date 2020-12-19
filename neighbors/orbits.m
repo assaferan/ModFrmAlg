@@ -69,14 +69,19 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 		xRoot`rank := xRoot`rank + 1;
 	    end if;
 	end procedure;
-	
+
+        rev_lookup := AssociativeArray();
+        for i in [1..#list] do
+	  rev_lookup[list[i]] := i;
+        end for;
 	// Apply the generators of the automorphism group to each subspace.
 	for x in list do
 	    for g in gs do
 		gens := [ b * g : b in Basis(x)];
 		// S := sub< V | x.1 * g >;
 		S := sub< V | gens >;
-		idx := Index(list, S);
+// idx := Index(list, S);
+                idx := rev_lookup[S];
 		union(x, list[idx], g);
 	    end for;
 	end for;

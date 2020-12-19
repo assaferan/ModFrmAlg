@@ -40,6 +40,8 @@ freeze;
 
 import "modfrmalg.m" : ModFrmAlgInit;
 
+import "../representation/representation.m" : nu;
+
 ///////////////////////////////////////////////////////////////////
 //                                                               //
 //    ModFrmAlgElt: The algebraic modular form element object.   //
@@ -192,6 +194,11 @@ procedure updatePrecision(f, k, ~Precision)
        error "No eigenvalues have been computed for this eigenform";
     end if;
     Precision := Sort([x : x in already_known]);
+  else
+    // This handles the case of integers  
+    if Type(Precision) eq SeqEnum then
+       Precision := [Integers(BaseRing(f`M))!!I : I in Precision];
+    end if;
   end if;
 end procedure;
 
@@ -218,21 +225,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	pivot := 0;
 	repeat pivot +:= 1;
 	until f`vec[pivot] ne 0;
-/*
-	if IsZero(Precision) then
-	    already_known := {};
-	    if IsDefined(f`M`Hecke`Ts, k) then
-		already_known := already_known join Keys(f`M`Hecke`Ts[k]);
-	    end if;
-	    if IsDefined(f`Eigenvalues, k) then
-		already_known := already_known join Keys(f`Eigenvalues[k]);
-	    end if;
-	    if IsEmpty(already_known) then
-		error "No eigenvalues have been computed for this eigenform";
-	    end if;
-	    Precision := Sort([x : x in already_known]);
-	end if;
-*/
+
         updatePrecision(f, k, ~Precision);
 	
 	if GetVerbose("AlgebraicModularForms") ge 2 then
@@ -249,16 +242,6 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	else
 	    Ps := Sort([x : x in Keys(hecke_images)]);
 	end if;
-/*
-	K := BaseRing(f`M`W);
-	L := BaseRing(f`vec);
-	roots := Roots(MinimalPolynomial(K.1), L);
-	emb := hom<K -> L | roots[1][1]>;
-	for p in Ps do
-	    hecke_image := Vector([emb(x) : x in Eltseq(hecke_images[p])]);
-	    f`Eigenvalues[k][p] := DotProduct(f`vec, hecke_image);
-	end for;
-*/
 	found_emb := false;
 	for p in Ps do
 	    if IsDefined(f`Eigenvalues[k], p) then
@@ -303,12 +286,25 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 		end if;
 	end if;
 
+        // Not needed, if none were computed, we will compute them
+/*
 	// Display an error if no Hecke matrices have been computed yet.
 	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
+*/
+        // Decompose the spaceto eigenspaces
+        D := Decomposition(M);
+
+        // This actually repeats the previous to get the also the eigenvectors.
+        // Since main computation is Hecke operators, we let it go for now
 
 	// Decompose eigenspace.
-	spaces, reducible := 
+        if IsDefined(M`Hecke`Ts, 1) then
+	  spaces, reducible := 
 		EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
+        else // space is zero-dimensional
+	  spaces := [];
+          reducible := [];
+        end if;
 
 	// This is not enough yet, since the spaces aren't the eigenvectors.
 	// !!! TODO - replace this 100 by a well chosen bound
@@ -327,7 +323,7 @@ intrinsic HeckeEigenforms(M::ModFrmAlg) -> List
 		    i in [1..#reps]];
 	// instead of dividing by wts[i], we multiply for the case of positive
 	// characteristic
-	wt_prod := &*wts;
+        wt_prod := IsEmpty(wts) select 1 else &*wts;
 	mult_wts := [wt_prod div wt : wt in wts];
 	
 	for i in [1..#spaces] do
@@ -558,8 +554,6 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
   end if;
   return true;
 end intrinsic;
-
-import "../representation/representation.m" : nu;
 
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :

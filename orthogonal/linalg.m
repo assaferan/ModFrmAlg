@@ -242,7 +242,7 @@ function SimpleIrreducibleTest(W,a)
 end function;
 
 function W_is_irreducible(M,W,a,random_operator_bound :
-			  estimate := true, orbits := true, useLLL := true)
+			  Estimate := true, Orbits := true, UseLLL := true)
    /*
    W = subspace of the dual
    a = exponent of factor of the characteristic polynomial.
@@ -259,9 +259,9 @@ function W_is_irreducible(M,W,a,random_operator_bound :
          printf "Trying to prove irreducible using random sum of Hecke operators.\n";
       end if;
       T := &+[Random([-3,-2,-1,1,2,3])*Restrict(HeckeOperator(M,ell :
-						Estimate := estimate,
-						Orbits := orbits,
-						UseLLL := useLLL), W) : 
+						Estimate := Estimate,
+						Orbits := Orbits,
+						UseLLL := UseLLL), W) : 
                 ell in PrimesUpTo(random_operator_bound, BaseRing(M))];
       f := CharacteristicPolynomial(T);
       if IsVerbose("AlgebraicModularForms") then 
@@ -276,9 +276,9 @@ function W_is_irreducible(M,W,a,random_operator_bound :
 
 end function;
 
-function Decomposition_recurse(M, V, primes, prime_idx,
+function Decomposition_recurse(M, V, primes, prime_idx, 
                                proof, random_op :
-			       useLLL := true, estimate := true, orbits := true)
+			       UseLLL := true, Estimate := true, Orbits := true)
 
    assert Type(M) eq ModFrmAlg;
    assert Type(primes) eq SeqEnum;
@@ -288,22 +288,24 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    // Compute the Decomposition of the subspace V of M
    // starting with Tp.
    if Dimension(V) eq 0 then
-      return [];
+      return [], true;
    end if;
 
+
    if prime_idx gt #primes then
-       return [V];
+     return [V], false;
    end if;
+
    
    fac := Factorization(ideal<Integers(BaseRing(M))|
 			     Generators(primes[prime_idx])>);
    // if the prime is ramified, at the moment the Hecke Operator
    // is not computed correctly
    if (#fac eq 1) and (fac[1][2] eq 2) then
-       return Decomposition_recurse(M, V, primes, prime_idx+1, proof,
-				    random_op : useLLL := useLLL,
-						estimate := estimate,
-						orbits := orbits);
+		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
+				    random_op : UseLLL := UseLLL,
+						Estimate := Estimate,
+						Orbits := Orbits);
    end if;
 
    pR := fac[1][1];
@@ -312,8 +314,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    vprintf AlgebraicModularForms, 2 : "\t\t(will stop at %o)\n",
 				      Norm(primes[#primes]);
 
-   T := Restrict(HeckeOperator(M, pR : Estimate := estimate,
-				      Orbits := orbits, UseLLL := useLLL), V);
+   T := Restrict(HeckeOperator(M, pR : Estimate := Estimate,
+				      Orbits := Orbits, UseLLL := UseLLL), V);
    D := [* *];
 
    
@@ -334,6 +336,7 @@ function Decomposition_recurse(M, V, primes, prime_idx,
        printf "\t\ttime = %o\n", Cputime(t);
    end if;
 
+   is_complete := true;
    for fac in FAC do
       f,a := Explode(fac);
       if Characteristic(BaseRing(M)) eq 0 then
@@ -351,27 +354,30 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 
       if Characteristic(BaseRing(M)) eq 0 and
 	 W_is_irreducible(M,W,a,random_op select Norm(pR) else 0 :
-			  estimate := estimate, orbits := orbits,
-			  useLLL := useLLL) then
-         Append(~D,W); 
+			  Estimate := Estimate, Orbits := Orbits,
+			  UseLLL := UseLLL) then
+         Append(~D,W);
+         is_complete_W := true;
       else
           if prime_idx lt #primes then
 	      q_idx   := Dimension(W) eq Dimension(V) select
 			 prime_idx + 1 else 1;
-	      Sub  := Decomposition_recurse(M, W, primes, q_idx, 
+              Sub, is_complete_W  := Decomposition_recurse(M, W, primes, q_idx, 
                                             proof, random_op :
-					    useLLL := useLLL,
-					    orbits := orbits,
-					    estimate := estimate); 
+					    UseLLL := UseLLL,
+					    Orbits := Orbits,
+					    Estimate := Estimate); 
               for WW in Sub do 
                   Append(~D, WW);
               end for;
           else
               Append(~D,W);
+              is_complete_W := false;
           end if;
       end if;
+      is_complete and:= is_complete_W;
    end for;
-   return D;
+   return D, is_complete;
 end function;
 
 procedure SortDecomp(~D)
@@ -381,35 +387,39 @@ procedure SortDecomp(~D)
 end procedure;
 
 intrinsic Decomposition(M::ModFrmAlg, bound::RngIntElt :
-			useLLL := true,
-			orbits := true,
-			estimate := true,
+			UseLLL := true,
+			Orbits := true,
+			Estimate := true,
 			Proof := true,
-		        Force := false) -> SeqEnum
+		        Force := false) -> SeqEnum, BoolElt
 {Decomposition of M with respect to the Hecke operators T_p with
 p coprime to the level of M and p<= bound. }
 
    if Dimension(M) eq 0 then
-      return [];
+      return [], true;
    end if;
 
    if Force or (not assigned M`Hecke`decomposition) then   
 
       RF := recformat <
-      bound  : RngIntElt, // bound so far
-      decomp : List    // subspace of M
+        bound  : RngIntElt, // bound so far
+        decomp : List,   // subspaces of M
+        is_complete : BoolElt
       >;
 
       D := [* VectorSpace(M) *];
 
-      M`Hecke`decomposition := rec < RF | bound := 0, decomp := D>;
+      M`Hecke`decomposition := rec < RF | bound := 0,
+	decomp := D,
+	is_complete := false>;
    end if;
 
    decomp := (M`Hecke`decomposition)`decomp;
    known  := (M`Hecke`decomposition)`bound;
+   is_complete := (M`Hecke`decomposition)`is_complete;
    if bound le known then
       SortDecomp(~decomp);
-      return decomp;
+      return decomp, is_complete;
    end if;
 
    // refine decomp
@@ -421,17 +431,51 @@ p coprime to the level of M and p<= bound. }
    */
    primes := PrimesUpTo(bound, F);
    prime_idx := [i : i in [1..#primes] | Norm(primes[i]) gt known][1];
-   use_LLL := useLLL and (not IsSpecialOrthogonal(M));
+   use_LLL := UseLLL and (not IsSpecialOrthogonal(M));
+   refined_decomp := [* *];
+   is_complete := true;
+   for MM in decomp do
+       DD, is_complete_MM := Decomposition_recurse(M,MM, primes, prime_idx,
+						   Proof, false :
+						   UseLLL := use_LLL,
+						   Orbits := Orbits,
+						   Estimate := Estimate);
+       refined_decomp cat:= DD;
+       is_complete and:= is_complete_MM;
+   end for;
+/*
    refined_decomp := &cat[Decomposition_recurse(M,MM, primes, prime_idx,
 						Proof, false :
 						useLLL := use_LLL,
 						orbits := orbits,
 						estimate := estimate) :
                           MM in decomp];
-         
+*/
    (M`Hecke`decomposition)`bound := bound;
    (M`Hecke`decomposition)`decomp := refined_decomp;
+   (M`Hecke`decomposition)`is_complete := is_complete;
 
    SortDecomp(~refined_decomp);
-   return refined_decomp;
+   return refined_decomp, is_complete;
+end intrinsic;
+
+intrinsic Decomposition(M::ModFrmAlg :
+			UseLLL := true,
+			Orbits := true,
+			Estimate := true,
+			Proof := true,
+		        Force := false) -> SeqEnum, BoolElt
+{Decomposition of M with respect to the Hecke operators T_p with
+p coprime to the level of M and p<= bound. }
+   bound := 10;
+   is_complete := false; 
+   while not is_complete do
+     D, is_complete := Decomposition(M, bound : UseLLL := UseLLL,
+				     Orbits := Orbits,
+				     Estimate := Estimate,
+				     Proof := Proof,
+				     Force := Force);
+     bound *:= 2;
+   end while;
+   return D;
 end intrinsic;

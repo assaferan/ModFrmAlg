@@ -153,9 +153,9 @@ end procedure;
 function testDecomposition(M, example, ps, N, useLLL, orbits :
 			   sturm_bound := 10)
     
-    D := Decomposition(M, sturm_bound : estimate := true,
-					useLLL := useLLL,
-					orbits := orbits);
+    D := Decomposition(M, sturm_bound : Estimate := true,
+					UseLLL := useLLL,
+					Orbits := orbits);
     eigenforms := HeckeEigenforms(M);
     evs := [* *];
     RR := RealField();
@@ -285,18 +285,24 @@ end procedure;
 
 // In order to find out interesting things
 // Right now focus on disc le 256
-// wt is the power of the symmetric representation
-// (2*k+j-6 for paramodular P_{k,j})
+// wt is a pair [k,j] for Paramodular P_{k,j}
+// However, right now (until we implement general irreps)
+// We simply take the weight to be Sym^j(v) \otimes Sym^(k-3)(Lambda^2(V))
 procedure get_lpolys(nipp_idx, wt : prec := 10)
   nipp := parseNippFile("nipp1-256.txt");
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   A := NippToForm(nipp[nipp_idx]);
-  G := SpecialOrthogonalGroup(A);
+  // G := SpecialOrthogonalGroup(A);
   std := StandardRepresentation(GL(5, Rationals()));
-  W := SymmetricRepresentation(std, wt);
-  M := AlgebraicModularForms(G, W);
-  D := Decomposition(M, 100);
+  k,j := Explode(wt);
+  sym_j := SymmetricRepresentation(std, j);
+  alt := AlternatingRepresentation(std, 2);
+  sym_k_3 := SymmetricRepresentation(alt, k-3);
+  W := TensorProduct(sym_j, sym_k_3);
+// M := AlgebraicModularForms(G, W);
+  M := OrthogonalModularForms(A, W);
+// D := Decomposition(M, 100);
   fs := HeckeEigenforms(M);
   lpolys := [LPolynomials(f : Precision := prec) : f in fs];
   nonlift_idxs := [];

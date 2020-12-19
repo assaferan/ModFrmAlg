@@ -301,7 +301,7 @@ intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
 {Constructs the representation Sym^n(V).}
     R := BaseRing(V);	  
     R_X := PolynomialRing(R, Rank(V));
-    AssignNames(~R_X, V`M`names);
+    AssignNames(~R_X, [x : x in V`M`names]);
     S := MonomialsOfDegree(R_X, n);
     M := CombinatorialFreeModule(R, S);
     a := Sprintf("
@@ -425,12 +425,14 @@ end function;
 
 intrinsic Rank(V::GrpRep) -> RngIntElt
 {The rank of the free module underlying the representation V.}
-  return #Basis(V);	  
+// return #Basis(V);
+   return Rank(V`M);
 end intrinsic;
 
 intrinsic Dimension(V::GrpRep) -> RngIntElt
 {The rank of the free module underlying the representation V.}
-  return Rank(V);
+//   return Rank(V);
+  return Dimension(V`M);
 end intrinsic;
 
 intrinsic Ngens(V::GrpRep) -> RngIntElt
@@ -575,8 +577,9 @@ end intrinsic;
 // are updated correctly.
 
 procedure verifyKnownGroups(V)
-    idxs := [[i : i in [1..Ngens(grp)] | grp.i in Keys(V`act_mats)] :
-	     grp in V`known_grps];
+    idxs := [[i : i in [1..Ngens(grp)] | /* grp.i in Keys(V`act_mats) */
+	       IsDefined(V`act_mats, grp.i) ] :
+	      grp in V`known_grps];
     V`known_grps := [sub<V`G | [V`known_grps[j].i : i in idxs[j]]> : j in [1..#idxs]];
 end procedure;
 
@@ -584,7 +587,7 @@ end procedure;
 // automorphisms of the representation. 
 function getActionHom(V, grp)
     GL_V := GL(Dimension(V), BaseRing(V));
-    verifyKnownGroups(V); // this is in case there was some interrupt
+    // verifyKnownGroups(V); // this is in case there was some interrupt
     return hom< grp -> GL_V |
 		  [Transpose(V`act_mats[grp.i]) : i in [1..Ngens(grp)]]>;
 end function;
@@ -625,12 +628,13 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
       // This is in the case we projected into PGL
       return ChangeRing(mat, BaseRing(V`G));
   end if;
-  verifyKnownGroups(V); // this is in case there was some interrupt
+  // verifyKnownGroups(V); // this is in case there was some interrupt
 
   if HasFiniteOrder(g) then
       is_known := exists(grp){grp : grp in V`known_grps | g in grp};
   else
-      is_known := g in Keys(V`act_mats);
+    // is_known := g in Keys(V`act_mats);
+      is_known := IsDefined(V`act_mats, g);
   end if;
 
   if not is_known then

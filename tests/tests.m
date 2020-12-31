@@ -283,38 +283,199 @@ procedure testRamaTornaria9()
     assert lpolys[3] eq 15625*x^4 - 375*x^3 + 85*x^2 - 3*x + 1;
 end procedure;
 
+function my_eval(f, x, y)
+  coeffs := [Evaluate(c, x) : c in Eltseq(f)];
+  return &+[coeffs[i]*y^(i-1) : i in [1..#coeffs]];
+end function;
+
+function my_facAlgExtSqrf(F)
+   QQ := Rationals();
+   Q_y<y> := PolynomialRing(QQ);
+   Q_yx<x> := PolynomialRing(Q_y);
+   F_y := Q_yx![Eltseq(c) : c in Eltseq(F)];
+   Q_x<x> := PolynomialRing(QQ);
+   Q_xy<y> := PolynomialRing(Q_x);
+   F_y := my_eval(F_y, y, x);
+   K<alpha> := BaseRing(F);
+   mipo := Evaluate(MinimalPolynomial(alpha), y);
+   mipo *:= Denominator(mipo);
+   shift := 0;
+   k := 0;
+   count := 0;
+   shiftBuf := false;
+   f := F_y * Denominator(F_y);
+   factors := [];
+   tmp := [f];
+   repeat
+     tmp2 := [];
+     for iter in tmp do
+       oldF := iter * Denominator(iter);
+       if (shift eq 0) then
+	 f := oldF;
+       else
+	 /*
+	 coeffs := [Evaluate(c, y-shift*alpha) : c in Eltseq(oldF)];
+         f := &+[coeffs[i]*y^(i-1) : i in [1..#coeffs]];
+	 */
+         // f := my_eval(oldF, alpha, y-shift*alpha);
+         f := my_eval(oldF, x-shift*y, y);
+         f *:= Denominator(f);
+       end if;
+       norm := Resultant(mipo, f);
+       normFactors := Factorization(norm);
+       if (#normFactors ge 1) and (normFactors[1][1] in QQ) then
+         normFactors := normFactors[2..#normFactors];
+       end if;
+       if (#normFactors eq 1) and (normFactors[1][2] eq 1) then
+	  Append(~factors, oldF);
+          continue;
+       end if;
+       if #normFactors ge 1 then
+         i := normFactors[1];
+       end if;
+       shiftBuf := false;
+       if not ((#normFactors eq 2) and (Degree(i[1]) le Degree(f))) then
+         if shift ne 0 then
+	   buf := f;
+         else
+	   buf := oldF;
+         end if;
+         shiftBuf := true;
+       else
+         buf := oldF;	   
+       end if;
+       count := 0;
+       for i in normFactors do
+	 if shiftBuf then
+	   factor := Gcd(buf, i[1]);
+         else
+	   if shift eq 0 then
+      	     factor := Gcd(buf, i[1]);
+           else
+	     /*
+	     coeffs := [Evaluate(c, y+shift*alpha) : c in Eltseq(i[1])];
+             ev := &+[coeffs[i]*y^(i-1) : i in [1..#coeffs]];
+	     */
+	     // factor := Gcd(buf, my_eval(i[1], alpha, y+shift*alpha));
+	     factor := Gcd(buf, (i[1])(x+shift*y));
+           end if;
+	 end if;
+         buf div:= factor;
+         if shiftBuf then
+	   if shift ne 0 then
+		    //factor := my_eval(factor, alpha, y+shift*alpha);
+	     factor := factor(x+shift*y);
+	   end if;
+	 end if;
+         if (i[2] eq 1) or (Degree(factor) eq 1) then
+	   Append(~factors, factor);
+         else
+           Append(~tmp2, factor);
+	 end if;
+         if buf in QQ then
+	   break;
+         end if;
+         count +:= 1;
+         if ((#normFactors - 1) eq count) then
+	   if shiftBuf then
+	     if normFactors[#normFactors][2] eq 1 then
+			   // Append(~factors, my_eval(buf, alpha, y+shift*alpha));
+	       Append(~factors, my_eval(buf, x+shift*y, y));
+             else
+	       //Append(~tmp2, my_eval(buf, alpha, y+shift*alpha));
+	       Append(~tmp2, my_eval(buf, x+shift*y, y));
+	     end if;
+	   else
+	     if normFactors[#normFactors][2] eq 1 then
+               Append(~factors, buf);
+             else
+	       Append(~tmp2, buf);
+	     end if;  
+	   end if;
+           buf := 1;
+           break;
+	 end if;
+       end for;
+     end for;
+     k +:= 1;
+     if (shift eq 0) then
+       shift +:= 1;
+       k := 1;
+     end if;
+     if (k eq 2) then
+       shift := -shift;
+     end if;
+     if (k eq 3) then
+       shift := -shift;
+       shift +:= 1;
+       k := 1;
+     end if;
+     tmp := tmp2;
+   until IsEmpty(tmp);
+   K_x<x> := Parent(F);
+   return [my_eval(f, x, alpha) : f in factors];
+end function;
+
+function my_facAlgExt(f)
+  res := [];
+  sqfree_fac := SquareFreeFactorization(f);
+  for fa in sqfree_fac do
+    f, a := Explode(fa);
+    f_fac := my_facAlgExtSqrf(f);
+    res cat:= [<g, a> : g in f_fac];
+  end for;
+  return res;
+end function;
+
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
 // However, right now (until we implement general irreps)
 // We simply take the weight to be Sym^j(v) \otimes Sym^(k-3)(Lambda^2(V))
-procedure get_lpolys(nipp_idx, wt : prec := 10)
+procedure get_lpolys(nipp_idx, wt : prec := 10, Estimate := false)
   nipp := parseNippFile("nipp1-256.txt");
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   A := NippToForm(nipp[nipp_idx]);
   // G := SpecialOrthogonalGroup(A);
-  std := StandardRepresentation(GL(5, Rationals()));
+  // std := StandardRepresentation(GL(5, Rationals()));
   k,j := Explode(wt);
-  sym_j := SymmetricRepresentation(std, j);
-  alt := AlternatingRepresentation(std, 2);
-  sym_k_3 := SymmetricRepresentation(alt, k-3);
-  W := TensorProduct(sym_j, sym_k_3);
+//sym_j := SymmetricRepresentation(std, j);
+//alt := AlternatingRepresentation(std, 2);
+// sym_k_3 := SymmetricRepresentation(alt, k-3);
+// W := TensorProduct(sym_j, sym_k_3);
+  G := OrthogonalGroup(A);
+  W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
 // M := AlgebraicModularForms(G, W);
-  M := OrthogonalModularForms(A, W);
+  M := AlgebraicModularForms(G, W);
 // D := Decomposition(M, 100);
-  fs := HeckeEigenforms(M);
-  lpolys := [LPolynomials(f : Precision := prec) : f in fs];
+  fs := HeckeEigenforms(M : Estimate := Estimate);
+  lpolys := [LPolynomials(f : Estimate := Estimate,
+			  Precision := prec) : f in fs];
   nonlift_idxs := [];
   for idx in [1..#fs] do
     lpolys_f := lpolys[idx];
-    nonlift := &and[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
-		    | disc mod p ne 0];
+    // This is sometimes problematic, when the base field is large
+    // magma might crash, e.g. disc = 229, genus = 1
+    // nonlift := &or[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
+    //		    | disc mod p ne 0];
+    nonlift := false;
+    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
+    for p in primes do
+      if Type(BaseRing(lpolys_f[p])) eq FldRat then
+         fac := Factorization(lpolys_f[p]);
+      else
+         fac := my_facAlgExt(lpolys_f[p]);
+      end if;
+      is_irred := (#fac eq 1) and (fac[1][2] eq 1);
+      nonlift or:= is_irred;
+    end for;
     if nonlift then
       Append(~nonlift_idxs, idx);
     end if;
   end for;
-  id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o.amf", prec, disc, g, wt);
+  id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
+		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
     nonlift_str := "nonlifts" cat &cat [Sprintf("_%o", i) : i in nonlift_idxs];
   else
@@ -323,3 +484,62 @@ procedure get_lpolys(nipp_idx, wt : prec := 10)
   fname := id_str cat nonlift_str; 
   Save(M, fname);
 end procedure;
+
+function analyticConductor(k, j)
+  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
+end function;
+
+function getWeightsByAnalyticConductor(N_an)
+  // This is another possiblity
+  // max_j := 2*Floor(N_an^(1/4)) - 7;
+  // for j in [0..max_j] do
+  //end for;
+  j := 0;
+  // The JL transfer only works for weight ge 3 
+  k := 3;
+  cur_cond := analyticConductor(k, j);
+  res := [];
+  while cur_cond le N_an do
+    while cur_cond le N_an do
+      Append(~res, [k,j]);
+      k +:= 1;
+      cur_cond := analyticConductor(k, j);
+    end while;
+    k := 3;
+    // We only consider even j
+    j +:= 2;
+    cur_cond := analyticConductor(k, j);
+  end while;
+  return res;
+end function;
+
+// Should change this, right now only works for small discs (up to 256)
+// and slowly
+function get_nipp_idx(disc, nipp)
+  return [idx : idx in [1..#nipp] | nipp[idx]`D eq disc][1];
+end function;
+
+function getBoxByAnalyticConductor(N_an)
+  weights := getWeightsByAnalyticConductor(N_an);
+  nipp := parseNippFile("nipp1-256.txt");
+  res := [];
+  for w in weights do
+     max_N := Floor(N_an / analyticConductor(w[1], w[2]));
+     // last index with this disc
+     max_idx := get_nipp_idx(max_N+1, nipp)-1;
+     if max_idx ge 1 then
+       Append(~res, <w, max_idx>);
+     end if;
+  end for;
+  return res;
+end function;
+
+procedure get_lpolys_batch(N_an)
+  boxes := getBoxByAnalyticConductor(N_an);
+  for box in boxes do
+    cmd := Sprintf("./lpolys_batch.sh 1 %o %o %o", box[2],
+		   box[1][1], box[1][2]);
+    System(cmd);
+  end for;
+end procedure;
+

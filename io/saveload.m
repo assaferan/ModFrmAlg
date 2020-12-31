@@ -136,7 +136,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 
 	// The Hecke standard images we've computed.
 	hecke_images := [* *];
-	for image_idx in [1..Dimension(M)] do
+        if assigned M`Hecke`standard_images then
+	 for image_idx in [1..Dimension(M)] do
 	    // dimensions for which the Hecke operators where computed
 	    image_dims := Keys(M`Hecke`standard_images[image_idx]);
 	    hecke_img_dim := [* *];
@@ -156,8 +157,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		Append(~hecke_img_dim, < dim, list >);
 	    end for;
 	    Append(~hecke_images, hecke_img_dim);
-	end for;
-
+	 end for;
+        end if;
 	// Initialize the eigenforms.
 	eigenforms := [* *];
 
@@ -165,7 +166,14 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	if assigned M`Hecke and assigned M`Hecke`Eigenforms then
 	    for f in M`Hecke`Eigenforms do
 		if f`IsEigenform then
+		     
 		    // Valid dimensions for the eigenvalues
+		    /*
+		    if not assigned f`Eigenvalues then
+		       f`Eigenvalues := AssociativeArray();
+	            end if;
+		    */
+		
 		    dims := Keys(f`Eigenvalues);
 		    dims := Sort([x : x in dims]);
 
@@ -180,14 +188,9 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			evs := [Eltseq(f`Eigenvalues[dim][p]) : p in Ps ];
 			
 			// A coupled list of eigenvalues and the corresponding ideals.
-			/*
-			list := [* < Generators(Ps[i]), evs[i], Parent(evs[i]) >
-				 : i in [1..#Ps] *];
-		       */
 			list := [* Generators(p) : p in Ps *];
 
 			// Add this list to the ongoing list of Hecke matrices.
-			// Append(~eigenvalues, < dim, list, evs >);
 			Append(~all_evs, evs);
 			Append(~all_ps, list);
 		    end for;
@@ -297,7 +300,19 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	    K := RationalsAsNumberField();
 	    // !!! TODO : Change also the inner forms
 	    G`G0 := ChangeRing(G`G0, K);
+            // TODO : take out everything to a function
+            // that changes the base ring of W
 	    W`G := GL(Degree(W`G),K);
+            if assigned W`standard or assigned W`hw_vdw then
+	      R_names := ChangeRing(Universe(Names(W`M)), K);
+              W`M := CombinatorialFreeModule(K,
+		     {@R_names!nm : nm in W`M`names@});
+            end if;
+            action := eval W`action_desc;
+            W`action := map< CartesianProduct(W`G, [1..Dimension(W`M)]) -> W`M |
+		 x :-> action(x[1], x[2], W)>;
+            W`known_grps := [sub<W`G|1>];
+            W`act_mats[W`G!1] := IdentityMatrix(BaseRing(W`M), Dimension(W`M));
 	end if;
 
 	if Type(BaseRing(W)) eq FldRat then

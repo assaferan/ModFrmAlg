@@ -143,6 +143,11 @@ intrinsic BaseRing(CFM::CombFreeMod) -> Rng
   return BaseRing(CFM`M);
 end intrinsic;
 
+intrinsic Names(CFM::CombFreeMod) -> .
+{return the names of the basis elements.}
+  return CFM`names;
+end intrinsic;
+
 intrinsic ChangeRing(CFM::CombFreeMod, R::Rng) -> CombFreeMod
 {return the CFM with base ring changed to R.}
   params := [* *];
@@ -239,20 +244,35 @@ end intrinsic;
 
 /* printing */
 
+function polynomialPrint(s)
+  R := Parent(s);
+  prefix_str := Sprintf("[ %m |\n", R);
+  mon_strs := [Sprintf("Monomial(%m, %m)", R,
+		       [Degree(m,i) : i in [1..Ngens(R)]]) : m in Monomials(s)];
+  all_mon_str := ["\t" cat m_str cat ",\n"
+		     : m_str in mon_strs[1..#mon_strs-1]];
+  Append(~all_mon_str, "\t" cat mon_strs[#mon_strs] cat "\n]\n");
+  all_mon_str := prefix_str cat (&cat all_mon_str);
+  coefs_strs := Sprintf("%m", Coefficients(s));
+  return Sprintf("Polynomial(%o, %o)", coefs_strs, all_mon_str);
+end function;
+
 intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 {.}
     if (level eq "Magma") then
 	params := [* *];
 	if Type(Universe(CFM`names)) eq RngMPol then
-	  // For the moment we assume all names are monomials
-	  // for simplicity
 	  S := CFM`names;
 	  R_X := Universe(S);
 	  prefix_str := Sprintf("{@ %m |\n", R_X);
-	  mon_strs := [Sprintf("Monomial(%m, %m)", R_X, [Degree(s,i) : i in [1..Ngens(R_X)]]) : s in S];
-	  all_mon_str := ["\t" cat m_str cat ",\n" : m_str in mon_strs[1..#mon_strs-1]];
-	  Append(~all_mon_str, "\t" cat mon_strs[#mon_strs] cat "\n@}\n");
-	  names_str := prefix_str cat (&cat all_mon_str);
+// mon_strs := [Sprintf("Monomial(%m, %m)", R_X, [Degree(s,i) : i in [1..Ngens(R// _X)]]) : s in S];
+          poly_strs := [polynomialPrint(s) : s in S];
+//all_mon_str := ["\t" cat m_str cat ",\n" : m_str in mon_strs[1..#mon_strs-1]];
+          all_poly_str := ["\t" cat m_str cat ",\n"
+			      : m_str in poly_strs[1..#poly_strs-1]];
+// Append(~all_mon_str, "\t" cat mon_strs[#mon_strs] cat "\n@}\n");
+          Append(~all_poly_str, "\t" cat poly_strs[#poly_strs] cat "\n@}\n");
+	  names_str := prefix_str cat (&cat all_poly_str);
 	  Append(~params, <"NAMES", Names(R_X)>);
 	else
 	    // we wanted to do this:

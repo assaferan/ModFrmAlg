@@ -534,10 +534,10 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
 
     HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 				 start, ~count, ~elapsed, fullCount :
-				 BeCareful := false,
-				 Orbits := true,
-				 UseLLL := false,
-				 Estimate := true);
+				 BeCareful := BeCareful,
+				 Orbits := Orbits,
+				 UseLLL := UseLLL,
+				 Estimate := Estimate);
     
     iota := M`H[idx]`embedding;
    

@@ -122,7 +122,10 @@ declare attributes GrpRep :
 	// In case this is a subrepresentation, its ambient representation
 	ambient,
 	// In case this is a subrepresentation, the embedding into its ambient.
-	embedding;
+        embedding,
+        // In case this is a highest weight in a van-der-Warden representation,
+        // some data to ease computations
+        hw_vdw;
 
 declare attributes GrpRepElt :
 		   // the actual element in the module
@@ -181,6 +184,11 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
 
   if IsDefined(param_array, "ALTERNATING") then
       V`alternating := param_array["ALTERNATING"];
+  end if;
+
+  if IsDefined(param_array, "HW_VDW") then
+      V`hw_vdw := param_array["HW_VDW"];
+      V`M := CombinatorialFreeModule(BaseRing(G), M`names);
   end if;
 
   if IsDefined(param_array, "WEIGHT") then
@@ -269,6 +277,7 @@ intrinsic TrivialRepresentation(G::Grp, R::Rng : name := "v") -> GrpRep
   return GroupRepresentation(G, M, a);
 end intrinsic;
 
+// Should change that to also support arbitrary reductive group
 intrinsic StandardRepresentation(G::GrpMat : name := "x") -> GrpRep
 {Constructs the standard representation of the matrix group G its ring of definition R, i.e. the representation obtained by considering its given embedding in GL_n acting on R^n by invertible linear transformations.}
   n := Degree(G);
@@ -383,6 +392,21 @@ intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
   return ret;
 end intrinsic;
 
+intrinsic TensorPower(V::GrpRep, d::RngIntElt) -> GrpRep
+{Construcs the tensor power representation V tensor itself d times.}
+  if (d lt 0) then
+    return TensorPower(DualRepresentation(V), -d);
+  end if;
+  if (d eq 0) then
+    return TrivialRepresentation(Group(V), BaseRing(V));
+  end if;
+  V_d := V;
+  for i in [1..d-1] do
+     V_d := TensorProduct(V_d, V);
+  end for;
+  return V_d;
+end intrinsic;
+
 intrinsic Pullback(V::GrpRep, /* f::Map[Grp, Grp] */
 		      f_desc::MonStgElt, H::Grp) -> GrpRep
 {Constructs the pullback of the representation V along the
@@ -450,6 +474,16 @@ intrinsic BaseRing(V::GrpRep) -> Rng
   return BaseRing(V`M);
 end intrinsic;
 
+intrinsic Group(V::GrpRep) -> Grp
+{Return the group that acts on V.}
+  return V`G;
+end intrinsic;
+
+intrinsic CFM(V::GrpRep) -> CombFreeMod
+{Return the combinatorial free module underlying V.}
+  return V`M;
+end intrinsic;
+
 function build_rep_params(V)
     params := [* *];
     if assigned V`tensor_product then
@@ -469,6 +503,9 @@ function build_rep_params(V)
     end if;
     if assigned V`pullback then
 	Append(~params, < "PULLBACK", V`pullback >);
+    end if;
+    if assigned V`hw_vdw then
+      Append(~params, < "HW_VDW", V`hw_vdw >);
     end if;
     if assigned V`mat_to_elt then
 	lie_grp := Codomain(Components(V`mat_to_elt)[2]);
@@ -600,7 +637,7 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
 {Computes the martix describing the action of g on V.}
   // In the cases of pullbacks and weight representations
   // we don't record anything, just compute from the underlying structure
-  if Type(BaseRing(g)) ne FldFin then
+  if (Type(g) ne GrpPermElt) and (Type(BaseRing(g)) ne FldFin) then
       assert IsIsomorphic(BaseRing(V`G),BaseRing(g));
   end if;
   if assigned V`pullback then
@@ -630,7 +667,7 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
   end if;
   // verifyKnownGroups(V); // this is in case there was some interrupt
 
-  if HasFiniteOrder(g) then
+  if (Type(g) eq GrpPermElt) or HasFiniteOrder(g) then
       is_known := exists(grp){grp : grp in V`known_grps | g in grp};
   else
     // is_known := g in Keys(V`act_mats);
@@ -638,7 +675,7 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
   end if;
 
   if not is_known then
-      if HasFiniteOrder(g) then
+      if (Type(g) eq GrpPermElt) or HasFiniteOrder(g) then
 	  grp_idx := 0;
 	  for j in [1..#V`known_grps] do 
 	      new_grp := sub<V`G | V`known_grps[j], g>;
@@ -670,7 +707,7 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
       end if;
   end if;
 
-  if HasFiniteOrder(g) then
+  if (Type(g) eq GrpPermElt) or HasFiniteOrder(g) then
       act_hom := getActionHom(V, grp);
       return Transpose(act_hom(g));
   else
@@ -777,6 +814,24 @@ intrinsic 'in'(v::., V::GrpRep) -> BoolElt
   return Parent(v) eq V;
 end intrinsic;
 
+intrinsic Intersection(V::GrpRep, W::GrpRep) -> GrpRep
+{Compute the intersection of the representation V, W.}
+  require (assigned V`embedding) and (assigned W`embedding) and
+           (Codomain(V`embedding) eq Codomain(W`embedding)) :
+  "Both representation should be subrepresentations of the same one.";
+  U := Codomain(V`embedding);
+  basis_imV := [Eltseq(V`embedding(V.i)) : i in [1..Dimension(V)]];
+  basis_imW := [Eltseq(W`embedding(W.i)) : i in [1..Dimension(W)]];
+  imV := sub< U`M`M | basis_imV >;
+  imW := sub< U`M`M | basis_imW >;
+  return Subrepresentation(U, Basis(imV meet imW));
+end intrinsic;
+
+intrinsic 'meet'(V::GrpRep, W::GrpRep) -> GrpRep
+{Compute the intersection of the representation V, W.}
+  return Intersection(V, W);
+end intrinsic;
+
 // This function is here simply due to our interest in GL3, U3, O3
 // TODO : 1. Move it to the tests and examples.
 //        2. Create a more general function for such constructions for
@@ -789,6 +844,17 @@ function getGL3Rep(a, b, K)
     sym_a := SymmetricRepresentation(V,a);
     sym_b_dual := SymmetricRepresentation(V_dual,b);
     return TensorProduct(sym_a, sym_b_dual);
+end function;
+
+// this is for highest weight a >= 2b >= 0
+// Is that correct? Verify!
+function getSO5Rep(a, b, K)
+    G := GL(5, K);
+    V := StandardRepresentation(G);
+    alt := AlternatingRepresentation(V,2);
+    sym_a_b := SymmetricRepresentation(V,a-b);
+    sym_b_alt := SymmetricRepresentation(alt,b);
+    return TensorProduct(sym_a_b, sym_b_alt);
 end function;
 
 /***************************************************
@@ -984,6 +1050,45 @@ intrinsic getGL3HighestWeightRep(a::RngIntElt,b::RngIntElt,K::Rng) -> GrpRep
     if (a eq 0) or (b eq 0) then return getGL3Rep(a,b,K); end if;
     return Kernel(getGL3ContractionMap(a,b,K));
 end intrinsic;
+
+// TODO!! Think about how to do this one - what is exactly the contraction?
+// Need to have the quadratic form
+function getSO5ContractionMap(a,b,K)
+    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
+    W_ab := getSO5Rep(a,b,K);
+    W_minus := getSO5Rep(a-1, b-1,K);
+    mon_basis := W_ab`tensor_product[1]`M`names;
+    alphas := [[Degree(b, i) : i in [1..5]] : b in mon_basis];
+    mon_alt_basis := W_ab`tensor_product[2]`M`names;
+    betas := [[Degree(b, i) : i in [1..10]] : b in mon_alt_basis];
+    coeffs := [[[alpha[i] * beta[i] : i in [1..5]] : beta in betas] : alpha in alphas];
+    idxs := [[[i : i in [1..5] | coeff[i] ne 0] : coeff in coeffs_row] :
+	     coeffs_row in coeffs];
+    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
+		     mon_alt_basis[j2] div Parent(mon_alt_basis[j2]).i> :
+		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
+    sym_minus := W_minus`tensor_product[1];
+    sym_dual_minus := W_minus`tensor_product[2];
+    mon_basis_minus := sym_minus`M`names;
+    mon_dual_basis_minus := sym_dual_minus`M`names;
+    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
+		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
+		     im_vec in image_vecs[j1][j2]] :
+		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
+    W_minus_image := [[[W_minus.Index(W_minus`M`names,
+				      Sprintf("%o",im_idx)) :
+		      im_idx in image_idxs[j1][j2]] :
+		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
+    function get_basis_image(coeffs, idxs, W_minus_image)
+	if IsEmpty(idxs) then return W_minus!0; end if;
+	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
+    end function;
+    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
+				      W_minus_image[j1][j2]) :
+		      j2 in [1..#image_idxs[j1]]] :
+			  j1 in [1..#image_idxs]];
+    return Homomorphism(W_ab, W_minus, basis_images);
+end function;
 
 intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
 {Return the fixed subspace of V under the group gamma.}
@@ -1268,4 +1373,355 @@ intrinsic AltSpinor(G::GrpRed, d::RngIntElt, j::RngIntElt) -> GrpRep
   W := TensorProduct(spin, sym);
   W`weight := <d,0,j div 2>;
   return W;
+end intrinsic;
+
+// This is code for experimenting with new features
+// Here we construct representations of the symmetric group
+// using Young symmetrizers
+// At the moment we assume t is a canonical tableau
+
+function getTableauRepresentation(t : R := Rationals())
+  
+  d := Weight(t);
+  S := SymmetricGroup(d);
+  act := Action(GSet(S));
+  // This is an inefficient construction, as it goes over all elements
+  // in S. Should rewrite.
+  P_t := [g : g in S | &and[ {act(x,g) : x in Eltseq(r)} eq
+			     {x : x in Eltseq(r)} : r in Rows(t)]];
+  Q_t := [g : g in S | &and[ {act(x,g) : x in Eltseq(r)} eq
+			     {x : x in Eltseq(r)} : r in Columns(t)]];
+  Q_S := GroupAlgebra(R, S);
+  a_t := &+[Q_S!g : g in P_t];
+  b_t := &+[Sign(g)*Q_S!g : g in Q_t];
+  c_t := a_t*b_t;
+  V_t := lideal<Q_S | c_t>;
+
+  M := CombinatorialFreeModule(Rationals(), IndexedSet(Basis(V_t)));
+
+
+  a := Sprintf("
+  function action(g, m, V)
+    g_V := Vector(Eltseq(g*((V`M)`names[m])));
+    orig := Matrix([Eltseq(b) : b in (V`M)`names]);
+    vec := Solution(orig, g_V);
+    return (V`M)!vec;
+    end function;
+    return action;
+  ");
+
+  V := GroupRepresentation(S, M, a);
+  return V;
+end function;
+
+function getDigitsLittleEndian(i, b, d)
+  assert Type(i) eq RngIntElt and i ge 0;
+  tmp := i;
+  digits := [];
+  for j in [1..d] do
+    Append(~digits, tmp mod b);
+    tmp div:= b;
+  end for;
+  return digits;
+end function;
+
+function getNumberFromDigitsLittleEndian(digits, b)
+  summands := [digits[i]* b^(i-1) : i in [1..#digits]];
+  if IsEmpty(summands) then
+    return 0;
+  end if;
+  return &+summands;
+end function;
+
+function getPermOnTensorPower(g, i, n)
+  S := Parent(g);
+  d := #GSet(S);
+  act := Action(GSet(S));
+  digits := getDigitsLittleEndian(i-1,n,d);
+  perm_digits := [digits[act(j,g)] : j in [1..d]];
+//  return &+[perm_digits[i]* n^(i-1) : i in [1..d]] + 1;
+  return getNumberFromDigitsLittleEndian(perm_digits, n) + 1;
+end function;
+
+// This is the first construction in Fulton and Harris
+// Can be made more efficient if needed.
+// Also possible to use their construction in Chapter 15.
+// Can also realize all representations at once.
+
+function WeylModule(lambda, V)
+  n := Dimension(V);
+  R := BaseRing(V);
+  k := #lambda;
+  sums := [&+lambda[1..i] : i in [0..k]];
+  tab := [[sums[i]+1..sums[i+1]] : i in [1..k]];
+  t := Tableau(tab);
+  d := Weight(t);
+  if d eq 0 then
+    return TensorPower(V, 0);
+  end if;
+  S := SymmetricGroup(d);
+  act := Action(GSet(S));
+  // This is an inefficient construction, as it goes over all elements
+  // in S. Should rewrite.
+  P_t := [g : g in S | &and[ {act(x,g) : x in Eltseq(r)} eq
+			     {x : x in Eltseq(r)} : r in Rows(t)]];
+  Q_t := [g : g in S | &and[ {act(x,g) : x in Eltseq(r)} eq
+			     {x : x in Eltseq(r)} : r in Columns(t)]];
+  // G := GL(n, R);
+  // V := StandardRepresentation(G);
+  V_d := TensorPower(V,d);
+  big_sym := SymmetricGroup(n^d);
+  P_t_act := [ big_sym![getPermOnTensorPower(g, i, n) : i in [1..n^d]]
+		     : g in P_t	];
+  Q_t_act := [ big_sym![getPermOnTensorPower(g, i, n) : i in [1..n^d]]
+		     : g in Q_t	];
+  P_t_act_V_d := [PermutationMatrix(R, g) : g in P_t_act];
+  Q_t_act_V_d := [PermutationMatrix(R, g) : g in Q_t_act];
+  a_t := &+[g : g in P_t_act_V_d];
+  b_t := &+[Sign(Q_t[i])*Q_t_act_V_d[i] : i in [1..#Q_t]];
+  c_t := a_t*b_t;
+  return Subrepresentation(V_d, Rows(c_t));
+end function;
+
+function getGLnHighestWeightRepresentation(n, lambda : R := Rationals())
+  V := StandardRepresentation(GL(n, R));
+  return WeylModule(lambda, V);
+end function;
+
+// !!! TODO : Add the construction via polynomials appearing in exercise 15.57
+
+function get_basis(lambda, n : F := Rationals())
+  R := PolynomialRing(F, n^2);
+  var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..n]] : i in [1..n]];
+  AssignNames(~R, &cat var_names);
+  mu := ConjugatePartition(lambda);
+  x := Matrix([[R.(Index(&cat var_names, var_names[i][j])) : j in [1..n]]
+		  : i in [1..n]]);
+  tabs := TableauxOfShape(lambda, n);
+  basis := [&*[Determinant(Submatrix(x, [1..mu[j]],
+				     [Integers()!Columns(t)[j][i]
+					 : i in [1..mu[j]]])) : j in [1..#mu]]
+	       : t in tabs];
+  return basis, x;
+end function;
+
+function get_action_polys(lambda, n, g : F := Rationals())
+  B, x := get_basis(lambda, n  : F := F);
+  R := Universe(B);
+  g_R := ChangeRing(g, R);
+  B_g := [Evaluate(f, Eltseq(x*g_R)) : f in B];
+  mons := &join([Set(Monomials(b)) : b in B]);
+  mons := SetToSequence(mons);
+  V := VectorSpace(F, #mons);
+  vecs := [&+[Coefficients(b)[i]*V.(Index(mons, Monomials(b)[i]))
+		 : i in [1..#Monomials(b)]] : b in B];
+  vecs_g := [&+[Coefficients(b)[i]*V.(Index(mons, Monomials(b)[i]))
+		   : i in [1..#Monomials(b)]] : b in B_g];
+  return Solution(Matrix(vecs), Matrix(vecs_g));
+end function;
+
+// !! TODO : complete - have to pass along all the relevant data
+// about the polynomials
+
+// This is not very efficient, but will do for now
+
+function getGLnHighestWeightRepresentationPolys(n, lambda : F := Rationals())
+  B := get_basis(lambda, n  : F := F);
+  M := CombinatorialFreeModule(F, {@ b : b in B@});
+ 
+  action_desc := Sprintf("           
+  	      function action(g, m, V)
+	      	      B := Names(V`M);
+                      R := Universe(B);
+                      n := %o;
+                      x := Matrix([[R.(n*i+j+1) : j in [0..n-1]] 
+                           : i in [0..n-1]]);
+                      F := BaseRing(R);
+                      mons := &join([Set(Monomials(b)) : b in B]);
+                      mons := SetToSequence(mons);
+                      mon_vs := VectorSpace(F, #mons);
+                      vecs := [&+[Coefficients(b)[i]*
+                              mon_vs.(Index(mons, Monomials(b)[i]))
+		               : i in [1..#Monomials(b)]] : b in B];
+                      g_R := ChangeRing(g, R);
+                      f := B[m];
+                      f_g := Evaluate(f, Eltseq(x*g_R));
+                      vec_g := &+[Coefficients(f_g)[i]*
+                                mon_vs.(Index(mons, Monomials(f_g)[i]))
+		                : i in [1..#Monomials(f_g)]];
+                      return (V`M)!Solution(Matrix(vecs), vec_g);
+  	      end function;
+  	      return action;
+	      ", n);
+  V := GroupRepresentation(GL(n, F), M, action_desc);
+  return V;
+end function;
+
+function Contraction(Q, p, q, d)
+  assert (1 le p) and (p lt q) and (q le d);
+  function get_contraction_image(i, Q, p, q, d)
+    n := Degree(Parent(Q));
+    digits := getDigitsLittleEndian(i-1,n,d);
+    rest_digits := [digits[i] : i in [1..d] | i notin [p,q]];
+// image_ind := &+[rest_digits[i]* n^(i-1) : i in [1..d-2]] + 1;
+    image_ind := getNumberFromDigitsLittleEndian(rest_digits, n) + 1;
+    return <Q[digits[p]+1, digits[q]+1],image_ind>;
+  end function;
+  R := BaseRing(Q);
+  n := Degree(Parent(Q));
+  V := StandardRepresentation(GL(n,R));
+  V_d := TensorPower(V, d);
+  V_d_2 := TensorPower(V, d-2);
+  images := [get_contraction_image(i, Q, p, q, d) : i in [1..n^d]];
+  basis_images := [t[1]*V_d_2.(t[2]) : t in images];
+  // This could be a problem - creating a morphism between
+  // two large spaces is difficult for magma for some reason.
+  return Homomorphism(V_d, V_d_2, basis_images);
+end function;
+
+// Here Q can either be a symmetric or a symplectic form.
+function getHighestWeightRepresentation(Q, lambda)
+  n := Degree(Parent(Q));
+  V := StandardRepresentation(GL(n,BaseRing(Q)));
+  k := #lambda;
+  sums := [&+lambda[1..i] : i in [0..k]];
+  tab := [[sums[i]+1..sums[i+1]] : i in [1..k]];
+  t := Tableau(tab);
+  d := Weight(t);
+  kernels := [Kernel(Contraction(Q, p, q, d))
+		       : p,q in [1..d] | p lt q];
+  if IsEmpty(kernels) then
+    return WeylModule(lambda, V);
+  end if;
+  V_bracket_d := &meet kernels;  
+  ret := V_bracket_d meet WeylModule(lambda, V);
+  // Here we add a 1 in the beginning to indicate a divisor of the
+  // Discriminant, see e.g. spinor norm.
+  // Should understand what are the irreps over Q to do this properly.
+  ret`weight := [1] cat lambda;
+  // This is also a temporary patch
+  ret`weight := ret`weight cat [0 : i in [1..3-#ret`weight]];
+  return ret;
+end function;
+
+function getSpHighestWeightRepresentation(n, lambda : R := Rationals())
+  G := SymplecticGroup(n, R);
+  Q := InnerForm(InnerForms(G)[1]);
+  return getHighestWeightRepresentation(Q, lambda);
+end function;
+
+function my_sum(seq, univ)
+  if IsEmpty(seq) then
+     return univ!0;
+  end if;
+  return &+seq;
+end function;
+
+function my_prod(seq, univ)
+  if IsEmpty(seq) then
+     return univ!1;
+  end if;
+  return &*seq;
+end function;
+
+function get_lap_kernel(lap)
+  F := BaseRing(Universe(lap));
+  im_B := lap;
+  im_mons := SetToSequence(&join([Set(Monomials(b)) : b in im_B]));
+  W := VectorSpace(F, #im_mons);
+  im_vecs := [my_sum([Coefficients(b)[i]*W.(Index(im_mons, Monomials(b)[i]))
+              : i in [1..#Monomials(b)]], W) : b in im_B];
+  K := Kernel(Matrix(im_vecs));
+  return K;
+end function;
+
+function get_hw_basis(lambda, Q)
+  F := BaseRing(Q);
+  n := Degree(Parent(Q));
+  R := PolynomialRing(F, n^2);
+  var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..n]] : i in [1..n]];
+  AssignNames(~R, &cat var_names);
+  mu := ConjugatePartition(lambda);
+  x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
+		   : j in [1..n]]: i in [1..n]]);
+  // TableauxOfShape needs the exact partition, so we trim
+  lam := [l : l in lambda | l gt 0];
+  if IsEmpty(lam) then
+    lam := [0];
+  end if;
+  tabs := TableauxOfShape(lam, n);
+  B := [my_prod([Determinant(Submatrix(x, [Integers()!Columns(t)[j][i]
+					: i in [1..mu[j]]], [1..mu[j]]))
+	      : j in [1..#mu]], R) : t in tabs];
+  laplacians := [[&+[Q[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
+			: i,j in [1..n]] : f in B] : p,q in [1..n]];
+  kers := [get_lap_kernel(lap) : lap in laplacians];
+  ker := &meet kers;
+  return [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
+end function;
+
+function getSOHighestWeightRepresentationPolys(lambda, Q)
+  n := Degree(Parent(Q));
+  F := BaseRing(Q);
+  B := get_hw_basis(lambda, Q);
+  M := CombinatorialFreeModule(F, {@ b : b in B@});
+  R := Universe(B);
+  F := BaseRing(R);
+  mons := &join([Set(Monomials(b)) : b in B]);
+  mons := SetToSequence(mons);
+  degs := [[Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
+  mon_vs := VectorSpace(F, #mons);
+  // This is somewhat long, optimize if needed
+  vecs := [&+[Coefficients(b)[i]*
+              mon_vs.(Index(mons, Monomials(b)[i]))
+	      : i in [1..#Monomials(b)]] : b in B];
+  hw_vdw_data := [* degs, [Eltseq(v) : v in vecs] *];
+  action_desc := Sprintf("           
+  	      function action(g, m, V)
+	      	      B := Names(V`M);
+                      R := Universe(B);
+                      n := %o;
+                      x := Matrix([[R.(n*i+j+1) 
+                            : j in [0..n-1]] : i in [0..n-1]]);
+                      g_R := ChangeRing(g, R);
+                      f := B[m];
+                      f_g := Evaluate(f, Eltseq(Transpose(g_R)*x));
+                      degs := V`hw_vdw[1];
+                      F := BaseRing(R);
+                      mon_vs := VectorSpace(F, #degs);
+                      basis_mat := ChangeRing(Matrix(V`hw_vdw[2]), F);
+                      degs_f_g := [[Degree(m, R.i) : i in [1..Rank(R)]] 
+                                    : m in Monomials(f_g)];
+                      vec_g := &+[Coefficients(f_g)[i]*
+                                mon_vs.(Index(degs, degs_f_g[i]))
+		                : i in [1..#degs_f_g]];
+                      return (V`M)!Solution(basis_mat, vec_g);
+  	      end function;
+  	      return action;
+	      ", n);
+  
+  V := GroupRepresentation(GL(n, F), M, action_desc :
+			   params := [* <"HW_VDW", hw_vdw_data> *]);
+  return V;
+end function;
+
+// This is for debugging purposes
+function dimensionOfHighestWeightRepresentationOddOrthogonal(lambda, m)
+  assert IsOdd(m);
+  n := m div 2;
+  assert #lambda le n;
+  lambda cat:= [0 : i in [1..(n-#lambda)]];
+  l := [lambda[i] + n - i : i in [1..n]];
+  prod := my_prod([(l[i]-l[j])*(l[i]+l[j]+1) : i,j in [1..n] | i lt j],
+		Integers());
+  num := prod * &*[2*l[i]+1 : i in [1..n]];
+  denom := &*[Factorial(2*n-2*j+1) : j in [1..n]];
+  return num div denom;
+end function;
+
+intrinsic HighestWeightRepresentation(G::GrpRed,
+				      lambda::SeqEnum[RngIntElt]) -> GrpRep
+{returns the irreducible representation with highest weight lambda.}
+  Q := InnerForm(InnerForms(G)[1]);
+  return getSOHighestWeightRepresentationPolys(lambda, Q);
 end intrinsic;

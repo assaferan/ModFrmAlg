@@ -33,7 +33,7 @@ import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 //                                                               //
 ///////////////////////////////////////////////////////////////////
 
-declare type GrpRed;
+declare type GrpRed[GrpRedElt];
 declare attributes GrpRed:
 	// the connected component - GrpLie
 	G0,
@@ -43,6 +43,12 @@ declare attributes GrpRed:
 	// We use that becasue TwistedGroupOfLieType doesn't work very well
 	// In general, inner forms could be presented as reflexive spaces
 	InnerForms;
+
+declare attributes GrpRedElt:
+        // the reductive group containing it
+        parent,
+        // the matrix representing the element.
+        elt;
 
 
 // !!! TODO : Add Weil restrictiond (G could be a product of Weil restrictions)
@@ -98,6 +104,32 @@ intrinsic ReductiveGroup(group_data::List) -> GrpRed
 end intrinsic;
 
 // constructors for special groups
+
+// symplectic
+
+function build_symplectic(symp)
+  F := BaseRing(symp);
+  n := Dimension(symp);
+  Sp_n := GroupOfLieType(StandardRootDatum("C", n div 2), F);
+  comp := CyclicGroup(1); 
+  return ReductiveGroup(Sp_n, comp : InnerForms := [symp]);
+end function;
+
+intrinsic SymplecticGroup(symp::RfxSpace) -> GrpRed
+{Construct the symplectic group associated to the symplectic space.}
+  return build_symplectic(symp);
+end intrinsic;
+
+intrinsic SymplecticGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
+{Construct the symplectic group associated to the specified alternating form.}
+  return SymplecticGroup(AmbientReflexiveSpace(innerForm));
+end intrinsic;
+
+intrinsic SymplecticGroup(n::RngIntElt, F::Fld) -> GrpRed
+{Construct the symplectic group of dimension n over F.}
+  require IsEven(n) : "n must be even.";
+  return SymplecticGroup(SplitReflexiveSpace("C", n div 2, F));
+end intrinsic;
 
 // orthogonal
 
@@ -291,11 +323,11 @@ function SplitReflexiveSpace(t, n, F)
 	M := DirectSum(I_1, BlockMatrix([[0,I_n],[I_n,0]]));
 	return AmbientReflexiveSpace(M);
     when "C":
-	I_n := IdentityMatrix(F);
+        I_n := IdentityMatrix(F, n);
 	M := BlockMatrix([[0,I_n],[-I_n,0]]);
 	return AmbientReflexiveSpace(M);
     when "D":
-	I_n := IdentityMatrix(F);
+        I_n := IdentityMatrix(F, n);
 	M := BlockMatrix([[0,I_n],[I_n,0]]);
 	return AmbientReflexiveSpace(M);
     else
@@ -339,3 +371,19 @@ function extract_root_datum(root_data)
 
     return R;
 end function;
+
+function build_elt(G,g)
+  g_G := New(GrpRedElt);
+  g_G`elt := g;
+  g_G`parent := G;
+  return g_G;
+end function;
+
+// !!! TODO : Complete that !!!
+// Coercion
+intrinsic IsCoercible(G::GrpRed, g::GrpMatElt[Fld]) -> Bool, GrpRedElt
+{.}
+  // Here we should check that g satisfies the requirements to be in the
+  //   group
+  return true, build_elt(G, g);
+end intrinsic;

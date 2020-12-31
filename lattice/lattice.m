@@ -376,9 +376,13 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
 
   // Make sure that the lattice was pushed down to an integral one, and
   //  that the first bilinear pairing is symmetric and positive definite.
+  // We no longer make sure of the conditions in the second line.
   try
       phis := [ ChangeRing(2*phi, Integers()) : phi in phis ];
-      assert IsSymmetric(phis[1]);
+      // !! TODO : in char. 2 check that we are alternating.
+      assert Transpose(phis[1]) in [phis[1], -phis[1]];
+      // We are now also using this function for symplectic groups  
+      // assert IsSymmetric(phis[1]);
       // We are now using this function also to construct groups
       // corresponding to non-definite forms
       // assert IsPositiveDefinite(phis[1]);

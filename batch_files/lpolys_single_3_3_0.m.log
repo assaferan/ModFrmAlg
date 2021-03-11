@@ -1,0 +1,18 @@
+
+memi_extend_handle_table(): bad handle for block 10981e430
+
+Magma: Internal error
+
+Please mail this entire run [*** WITH THE DETAILS BELOW ***]
+    to magma-bugs@maths.usyd.edu.au
+
+You can print the entire input by entering:
+%P
+
+Version: 2.25-6
+Machine type: intel64-osx
+Initial seed: 1975795536
+Time to this point: 21.23
+Memory usage: 32.09MB
+
+Magma: Fatal Error: Magma: Irrecoverable error; exiting

@@ -353,6 +353,11 @@ intrinsic Module(M::ModFrmAlg) -> ModDedLat
 	return M`L;
 end intrinsic;
 
+intrinsic Level(M::ModFrmAlg) -> ModDedLat
+{ Returns the lattice such that the level is the stabilizer of this lattice. }
+	return M`L;
+end intrinsic;
+
 intrinsic BaseRing(M::ModFrmAlg) -> FldOrd
 { The base ring of the space of algebraic modular forms. }
       return M`K;

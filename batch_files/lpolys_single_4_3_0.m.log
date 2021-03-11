@@ -1,0 +1,17 @@
+WARNING: File not saved. Set the Overwrite parameter.
+
+
+Magma: Internal error
+
+Please mail this entire run [*** WITH THE DETAILS BELOW ***]
+    to magma-bugs@maths.usyd.edu.au
+
+You can print the entire input by entering:
+%P
+
+Version: 2.25-6
+Machine type: intel64-osx
+Initial seed: 1959083601
+Time to this point: 21.06
+Memory usage: 32.09MB
+Segmentation fault

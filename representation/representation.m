@@ -125,7 +125,7 @@ declare attributes GrpRep :
         embedding,
         // In case this is a highest weight in a van-der-Warden representation,
         // some data to ease computations
-        hw_vdw;
+        hw_vdw, hw_vdw_rev;
 
 declare attributes GrpRepElt :
 		   // the actual element in the module
@@ -189,6 +189,10 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
   if IsDefined(param_array, "HW_VDW") then
       V`hw_vdw := param_array["HW_VDW"];
       V`M := CombinatorialFreeModule(BaseRing(G), M`names);
+      V`hw_vdw_rev := AssociativeArray();
+      for i in [1..#V`hw_vdw[1]] do
+	V`hw_vdw_rev[V`hw_vdw[1][i]] := i;
+      end for;
   end if;
 
   if IsDefined(param_array, "WEIGHT") then
@@ -512,7 +516,7 @@ function build_rep_params(V)
 	Append(~params, < "WEIGHT",
 			  <ReductiveGroup(lie_grp,
 					  CyclicGroup(1)),
-			   HighestWeight(V`weight)[1] > >);
+			   HighestWeights(V`weight)[1] > >);
     end if;
     if assigned V`ambient then
 	images := [V`embedding(V.i)`m : i in [1..Dimension(V)]];
@@ -1676,26 +1680,37 @@ function getSOHighestWeightRepresentationPolys(lambda, Q)
               mon_vs.(Index(mons, Monomials(b)[i]))
 	      : i in [1..#Monomials(b)]] : b in B];
   hw_vdw_data := [* degs, [Eltseq(v) : v in vecs] *];
+  // !!! TODO - this is still inefficient
+  // can change construction of vec_g to not need multiplication
   action_desc := Sprintf("           
   	      function action(g, m, V)
 	      	      B := Names(V`M);
                       R := Universe(B);
                       n := %o;
-                      x := Matrix([[R.(n*i+j+1) 
+                      gens := GeneratorsSequence(R);
+                      x := Matrix([[gens[n*i+j+1] 
                             : j in [0..n-1]] : i in [0..n-1]]);
                       g_R := ChangeRing(g, R);
                       f := B[m];
                       f_g := Evaluate(f, Eltseq(Transpose(g_R)*x));
-                      degs := V`hw_vdw[1];
+                      deg_rev := V`hw_vdw_rev;
                       F := BaseRing(R);
-                      mon_vs := VectorSpace(F, #degs);
+                      mon_vs := VectorSpace(F, #deg_rev);
                       basis_mat := ChangeRing(Matrix(V`hw_vdw[2]), F);
-                      degs_f_g := [[Degree(m, R.i) : i in [1..Rank(R)]] 
-                                    : m in Monomials(f_g)];
-                      vec_g := &+[Coefficients(f_g)[i]*
-                                mon_vs.(Index(degs, degs_f_g[i]))
-		                : i in [1..#degs_f_g]];
-                      return (V`M)!Solution(basis_mat, vec_g);
+                      degs_f_g := [];
+                      mons_f_g := Monomials(f_g);
+                      for m in mons_f_g do
+                         degs_m := Exponents(m);
+                         Append(~degs_f_g, degs_m);
+                      end for;
+                      coeffs := Coefficients(f_g);
+                      vec_g := mon_vs!0;
+                      for i in [1..#degs_f_g] do
+                         vec_g +:= coeffs[i]*mon_vs.(deg_rev[degs_f_g[i]]);
+                      end for;
+                      // return (V`M)!Solution(basis_mat, vec_g);
+                      return CombinatorialFreeModuleElement(V`M, 
+                                 Solution(basis_mat, vec_g));
   	      end function;
   	      return action;
 	      ", n);

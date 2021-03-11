@@ -130,6 +130,9 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
     // Do we need this? Check the ramified primes
     bad_modulus := Numerator(Norm(Discriminant(Module(M))));
     V := ReflexiveSpace(Module(M));
+    // something crashes in orthogonal mass
+    // until we figure it out we leave it be
+/*
     if SpaceType(V) eq "Hermitian" then
 	K := BaseRing(V);
 	// !!! TODO :
@@ -138,7 +141,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
     else
 	total_mass := OrthogonalMass(Module(M));
     end if;
-	
+*/
     repeat
 	repeat
 	    // Increment norm by 10.

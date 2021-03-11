@@ -516,7 +516,7 @@ function build_rep_params(V)
 	Append(~params, < "WEIGHT",
 			  <ReductiveGroup(lie_grp,
 					  CyclicGroup(1)),
-			   HighestWeight(V`weight)[1] > >);
+			   HighestWeights(V`weight)[1] > >);
     end if;
     if assigned V`ambient then
 	images := [V`embedding(V.i)`m : i in [1..Dimension(V)]];

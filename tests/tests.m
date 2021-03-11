@@ -24,7 +24,7 @@ import "examples.m" : AlgebraicModularFormsExamples;
 import "../io/path.m" : path;
 import "../neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
 import "../neighbors/inv-CN1.m" : Invariant;
-import "../nipp_parse.m" : parseNippFile, NippToForm;
+import "../lattice_db/nipp_parse.m" : parseNippFile, NippToForm;
 
 forward testExample;
 forward testUnitaryMassFormula;
@@ -289,14 +289,14 @@ function my_eval(f, x, y)
 end function;
 
 function my_facAlgExtSqrf(F)
-   QQ := Rationals();
+   K<alpha> := BaseRing(F);
+   QQ := BaseRing(K); // That should be the rationals, maybe as a number field
    Q_y<y> := PolynomialRing(QQ);
    Q_yx<x> := PolynomialRing(Q_y);
    F_y := Q_yx![Eltseq(c) : c in Eltseq(F)];
    Q_x<x> := PolynomialRing(QQ);
    Q_xy<y> := PolynomialRing(Q_x);
    F_y := my_eval(F_y, y, x);
-   K<alpha> := BaseRing(F);
    mipo := Evaluate(MinimalPolynomial(alpha), y);
    mipo *:= Denominator(mipo);
    shift := 0;
@@ -430,10 +430,11 @@ end function;
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
-// However, right now (until we implement general irreps)
-// We simply take the weight to be Sym^j(v) \otimes Sym^(k-3)(Lambda^2(V))
-procedure get_lpolys(nipp_idx, wt : prec := 10, Estimate := false)
-  nipp := parseNippFile("nipp1-256.txt");
+procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipp := parseNippFile(nipp_fname);
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   A := NippToForm(nipp[nipp_idx]);
@@ -519,27 +520,122 @@ function get_nipp_idx(disc, nipp)
   return [idx : idx in [1..#nipp] | nipp[idx]`D eq disc][1];
 end function;
 
+function get_last_nipp_idx(disc, nipp)
+  idxs := [idx : idx in [1..#nipp] | nipp[idx]`D eq disc];
+  if IsEmpty(idxs) then return 0; end if;
+  return idxs[#idxs];
+end function;
+
+function get_nipp_table_idx(disc, nipp_maxs)
+  table_idx := 1;
+  while nipp_maxs[table_idx+1] lt disc do
+      table_idx +:= 1;
+      if table_idx ge #nipp_maxs then
+	 error "This size of lattices is not yet supported!";
+      end if;
+  end while;
+  return table_idx;
+end function;
+
 function getBoxByAnalyticConductor(N_an)
   weights := getWeightsByAnalyticConductor(N_an);
-  nipp := parseNippFile("nipp1-256.txt");
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  max_max := Floor(N_an / analyticConductor(3, 0));
+  num_tables := get_nipp_table_idx(max_max, nipp_maxs);
+  nipp_fnames := [Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[i]+1, nipp_maxs[i+1])
+		     : i in [1..num_tables]];
+  nipps := [parseNippFile(fname) : fname in nipp_fnames];
+  nipp_lens := [#nipp : nipp in nipps];
   res := [];
   for w in weights do
      max_N := Floor(N_an / analyticConductor(w[1], w[2]));
      // last index with this disc
-     max_idx := get_nipp_idx(max_N+1, nipp)-1;
+     table_idx := get_nipp_table_idx(max_N, nipp_maxs);
+     nipp := nipps[table_idx];
+     max_idx := get_last_nipp_idx(max_N, nipp);
      if max_idx ge 1 then
-       Append(~res, <w, max_idx>);
+       Append(~res, <w, table_idx, max_idx>);
      end if;
   end for;
-  return res;
+  return res, nipp_lens;
 end function;
 
-procedure get_lpolys_batch(N_an)
-  boxes := getBoxByAnalyticConductor(N_an);
+// This is needed due to unexplained magma crashes
+function createBatchFile(tid, idx, k, j)
+  fname := Sprintf("batch_files/lpolys_single_%o_%o_%o_%o.m", tid, idx, k, j);
+  f := Open(fname, "w");
+  output_str := "AttachSpec(\"spec\");\n";
+  output_str cat:= "import \"tests/tests.m\" : get_lpolys;\n";
+  output_str cat:= "time0 := Cputime();\n";
+  output_str cat:= Sprintf("get_lpolys(%o, %o, [%o, %o]);\n", tid, idx, k, j);
+  output_str cat:= "printf \"elapsed: %%o\\n\", Cputime()-time0;\n";
+  output_str cat:= "exit;\n";
+  fprintf f, output_str;
+  delete f;
+  return fname;
+end function;
+
+function get_lpolys_batch(N_an)
+  vprintf AlgebraicModularForms, 2:
+    "Calculating boxes...";
+  boxes, nipp_lens := getBoxByAnalyticConductor(N_an);
+  cmds := [];
+  vprintf AlgebraicModularForms, 2:
+    "Done!\nPreparing batch files....\n";
   for box in boxes do
-    cmd := Sprintf("./lpolys_batch.sh 1 %o %o %o", box[2],
-		   box[1][1], box[1][2]);
+     k := box[1][1];
+     j := box[1][2];
+     table_idx := box[2];
+     max_idx := box[3];
+     vprintf AlgebraicModularForms, 2:
+	 "k = %o, j = %o, table_idx = %o, max_idx = %o...\n",
+	 k, j, table_idx, max_idx;
+     for tid in [1..table_idx] do
+       if tid eq table_idx then
+	 mid := max_idx;
+       else
+         mid := nipp_lens[tid];
+       end if;
+       for idx in [1..mid] do
+	 fname := createBatchFile(tid, idx, k, j);
+         // magma_cmd := Sprintf("magma -b " cat fname);
+         // Append(~cmds, magma_cmd);
+         Append(~cmds, fname);
+       end for;
+	    // we abandon this method due to unexplained magma crashes
+	    // cmd := Sprintf("./lpolys_batch.sh 1 %o %o %o", box[2],
+	    //	   box[1][1], box[1][2]);
+	    //System(cmd);
+     end for;
+  end for;
+  vprintf AlgebraicModularForms, 2: "Done!\n";
+  return cmds;
+end function;
+
+procedure prepareBatchFile(N_an)
+  cmds := get_lpolys_batch(N_an);
+  fname := Sprintf("batch_files/lpolys_box_%o.sh", N_an);
+  f := Open(fname, "w");
+  output_str := "#!/bin/bash\n";
+  all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  
+  output_str cat:= "PROCESSES_TO_RUN=(" cat all_cmds cat ")\n";
+  output_str cat:= "for i in ${PROCESSES_TO_RUN[@]}; do\n";
+  output_str cat:= "\t magma -b ${i%%/*}/./${i##*/} > ${i}.log 2>&1 &\n";
+  output_str cat:= "done\n";
+// output_str cat:= "wait\n";
+  fprintf f, output_str;
+  delete f;
+  chmod_cmd := Sprintf("chmod +x %o", fname);
+  System(chmod_cmd);
+  // we will run it from outside
+  // System("./" cat fname);
+end procedure;
+
+procedure LaunchCommands(cmds)
+  vprintf AlgebraicModularForms, 2:
+    "Done! Launching %o commands.", #cmds;
+  for cmd in cmds do
     System(cmd);
   end for;
 end procedure;
-

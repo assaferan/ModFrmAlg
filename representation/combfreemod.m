@@ -175,6 +175,18 @@ intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
   return elt;
 end intrinsic;
 
+intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
+			  v::ModTupFldElt[FldOrd[FldRat]]) -> CombFreeModElt
+{Construct an element of CFM whose underlying vector is v.}
+  elt := New(CombFreeModElt);
+  elt`vec := v;
+  elt`parent := CFM;
+  dim := Dimension(CFM`M);
+  elt`name := createElementString(Eltseq(v), CFM`names);
+
+  return elt;
+end intrinsic;
+
 /* access */
 
 intrinsic Parent(elt::CombFreeModElt) -> CombFreeMod
@@ -228,12 +240,13 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
       if BaseRing(U1) ne BaseRing(U2) or Ngens(U1) ne Ngens(U2) then
 	  return false;
       end if;
-      phi := hom< U1 -> U2 | [U2.i : i in [1..Ngens(U2)]]>;
-      return &and[phi(M1`names[i]) eq M2`names[i] : i in [1..#M1`names]];
-  else
-      if #M1`names ne #M2`names then return false; end if;
-      return &and[M1`names[i] eq M2`names[i] : i in [1..#M1`names]];
+      if (U1 ne U2) then
+        phi := hom< U1 -> U2 | [U2.i : i in [1..Ngens(U2)]]>;
+        return &and[phi(M1`names[i]) eq M2`names[i] : i in [1..#M1`names]];
+       end if;
   end if;
+  if #M1`names ne #M2`names then return false; end if;
+  return &and[M1`names[i] eq M2`names[i] : i in [1..#M1`names]];
 end intrinsic;
 
 intrinsic Hash(CFM::CombFreeMod) -> RngIntElt

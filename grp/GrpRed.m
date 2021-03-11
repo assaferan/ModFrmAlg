@@ -20,8 +20,10 @@ freeze;
 
 // imports
 
-// !!! TODO : change to go to magma's location
+// !!! TODO : Fix this terrible patch
+
 import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
+
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //

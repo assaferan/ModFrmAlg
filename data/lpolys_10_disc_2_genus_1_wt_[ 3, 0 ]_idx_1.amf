@@ -1,0 +1,270 @@
+[*
+    <"GROUP",     ReductiveGroup([* <"ROOT_DATUM", [*
+    <
+    "SIMPLE_ROOTS",
+
+    MatrixAlgebra(RationalField(), 2) ! Matrix(RationalField(), 2, 2, [ 1, -1, 
+    0, 1 ])
+    >,
+
+    <
+    "SIMPLE_COROOTS",
+
+    MatrixAlgebra(RationalField(), 2) ! Matrix(RationalField(), 2, 2, [ 1, -1, 
+    0, 2 ])
+    >,
+    <"SIGNS", 1>, <"TYPE", "[*\n<\"B\", [ 1 .. 2 ]>\n*]">
+    *]>,
+    <"BASE_FIELD", FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))>,
+    <"COMP_GROUP", Sym(2)>,
+    <"INNER_FORMS", [ PowerStructure(RfxSpace) |
+    AmbientReflexiveSpace(MatrixAlgebra(FieldOfFractions(EquationOrder(Polynomi\
+    al(\[-1, 1]))), 5) ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))
+    | (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+    RationalField() | 1 ], 0, 0, (FieldOfFractions(EquationOrder(Polynomial(\[-\
+    1, 1])))) ! [ RationalField() | 1/2 ], 
+    (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ RationalField() 
+    | 1/2 ], 0, (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+    RationalField() | 1 ], 0, 0, (FieldOfFractions(EquationOrder(Polynomial(\[-\
+    1, 1])))) ! [ RationalField() | 1/2 ], 0, 0, 
+    (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ RationalField() 
+    | 1 ], 0, (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+    RationalField() | 1/2 ], (FieldOfFractions(EquationOrder(Polynomial(\[-1, 
+    1])))) ! [ RationalField() | 1/2 ], 0, 0, 
+    (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ RationalField() 
+    | 1 ], 0, (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+    RationalField() | 1/2 ], (FieldOfFractions(EquationOrder(Polynomial(\[-1, 
+    1])))) ! [ RationalField() | 1/2 ], (FieldOfFractions(EquationOrder(Polynom\
+    ial(\[-1, 1])))) ! [ RationalField() | 1/2 ], 0, 
+    (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ RationalField() 
+    | 1 ] ], FieldAutomorphism(FieldOfFractions(EquationOrder(Polynomial(\[-1, 
+    1]))), PermutationGroup<1 |  
+    \[ 1 ]:
+     Order := 1 >![ 1 ]))
+    ]>
+    *])>,
+    <"WEIGHT",     GroupRepresentation(GL(5, FieldOfFractions(EquationOrder(Polynomial(\[-1, 
+    1])))), CombinatorialFreeModule(FieldOfFractions(EquationOrder(Polynomial(\\
+    [-1, 1]))), {@ PolynomialRing(FieldOfFractions(EquationOrder(Polynomial(\[-\
+    1, 1]))), 25) |
+        Polynomial([ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) |
+    (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ RationalField() 
+    | 1 ]
+    ], [ PolynomialRing(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 
+    25) |
+        Monomial(PolynomialRing(FieldOfFractions(EquationOrder(Polynomial(\[-1, 
+    1]))), 25), \[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+    0, 0, 0, 0, 0 ])
+    ]
+    )
+    @}
+     : params := [*
+    <"NAMES", [ Strings() | "x_1_1", "x_1_2", "x_1_3", "x_1_4", "x_1_5", 
+    "x_2_1", "x_2_2", "x_2_3", "x_2_4", "x_2_5", "x_3_1", "x_3_2", "x_3_3", 
+    "x_3_4", "x_3_5", "x_4_1", "x_4_2", "x_4_3", "x_4_4", "x_4_5", "x_5_1", 
+    "x_5_2", "x_5_3", "x_5_4", "x_5_5" ]>
+    *]), "           \n  \t      function action(g, m, V)\n\t      \t      B := 
+    Names(V`M);\n                      R := Universe(B);\n                      
+    n := 5;\n                      x := Matrix([[R.(n*i+j+1) \n                 
+    : j in [0..n-1]] : i in [0..n-1]]);\n                      g_R := 
+    ChangeRing(g, R);\n                      f := B[m];\n                      
+    f_g := Evaluate(f, Eltseq(Transpose(g_R)*x));\n                      degs :=
+    V`hw_vdw[1];\n                      F := BaseRing(R);\n                     
+    mon_vs := VectorSpace(F, #degs);\n                      basis_mat := 
+    ChangeRing(Matrix(V`hw_vdw[2]), F);\n                      degs_f_g := 
+    [[Degree(m, R.i) : i in [1..Rank(R)]] \n                                    
+    : m in Monomials(f_g)];\n                      vec_g := 
+    &+[Coefficients(f_g)[i]*\n                                
+    mon_vs.(Index(degs, degs_f_g[i]))\n\t\t                : i in 
+    [1..#degs_f_g]];\n                      return (V`M)!Solution(basis_mat, 
+    vec_g);\n  \t      end function;\n  \t      return action;\n\t      " : 
+    params := [* <"HW_VDW", [*
+    [ PowerSequence(IntegerRing()) |
+    \[ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    ]
+    ],
+    [ PowerSequence(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) |
+    [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) |
+    (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ RationalField() 
+    | 1 ]
+    ]
+    ]
+    *]>, <"FROM_FILE", true> *])>,
+    <"POLY", Polynomial(\[-1, 1])>,
+
+    <
+"INNER"        ,
+
+        MatrixAlgebra(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 5) 
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1 ], 0, 0, (FieldOfFractions(EquationOrder(Polynomial\
+        (\[-1, 1])))) ! [ RationalField() | 1/2 ], 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1/2 ], 0, (FieldOfFractions(EquationOrder(Polynomial(\
+        \[-1, 1])))) ! [ RationalField() | 1 ], 0, 0, 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1/2 ], 0, 0, (FieldOfFractions(EquationOrder(Polynomi\
+        al(\[-1, 1])))) ! [ RationalField() | 1 ], 0, 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1/2 ], (FieldOfFractions(EquationOrder(Polynomial(\[-\
+        1, 1])))) ! [ RationalField() | 1/2 ], 0, 0, 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1 ], 0, (FieldOfFractions(EquationOrder(Polynomial(\[\
+        -1, 1])))) ! [ RationalField() | 1/2 ], 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1/2 ], (FieldOfFractions(EquationOrder(Polynomial(\[-\
+        1, 1])))) ! [ RationalField() | 1/2 ], 0, 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 1 ] ]
+    >,
+    <"GENUS", [* [*
+        <[ PowerSequence(RationalField()) |
+            [ RationalField() | 1 ]
+        ], [ PowerSequence(RationalField()) |
+            [ RationalField() | 1 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ]
+        ]>,
+        <[ PowerSequence(RationalField()) |
+            [ RationalField() | 1 ]
+        ], [ PowerSequence(RationalField()) |
+            [ RationalField() | 0 ],
+            [ RationalField() | 1 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ]
+        ]>,
+        <[ PowerSequence(RationalField()) |
+            [ RationalField() | 1 ]
+        ], [ PowerSequence(RationalField()) |
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 1 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ]
+        ]>,
+        <[ PowerSequence(RationalField()) |
+            [ RationalField() | 1 ]
+        ], [ PowerSequence(RationalField()) |
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 1 ],
+            [ RationalField() | 0 ]
+        ]>,
+        <[ PowerSequence(RationalField()) |
+            [ RationalField() | 1 ]
+        ], [ PowerSequence(RationalField()) |
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 0 ],
+            [ RationalField() | 1 ]
+        ]>
+    *] *]>, <"HECKE", [* <1, [*
+        <
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [2]
+            ],
+
+            MatrixAlgebra(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))),
+            1) ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+            (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+            RationalField() | 10 ] ]
+        >
+    *]> *]>, <"HECKE_IMAGES", [* [* <1, [*
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [2]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 10 ] ]>,
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [3]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 40 ] ]>,
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [5]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 156 ] ]>,
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [7]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 400 ] ]>
+    *]>, <2, [*
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [2]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 0 ]>,
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [3]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 120 ] ]>,
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [5]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 780 ] ]>,
+        <[ EquationOrder(Polynomial(\[-1, 1])) |
+            [7]
+        ], VectorSpace(FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))), 1)
+        ! [ FieldOfFractions(EquationOrder(Polynomial(\[-1, 1]))) | 
+        (FieldOfFractions(EquationOrder(Polynomial(\[-1, 1])))) ! [ 
+        RationalField() | 2800 ] ]>
+    *]> *] *]>, <"EIGENFORMS", [*
+        <[ ext<K|Polynomial(K, [-1, 1])> where K is RationalField() |
+            [ RationalField() | 1 ]
+        ], true, <\[ 1, 2 ], [ PowerStructure(List) | [*
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [3]
+            ],
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [2]
+            ],
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [5]
+            ],
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [7]
+            ]
+        *], [*
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [3]
+            ],
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [2]
+            ],
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [5]
+            ],
+            [ EquationOrder(Polynomial(\[-1, 1])) |
+                [7]
+            ]
+        *] ], [ PowerSequence(PowerSequence(RationalField())) |
+            [ PowerSequence(RationalField()) |
+                [ RationalField() | 40 ],
+                [ RationalField() | 10 ],
+                [ RationalField() | 156 ],
+                [ RationalField() | 400 ]
+            ],
+            [ PowerSequence(RationalField()) |
+                [ RationalField() | 120 ],
+                [ RationalField() | 0 ],
+                [ RationalField() | 780 ],
+                [ RationalField() | 2800 ]
+            ]
+        ]>>
+    *]>
+*]

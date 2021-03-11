@@ -1,0 +1,17 @@
+
+
+Magma: Internal error
+
+Please mail this entire run [*** WITH THE DETAILS BELOW ***]
+    to magma-bugs@maths.usyd.edu.au
+
+You can print the entire input by entering:
+%P
+
+Version: 2.25-6
+Machine type: intel64-osx
+Initial seed: 1992768595
+Time to this point: 18.99
+Memory usage: 32.09MB
+Segmentation fault
+Magma: Fatal Error: Magma: Irrecoverable error; exiting

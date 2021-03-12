@@ -205,9 +205,12 @@ end intrinsic;
 
 function normalizeField(R)
     K := AbsoluteField(FieldOfFractions(R));
+//    K := AbsoluteField(NumberField(R));
+
     if Type(K) eq FldRat then
 	K := RationalsAsNumberField();
     end if;
+
     return K;
 end function;
 
@@ -261,11 +264,12 @@ intrinsic UnitaryModularForms(F::Fld, n::RngIntElt) ->ModFrmAlg
   return UnitaryModularForms(IdentityMatrix(F, n));
 end intrinsic;
 
-function getWeightRep(weight, char, F, n)
+function getWeightRep(G, weight, char, F, n)
 //    F := AbsoluteField(F);
     if Type(F) eq FldRat then
 	F := RationalsAsNumberField();
     end if;
+    // !!! TODO - change the positive characteristic to support also orthogonal
     if char ne 0 then
       pR := Factorization(ideal<Integers(F)|char>)[1][1];
       Fq, mod_q := ResidueClassField(pR);
@@ -290,6 +294,7 @@ function getWeightRep(weight, char, F, n)
       GL_n := GroupOfLieType(StandardRootDatum("A",n-1), F);
       W := GroupRepresentation(GL_n, weight);
      */
+      /*
       if &and[w eq 0 : w in weight] then
 	  W := TrivialRepresentation(GL(n,F),F);
       elif n eq 3 then
@@ -297,6 +302,8 @@ function getWeightRep(weight, char, F, n)
       else
 	  error "at the moment we have not implemented highest weight representations of this type";
       end if;
+      */
+      W := HighestWeightRepresentation(G, weight);
     end if;
     return W;
 end function;
@@ -307,7 +314,8 @@ intrinsic UnitaryModularForms(F::Fld,
 			char::RngIntElt) -> ModFrmAlg
 {.}
   F := normalizeField(F);
-  W := getWeightRep(weight, char, F, n);
+  G := UnitaryGroup(IdentityMatrix(F, n));
+  W := getWeightRep(G,weight, char, F, n);
   return UnitaryModularForms(F, n, W);
 end intrinsic;
 
@@ -318,8 +326,9 @@ intrinsic UnitaryModularForms(F::Fld,
 {.}
   F := normalizeField(F);
   n := Degree(Parent(innerForm));
-  W := getWeightRep(weight, char, F, n);
-  return UnitaryModularForms(ChangeRing(innerForm,F), W);
+  G := UnitaryGroup(ChangeRing(innerForm, F));
+  W := getWeightRep(G, weight, char, F, n);
+  return AlgebraicModularForms(G, W);
 end intrinsic;
 
 intrinsic OrthogonalModularForms(F::Fld,
@@ -329,19 +338,34 @@ intrinsic OrthogonalModularForms(F::Fld,
 {.}
   F := normalizeField(F);
   n := Degree(Parent(innerForm));
-  W := getWeightRep(weight, char, F, n);
-  return OrthogonalModularForms(ChangeRing(innerForm,F), W);
+  G := OrthogonalGroup(ChangeRing(innerForm,F));
+  W := getWeightRep(G, weight, char, F, n);
+  return AlgebraicModularForms(G, W);
 end intrinsic;
 // Should also think how to get the isogeny in general,
 // and how it should affect calculations
 
 intrinsic Print(M::ModFrmAlg, level::MonStgElt) {}
 	K := BaseRing(InnerForm(M));
-	printf "Space of algebraic modular forms over %o.\n", M`G;
+	printf "Space of algebraic modular forms on %o", M`G;
         if level eq "Maximal" then
 	  printf "Inner form:\n%o\n", InnerForm(M);
         end if;
-        printf "of weight %o and level %o", M`W, M`L;
+        R := BaseRing(M`W);
+        if (Dimension(M`W) eq 1) and (Type(BaseRing(M)) eq Type(R))
+			   and BaseRing(M) eq R then
+	  weight := Sprintf("trivial weight");
+	else
+          weight := "weight ";
+          if Type(R) eq FldOrd then 
+            R := NumberField(MaximalOrder(BaseRing(CFM`M)));
+          end if;
+          R := (Degree(R) eq 1) select Rationals() else R;
+          weight cat:= (assigned M`W`lambda) select Sprintf("%o", M`W`lambda)
+        	       else Sprintf("%o-dimensional vector space over %o",
+			     Dimension(M`W), R);
+        end if;
+        printf " of %o and level %o", weight, M`L;
 end intrinsic;
 
 intrinsic IsSpecialOrthogonal(M::ModFrmAlg) -> BoolElt

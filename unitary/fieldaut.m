@@ -213,11 +213,17 @@ intrinsic FixedField(alpha::FldAut) -> Fld
      ((Type(alpha`L) eq AlgAss) and IsFinite(BaseRing(alpha`L))) then
     return sub<alpha`L|[x : x in alpha`L | alpha(x) eq x]>;
   end if;
-  F := FixedField(alpha`L, [alpha`map]);
-  if Type(F) eq FldRat and Degree(alpha`L) eq 1 then
-      F := QNF();
+  if Type(alpha`L) ne FldRat then
+    F := FixedField(alpha`L, [alpha`map]);
+    if Type(F) eq FldRat and Degree(alpha`L) eq 1 then
+        F := QNF();
+    end if;
+    assert IsSubfield(F,alpha`L);
+  else
+    F := alpha`L;
   end if;
-  assert IsSubfield(F,alpha`L);
+
+// assert IsSubfield(F,alpha`L);
   alpha`fixed := F;
   return alpha`fixed;
 end intrinsic;

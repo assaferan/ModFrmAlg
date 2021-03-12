@@ -189,6 +189,7 @@ end intrinsic;
 intrinsic UnitaryGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
 {Construct the unitary group preserving the specified hermitian form.}
   K := BaseRing(innerForm);
+  require Type(K) ne FldRat : "The form should be over a CM field.";
   _, cc := HasComplexConjugate(K);
   alpha := FieldAutomorphism(K, cc);
   
@@ -262,11 +263,31 @@ end intrinsic;
 intrinsic IsOrthogonal(G::GrpRed) -> BoolElt
 {.}
   R := RootDatum(G`G0);
-  if not IsIrreducible(R) then return false; end if;
+ 
   name := CartanName(R);
   cartan_type := name[1];
 
   return (cartan_type in ["B","D"]);
+end intrinsic;
+
+intrinsic IsSymplectic(G::GrpRed) -> BoolElt
+{.}
+  R := RootDatum(G`G0);
+ 
+  name := CartanName(R);
+  cartan_type := name[1];
+
+  return (cartan_type eq "C");
+end intrinsic;
+
+intrinsic IsUnitary(G::GrpRed) -> BoolElt
+{.}
+  R := RootDatum(G`G0);
+  
+  name := CartanName(R);
+  cartan_type := name[1];
+
+  return (cartan_type eq "A");
 end intrinsic;
 
 intrinsic IsSpecialOrthogonal(G::GrpRed) -> BoolElt
@@ -303,9 +324,11 @@ intrinsic Print(G::GrpRed, level::MonStgElt)
       if IsSpecialOrthogonal(G) then
          printf "special orthogonal group of %o", InnerForm(G,1);
       elif IsOrthogonal(G) then
-	printf "Orthogonal group of %o", InnerForm(G,1);
+	printf "orthogonal group of %o", InnerForm(G,1);
+      elif IsUnitary(G) then
+	printf "unitary group of %o", InnerForm(G,1);
       else
-        printf "Reductive group with connected component %o", G`G0;
+        printf "reductive group with connected component %o", G`G0;
         if level ne "Minimal" then
 	  printf ", and component group %o", G`Comp;
         end if;

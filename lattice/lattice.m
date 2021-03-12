@@ -102,7 +102,7 @@ declare attributes ModDedLat:
 	// Jordan decomposition of the lattice at a prime.
 	Jordan,
 
-	// The spinor norms as specified prime ideals.
+	// The spinor norms at specified prime ideals.
 	SpinorNorm;
 
 // adding some attributes to the existing lattice type Lat.
@@ -129,8 +129,14 @@ end intrinsic;
 // print
 
 intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
-   printf "lattice of (half-)discriminant %o",
-              Discriminant(lat : GramFactor := 2);
+   if (SpaceType(ReflexiveSpace(lat)) eq "Hermitian") then
+     factor := 1;
+   else
+     factor := 2;
+   end if;
+   disc := IsEven(Rank(lat)) select "discrminant" else "half-discriminant";
+   printf "lattice whose %o has norm %o", disc,
+           Norm(Discriminant(lat : GramFactor := factor));
    if level eq "Maximal" then
      printf "%o", Module(lat);
    end if;
@@ -197,20 +203,20 @@ intrinsic LatticeWithBasis(rfxSpace::RfxSpace, basis::Mtrx) -> ModDedLat
 matrix provided. }
   // Make sure that the base ring of the reflexive space and the base
   //  ring of the supplied basis agree.
-  require rfxSpace`F eq BaseRing(basis): "The base rings do not match.";
+  require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
 
   // Initialize the internal lattice structure.
   lat := New(ModDedLat);
-
-  // Assign the specified lattice.
-  lat`Module := Module(Rows(basis));
 
   // Assign the base field.
   lat`F := BaseRing(rfxSpace);
 
   // Assign the base ring.
   lat`R := Integers(lat`F);
-	
+
+  // Assign the specified lattice.
+  lat`Module := Module(Rows(basis));
+
   // Assign the pseudobasis if we're over a number field.
   lat`psBasis := PseudoBasis(Module(lat));
 
@@ -585,7 +591,7 @@ intrinsic Scale(lat::ModDedLat) -> RngOrdFracIdl
   if assigned lat`Scale then return lat`Scale; end if;
 
   // Extract the coefficient ideals.
-  idls := [ pb[1] : pb in PseudoBasis(Module(lat)) ];
+  idls := [ pb[1] : pb in PseudoBasis(lat) ];
 
   gram := GramMatrix(lat, Basis(Module(lat)));
   

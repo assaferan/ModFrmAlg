@@ -116,8 +116,12 @@ declare attributes ModFrmAlg:
 
 intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep,
-				level::AlgMatElt[Fld]) -> ModFrmAlg
-{Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.}
+				level::AlgMatElt[Fld] :
+				GramFactor := 1) -> ModFrmAlg
+{Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
+    If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
+    If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
+
         require IsCompact(G) : "Group must be compact at infinity.";
         K := SplittingField(G);
         require IsField(K) : "Reductive group must be defined over a field.";
@@ -132,7 +136,7 @@ intrinsic AlgebraicModularForms(G::GrpRed,
 
         cartanType := CartanName(G)[1];
 
-	V := InnerForm(G,1);
+        V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
 
 	// Build the lattice from the level
 	L := LatticeWithBasis(V, ChangeRing(level, K));
@@ -331,11 +335,13 @@ end intrinsic;
 // Should also think how to get the isogeny in general,
 // and how it should affect calculations
 
-intrinsic Print(M::ModFrmAlg) {}
+intrinsic Print(M::ModFrmAlg, level::MonStgElt) {}
 	K := BaseRing(InnerForm(M));
 	printf "Space of algebraic modular forms over %o.\n", M`G;
-	printf "Inner form:\n%o\n", InnerForm(M);
-	printf "of weight %o", M`W;
+        if level eq "Maximal" then
+	  printf "Inner form:\n%o\n", InnerForm(M);
+        end if;
+        printf "of weight %o and level %o", M`W, M`L;
 end intrinsic;
 
 intrinsic IsSpecialOrthogonal(M::ModFrmAlg) -> BoolElt

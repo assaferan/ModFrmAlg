@@ -304,12 +304,12 @@ intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 	printf "CombinatorialFreeModule(%m, %o : params := %m)", BaseRing(CFM`M), names_str, params;  
 	return;
   end if;
-  desc := Sprintf("Free module of rank %o over %o",
+  desc := Sprintf("free module of rank %o over %o",
 		  Dimension(CFM`M), BaseRing(CFM`M));
-  if (level eq "Minimal") then printf "%o", desc; return; end if; 
+  if (level ne "Maximal") then printf "%o", desc; return; end if; 
   names := CFM`names;
   MAX_LEN := 5;
-  if (level eq "Default") and (#names gt MAX_LEN) then
+  if (#names gt MAX_LEN) then
       names := names[1..MAX_LEN];
       suffix := "...";
   else

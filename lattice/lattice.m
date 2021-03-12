@@ -128,8 +128,12 @@ end intrinsic;
 
 // print
 
-intrinsic Print(lat::ModDedLat) {}
-	Module(lat);
+intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
+   printf "lattice of (half-)discriminant %o",
+              Discriminant(lat : GramFactor := 2);
+   if level eq "Maximal" then
+     printf "%o", Module(lat);
+   end if;
 end intrinsic;
 
 // boolean operators
@@ -608,40 +612,23 @@ intrinsic Discriminant(lambda::ModDedLat, pi::ModDedLat) -> RngOrdFracIdl
   return &*ElementaryDivisors(lambda, pi);
 end intrinsic;
 
-intrinsic Discriminant(lat::ModDedLat) -> RngOrdFracIdl
+intrinsic Discriminant(lat::ModDedLat : GramFactor := 1) -> RngOrdFracIdl
 { Compute the discriminant of the lattice. }
   // Return the discriminant if it's already been computed.
-  if assigned lat`Discriminant then return lat`Discriminant; end if;
-/*
-  // The inner form of the ambient reflexive space.
-  M := InnerForm(ReflexiveSpace(lat));
-  
-  // Retrieve the basis matrix for this lattice.
-  B := ChangeRing(Matrix(Basis(Module(lat))), BaseRing(M));
-
-  // The determinant of the inner form of this lattice.
-  det := Determinant(M) * Determinant(B) * alpha(Determinant(B));
-  
-  // Assign the discriminant.
-  steinitz :=  SteinitzClass(Module(lat));
-  lat`Discriminant := det * steinitz * alpha(steinitz);
-
-*/
-
-  lat`Discriminant := Discriminant(DualLattice(lat), lat);
-
-/*
-  // The involution of the ambient reflexive space
-  alpha := Involution(ReflexiveSpace(lat));
-
-  // Return the discriminant depending on the parity of the dimension.
-  if IsIdentity(alpha) and
-     (Dimension(ReflexiveSpace(lat)) mod 2 eq 1) then
-      lat`Discriminant /:= 2;
+  if not assigned lat`Discriminant then 
+     lat`Discriminant := Discriminant(DualLattice(lat), lat);
   end if;
-*/
 
-  return lat`Discriminant;
+  if GramFactor eq 1 then
+     return lat`Discriminant;
+  elif GramFactor eq 2 then
+     r := Rank(lat);
+     if IsEven(r) then
+        return 2^r * lat`Discriminant;
+     else
+        return 2^(r-1) * lat`Discriminant;
+     end if;
+  end if;
 end intrinsic;
 
 

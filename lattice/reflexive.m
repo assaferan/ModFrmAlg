@@ -149,7 +149,14 @@ intrinsic Print(R::RfxSpace, level::MonStgElt)
       end if;
   else
       K := BaseRing(R`V);
-      printf "%o", R`V;
+      if SpaceType(R) eq "Symmetric" then
+        printf "quadratic space of dimension %o over %o", Rank(R`V), K;
+      elif SpaceType(R) eq "Hermitian" then
+        printf "hermitian space of dimension %o over %o", Rank(R`V), K;
+      elif SpaceType(R) eq "Alternating" then
+	printf "symplectic space of dimension %o over %o", Rank(R`V), K;
+      end if;
+      // printf "%o", R`V;
   end if;
 end intrinsic;
 

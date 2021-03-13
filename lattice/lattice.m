@@ -102,7 +102,7 @@ declare attributes ModDedLat:
 	// Jordan decomposition of the lattice at a prime.
 	Jordan,
 
-	// The spinor norms as specified prime ideals.
+	// The spinor norms at specified prime ideals.
 	SpinorNorm;
 
 // adding some attributes to the existing lattice type Lat.
@@ -128,8 +128,18 @@ end intrinsic;
 
 // print
 
-intrinsic Print(lat::ModDedLat) {}
-	Module(lat);
+intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
+   if (SpaceType(ReflexiveSpace(lat)) eq "Hermitian") then
+     factor := 1;
+   else
+     factor := 2;
+   end if;
+   disc := IsEven(Rank(lat)) select "discrminant" else "half-discriminant";
+   printf "lattice whose %o has norm %o", disc,
+           Norm(Discriminant(lat : GramFactor := factor));
+   if level eq "Maximal" then
+     printf "%o", Module(lat);
+   end if;
 end intrinsic;
 
 // boolean operators
@@ -193,20 +203,20 @@ intrinsic LatticeWithBasis(rfxSpace::RfxSpace, basis::Mtrx) -> ModDedLat
 matrix provided. }
   // Make sure that the base ring of the reflexive space and the base
   //  ring of the supplied basis agree.
-  require rfxSpace`F eq BaseRing(basis): "The base rings do not match.";
+  require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
 
   // Initialize the internal lattice structure.
   lat := New(ModDedLat);
-
-  // Assign the specified lattice.
-  lat`Module := Module(Rows(basis));
 
   // Assign the base field.
   lat`F := BaseRing(rfxSpace);
 
   // Assign the base ring.
   lat`R := Integers(lat`F);
-	
+
+  // Assign the specified lattice.
+  lat`Module := Module(Rows(basis));
+
   // Assign the pseudobasis if we're over a number field.
   lat`psBasis := PseudoBasis(Module(lat));
 
@@ -581,7 +591,7 @@ intrinsic Scale(lat::ModDedLat) -> RngOrdFracIdl
   if assigned lat`Scale then return lat`Scale; end if;
 
   // Extract the coefficient ideals.
-  idls := [ pb[1] : pb in PseudoBasis(Module(lat)) ];
+  idls := [ pb[1] : pb in PseudoBasis(lat) ];
 
   gram := GramMatrix(lat, Basis(Module(lat)));
   
@@ -608,40 +618,23 @@ intrinsic Discriminant(lambda::ModDedLat, pi::ModDedLat) -> RngOrdFracIdl
   return &*ElementaryDivisors(lambda, pi);
 end intrinsic;
 
-intrinsic Discriminant(lat::ModDedLat) -> RngOrdFracIdl
+intrinsic Discriminant(lat::ModDedLat : GramFactor := 1) -> RngOrdFracIdl
 { Compute the discriminant of the lattice. }
   // Return the discriminant if it's already been computed.
-  if assigned lat`Discriminant then return lat`Discriminant; end if;
-/*
-  // The inner form of the ambient reflexive space.
-  M := InnerForm(ReflexiveSpace(lat));
-  
-  // Retrieve the basis matrix for this lattice.
-  B := ChangeRing(Matrix(Basis(Module(lat))), BaseRing(M));
-
-  // The determinant of the inner form of this lattice.
-  det := Determinant(M) * Determinant(B) * alpha(Determinant(B));
-  
-  // Assign the discriminant.
-  steinitz :=  SteinitzClass(Module(lat));
-  lat`Discriminant := det * steinitz * alpha(steinitz);
-
-*/
-
-  lat`Discriminant := Discriminant(DualLattice(lat), lat);
-
-/*
-  // The involution of the ambient reflexive space
-  alpha := Involution(ReflexiveSpace(lat));
-
-  // Return the discriminant depending on the parity of the dimension.
-  if IsIdentity(alpha) and
-     (Dimension(ReflexiveSpace(lat)) mod 2 eq 1) then
-      lat`Discriminant /:= 2;
+  if not assigned lat`Discriminant then 
+     lat`Discriminant := Discriminant(DualLattice(lat), lat);
   end if;
-*/
 
-  return lat`Discriminant;
+  if GramFactor eq 1 then
+     return lat`Discriminant;
+  elif GramFactor eq 2 then
+     r := Rank(lat);
+     if IsEven(r) then
+        return 2^r * lat`Discriminant;
+     else
+        return 2^(r-1) * lat`Discriminant;
+     end if;
+  end if;
 end intrinsic;
 
 

@@ -148,8 +148,20 @@ intrinsic Print(R::RfxSpace, level::MonStgElt)
 	  printf "AmbientReflexiveSpace(%m, %m)", InnerForm(R), Involution(R);
       end if;
   else
-      K := BaseRing(R`V);
-      printf "%o", R`V;
+  K := NumberField(MaximalOrder(BaseRing(R`V)));
+  // For display purposes
+  _<x> := Parent(DefiningPolynomial(K));
+      if Degree(K) eq 1 then
+	K := Rationals();
+      end if;
+      if SpaceType(R) eq "Symmetric" then
+        printf "quadratic space of dimension %o over %o", Rank(R`V), K;
+      elif SpaceType(R) eq "Hermitian" then
+        printf "hermitian space of dimension %o over %o", Rank(R`V), K;
+      elif SpaceType(R) eq "Alternating" then
+	printf "symplectic space of dimension %o over %o", Rank(R`V), K;
+      end if;
+      // printf "%o", R`V;
   end if;
 end intrinsic;
 
@@ -259,18 +271,21 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 
       // Determine field of fractions.
       if IsField(R) then
+
 	  if R cmpeq Rationals() then
 	      R := RationalsAsNumberField();
 	  end if;
 
 	  // Make sure we're dealing with a number field.
-	  require IsNumberField(R) or (Type(R) eq FldOrd):
+	  require IsNumberField(R) or (Type(R) eq FldOrd) or Type(R)eq FldRat:
 	          "Base ring must be a number field or number ring.";
 	  // The maximal order of our number field.
 	  R := Integers(R);
+
       elif R cmpeq Integers() then
 	  // Convert to a maximal order format.
 	  R := Integers(RationalsAsNumberField());
+
       end if;
 
       // The field of fractions of the maximal order of our number field.

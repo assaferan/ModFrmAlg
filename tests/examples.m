@@ -207,7 +207,8 @@ function createExamples_7_4()
 					 inner_form := inner_form,
 					 coeff_char := 0,
 					 genus := 2,
-					 weight := [3,1],
+						  // weight := [3,1],
+                                         weight := [3,0,-1],
 					 norm_p := norm_p,
 					 timing := [],
 					 evs := evs_3_1>;
@@ -218,7 +219,8 @@ function createExamples_7_4()
 					 inner_form := inner_form,
 					 coeff_char := 0,
 					 genus := 2,
-					 weight := [3,3],
+						  //weight := [3,3],
+                                         weight := [3,0,-3],
 					 norm_p := norm_p,
 					 timing := [],
 					 evs := evs_3_3>;
@@ -240,7 +242,9 @@ function createExamples_7_4()
 					 inner_form := inner_form,
 					 coeff_char := 0,
 					 genus := 2,
-					 weight := [2,2],
+					 // This was the weight in terms of a,b
+					 //weight := [2,2],
+                                         weight := [2,0,-2],
 					 norm_p := norm_p,
 					 timing := [],
 					 evs := evs_2_2>;

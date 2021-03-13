@@ -82,8 +82,10 @@ forward spinor_norm_rho;
 
 declare type GrpRep[GrpRepElt];
 declare attributes GrpRep :
-		   // the group
-		   G,
+	// the (actual) group - currently we usde a matrix group containing grp
+	G,
+        // the reductive group
+        grp,
 	// the module
 	M,
 	// the action on basis elements
@@ -119,6 +121,8 @@ declare attributes GrpRep :
 	pullback,
 	mat_to_elt,
 	weight,
+        lambda,
+        is_irreducible,
 	// In case this is a subrepresentation, its ambient representation
 	ambient,
 	// In case this is a subrepresentation, the embedding into its ambient.
@@ -187,12 +191,14 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
   end if;
 
   if IsDefined(param_array, "HW_VDW") then
-      V`hw_vdw := param_array["HW_VDW"];
+      V`hw_vdw := param_array["HW_VDW"][1];
       V`M := CombinatorialFreeModule(BaseRing(G), M`names);
       V`hw_vdw_rev := AssociativeArray();
       for i in [1..#V`hw_vdw[1]] do
 	V`hw_vdw_rev[V`hw_vdw[1][i]] := i;
       end for;
+      V`lambda := param_array["HW_VDW"][2];
+      V`is_irreducible := true;
   end if;
 
   if IsDefined(param_array, "WEIGHT") then
@@ -220,6 +226,16 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
       end if;
       V`mat_to_elt := word_map * G_map;
       V`weight := HighestWeightRepresentation(Codomain(V`mat_to_elt),hw);
+      V`lambda := hw;
+      V`is_irreducible := true;
+  end if;
+
+  if IsDefined(param_array, "IS_IRREDUCIBLE") then
+    V`is_irreducible := param_array["IS_IRREDUCIBLE"];
+  end if;
+
+  if IsDefined(param_array, "GRP") then
+    V`grp := param_array["GRP"];
   end if;
 
   V`action_desc := action_desc;
@@ -509,7 +525,7 @@ function build_rep_params(V)
 	Append(~params, < "PULLBACK", V`pullback >);
     end if;
     if assigned V`hw_vdw then
-      Append(~params, < "HW_VDW", V`hw_vdw >);
+        Append(~params, < "HW_VDW", <V`hw_vdw, V`lambda> >);
     end if;
     if assigned V`mat_to_elt then
 	lie_grp := Codomain(Components(V`mat_to_elt)[2]);
@@ -523,6 +539,12 @@ function build_rep_params(V)
 	iota := Homomorphism(V`M, V`ambient`M, images);
 	Append(~params, < "AMBIENT", V`ambient >);
 	Append(~params, < "EMBEDDING", iota >);
+    end if;
+    if assigned V`is_irreducible then
+        Append(~params, < "IS_IRREDUCIBLE", V`is_irreducible >);
+    end if;
+    if assigned V`grp then
+       Append(~params, < "GRP", V`grp >);
     end if;
     return params;
 end function;
@@ -544,7 +566,8 @@ intrinsic Print(V::GrpRep, level::MonStgElt)
 	     V`G, V`M, V`action_desc, params;
       return;
   end if;
-  printf "%o with an action of %o", V`M, V`G; 
+  G := (assigned V`grp) select V`grp else V`G;
+  printf "%o with an action of %o", V`M, G; 
 end intrinsic;		   
 
 /* generators and coercion */ 
@@ -1045,54 +1068,7 @@ function getGL3ContractionMap(a,b,K)
     return Homomorphism(W_ab, W_minus, basis_images);
 end function;
 
-// getGL3HighestWeightRep - returns the highest weight representation of GL3 over K
-// of highest weight (a,b,0)
-// (at this point we do not consider the twist by the determinant)
 
-intrinsic getGL3HighestWeightRep(a::RngIntElt,b::RngIntElt,K::Rng) -> GrpRep
-{.}
-    if (a eq 0) or (b eq 0) then return getGL3Rep(a,b,K); end if;
-    return Kernel(getGL3ContractionMap(a,b,K));
-end intrinsic;
-
-// TODO!! Think about how to do this one - what is exactly the contraction?
-// Need to have the quadratic form
-function getSO5ContractionMap(a,b,K)
-    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
-    W_ab := getSO5Rep(a,b,K);
-    W_minus := getSO5Rep(a-1, b-1,K);
-    mon_basis := W_ab`tensor_product[1]`M`names;
-    alphas := [[Degree(b, i) : i in [1..5]] : b in mon_basis];
-    mon_alt_basis := W_ab`tensor_product[2]`M`names;
-    betas := [[Degree(b, i) : i in [1..10]] : b in mon_alt_basis];
-    coeffs := [[[alpha[i] * beta[i] : i in [1..5]] : beta in betas] : alpha in alphas];
-    idxs := [[[i : i in [1..5] | coeff[i] ne 0] : coeff in coeffs_row] :
-	     coeffs_row in coeffs];
-    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
-		     mon_alt_basis[j2] div Parent(mon_alt_basis[j2]).i> :
-		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
-    sym_minus := W_minus`tensor_product[1];
-    sym_dual_minus := W_minus`tensor_product[2];
-    mon_basis_minus := sym_minus`M`names;
-    mon_dual_basis_minus := sym_dual_minus`M`names;
-    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
-		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
-		     im_vec in image_vecs[j1][j2]] :
-		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
-    W_minus_image := [[[W_minus.Index(W_minus`M`names,
-				      Sprintf("%o",im_idx)) :
-		      im_idx in image_idxs[j1][j2]] :
-		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
-    function get_basis_image(coeffs, idxs, W_minus_image)
-	if IsEmpty(idxs) then return W_minus!0; end if;
-	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
-    end function;
-    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
-				      W_minus_image[j1][j2]) :
-		      j2 in [1..#image_idxs[j1]]] :
-			  j1 in [1..#image_idxs]];
-    return Homomorphism(W_ab, W_minus, basis_images);
-end function;
 
 intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
 {Return the fixed subspace of V under the group gamma.}
@@ -1639,9 +1615,7 @@ function get_lap_kernel(lap)
   return K;
 end function;
 
-function get_hw_basis(lambda, Q)
-  F := BaseRing(Q);
-  n := Degree(Parent(Q));
+function get_hw_basis_gl(lambda, F, n)
   R := PolynomialRing(F, n^2);
   var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..n]] : i in [1..n]];
   AssignNames(~R, &cat var_names);
@@ -1657,6 +1631,13 @@ function get_hw_basis(lambda, Q)
   B := [my_prod([Determinant(Submatrix(x, [Integers()!Columns(t)[j][i]
 					: i in [1..mu[j]]], [1..mu[j]]))
 	      : j in [1..#mu]], R) : t in tabs];
+  return B, x;
+end function;
+
+function get_hw_basis_so(lambda, Q)
+  F := BaseRing(Q);
+  n := Degree(Parent(Q));
+  B, x := get_hw_basis_gl(lambda, F, n);
   laplacians := [[&+[Q[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
 			: i,j in [1..n]] : f in B] : p,q in [1..n]];
   kers := [get_lap_kernel(lap) : lap in laplacians];
@@ -1664,13 +1645,10 @@ function get_hw_basis(lambda, Q)
   return [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
 end function;
 
-function getSOHighestWeightRepresentationPolys(lambda, Q)
-  n := Degree(Parent(Q));
-  F := BaseRing(Q);
-  B := get_hw_basis(lambda, Q);
-  M := CombinatorialFreeModule(F, {@ b : b in B@});
+function get_hw_rep_poly(lambda, B, n)
   R := Universe(B);
   F := BaseRing(R);
+  M := CombinatorialFreeModule(F, {@ b : b in B@});
   mons := &join([Set(Monomials(b)) : b in B]);
   mons := SetToSequence(mons);
   degs := [[Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
@@ -1716,8 +1694,36 @@ function getSOHighestWeightRepresentationPolys(lambda, Q)
 	      ", n);
   
   V := GroupRepresentation(GL(n, F), M, action_desc :
-			   params := [* <"HW_VDW", hw_vdw_data> *]);
+			   params := [* <"HW_VDW", <hw_vdw_data, lambda> > *]);
   return V;
+end function;
+
+function getGLHighestWeightRepresentationPolys(lambda, F, n)
+  is_dominant := &and[lambda[i] ge lambda[i+1] : i in [1..#lambda-1]];
+  error if not is_dominant, "highest weight must be dominant";
+  adjust := false;
+  m := lambda[#lambda];
+  if m lt 0 then
+    det_rep := DeterminantRepresentation(GL(n,F) : k := m);
+    adjust := true;
+    w := [l - m : l in lambda];
+  else
+    w := lambda;
+  end if;
+  B := get_hw_basis_gl(w, F, n);
+  V := get_hw_rep_poly(w, B, n);
+  if adjust then
+    V := TensorProduct(V, det_rep);
+    V`lambda := lambda;
+  end if;
+  return V;
+end function;
+
+function getSOHighestWeightRepresentationPolys(lambda, Q)
+  n := Degree(Parent(Q));
+  B := get_hw_basis_so(lambda, Q);
+
+  return get_hw_rep_poly(lambda, B, n);
 end function;
 
 // This is for debugging purposes
@@ -1737,6 +1743,74 @@ end function;
 intrinsic HighestWeightRepresentation(G::GrpRed,
 				      lambda::SeqEnum[RngIntElt]) -> GrpRep
 {returns the irreducible representation with highest weight lambda.}
+  require #InnerForms(G) eq 1 : "Highest weight representation for G is currently not supported";
   Q := InnerForm(InnerForms(G)[1]);
-  return getSOHighestWeightRepresentationPolys(lambda, Q);
+  F := NumberField(MaximalOrder(BaseRing(Q)));
+  Q := ChangeRing(Q, F);
+  if IsOrthogonal(G) then
+    V := getSOHighestWeightRepresentationPolys(lambda, Q);
+  elif IsUnitary(G) then
+    V := getGLHighestWeightRepresentationPolys(lambda, F, Degree(Parent(Q)));
+  // Should check this out, but I believe this would work.
+  elif IsSymplectic(G) then
+    V := getSOHighestWeightRepresentationPolys(lambda, Q);
+  else
+    error "Highest weight representation for G is currently not supported";
+  end if;
+  V`grp := G;
+  return V;
 end intrinsic;
+
+
+// old code
+
+/*
+// getGL3HighestWeightRep - returns the highest weight representation of GL3 over K
+// of highest weight (a,b,0)
+// (at this point we do not consider the twist by the determinant)
+
+intrinsic getGL3HighestWeightRep(a::RngIntElt,b::RngIntElt,K::Rng) -> GrpRep
+{.}
+    if (a eq 0) or (b eq 0) then return getGL3Rep(a,b,K); end if;
+    return Kernel(getGL3ContractionMap(a,b,K));
+end intrinsic;
+
+// TODO!! Think about how to do this one - what is exactly the contraction?
+// Need to have the quadratic form
+function getSO5ContractionMap(a,b,K)
+    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
+    W_ab := getSO5Rep(a,b,K);
+    W_minus := getSO5Rep(a-1, b-1,K);
+    mon_basis := W_ab`tensor_product[1]`M`names;
+    alphas := [[Degree(b, i) : i in [1..5]] : b in mon_basis];
+    mon_alt_basis := W_ab`tensor_product[2]`M`names;
+    betas := [[Degree(b, i) : i in [1..10]] : b in mon_alt_basis];
+    coeffs := [[[alpha[i] * beta[i] : i in [1..5]] : beta in betas] : alpha in alphas];
+    idxs := [[[i : i in [1..5] | coeff[i] ne 0] : coeff in coeffs_row] :
+	     coeffs_row in coeffs];
+    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
+		     mon_alt_basis[j2] div Parent(mon_alt_basis[j2]).i> :
+		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
+    sym_minus := W_minus`tensor_product[1];
+    sym_dual_minus := W_minus`tensor_product[2];
+    mon_basis_minus := sym_minus`M`names;
+    mon_dual_basis_minus := sym_dual_minus`M`names;
+    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
+		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
+		     im_vec in image_vecs[j1][j2]] :
+		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
+    W_minus_image := [[[W_minus.Index(W_minus`M`names,
+				      Sprintf("%o",im_idx)) :
+		      im_idx in image_idxs[j1][j2]] :
+		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
+    function get_basis_image(coeffs, idxs, W_minus_image)
+	if IsEmpty(idxs) then return W_minus!0; end if;
+	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
+    end function;
+    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
+				      W_minus_image[j1][j2]) :
+		      j2 in [1..#image_idxs[j1]]] :
+			  j1 in [1..#image_idxs]];
+    return Homomorphism(W_ab, W_minus, basis_images);
+end function;
+*/

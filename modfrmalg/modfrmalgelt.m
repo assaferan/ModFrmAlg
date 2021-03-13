@@ -243,11 +243,13 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	    Ps := Sort([x : x in Keys(hecke_images)]);
 	end if;
 	found_emb := false;
+        K := BaseRing(f`M`W);
+        L := BaseRing(f`vec);  
 	for p in Ps do
 	    if IsDefined(f`Eigenvalues[k], p) then
 		if not found_emb then
-		    K := BaseRing(f`M`W);
-		    L := BaseRing(f`vec);
+		       // K := BaseRing(f`M`W);
+		       // L := BaseRing(f`vec);
 		    if not IsPrimeField(K) then
 			roots := Roots(MinimalPolynomial(K.1), L);
 			embs := [hom<K -> L | root[1] > : root in roots];
@@ -337,12 +339,23 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true) -> List
 	    // Assign parent modular space.
 	    mform`M := M;
 
+            // for display purposes
+            K_f := BaseRing(vec);
+            if Type(K_f) ne FldRat then
+               AssignNames(~K_f, [Sprintf("a_%o", i)]);
+            end if;
 	    // Assign vector.
 	    mform`vec := vec;
 
-	    // Flag as cuspidal?
-	    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+	    // If the weight is non-trivial all forms are cuspidal
+            // !!! TODO - do the general case, we might have some
+            // multiplicity of the trivial representation
+            if Rank(Weight(M)) gt 1 then
+              mform`IsCuspidal := true;
+	    else
+	      mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
 				    i in [1..#wts]] eq 0;
+            end if;
 
 	    // Cusp forms are not Eistenstein.
 	    mform`IsEisenstein := not mform`IsCuspidal;

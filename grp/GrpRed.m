@@ -189,6 +189,7 @@ end intrinsic;
 intrinsic UnitaryGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
 {Construct the unitary group preserving the specified hermitian form.}
   K := BaseRing(innerForm);
+  require Type(K) ne FldRat : "The form should be over a CM field.";
   _, cc := HasComplexConjugate(K);
   alpha := FieldAutomorphism(K, cc);
   
@@ -262,11 +263,31 @@ end intrinsic;
 intrinsic IsOrthogonal(G::GrpRed) -> BoolElt
 {.}
   R := RootDatum(G`G0);
-  if not IsIrreducible(R) then return false; end if;
+ 
   name := CartanName(R);
   cartan_type := name[1];
 
   return (cartan_type in ["B","D"]);
+end intrinsic;
+
+intrinsic IsSymplectic(G::GrpRed) -> BoolElt
+{.}
+  R := RootDatum(G`G0);
+ 
+  name := CartanName(R);
+  cartan_type := name[1];
+
+  return (cartan_type eq "C");
+end intrinsic;
+
+intrinsic IsUnitary(G::GrpRed) -> BoolElt
+{.}
+  R := RootDatum(G`G0);
+  
+  name := CartanName(R);
+  cartan_type := name[1];
+
+  return (cartan_type eq "A");
 end intrinsic;
 
 intrinsic IsSpecialOrthogonal(G::GrpRed) -> BoolElt
@@ -292,7 +313,6 @@ forward build_root_data;
 
 intrinsic Print(G::GrpRed, level::MonStgElt)
 {Print the reductive group G.}
-  // !!! TODO : add magma level printing to ease on save-load.
   if level eq "Magma" then
       group_data := [* *];
       Append(~group_data, < "ROOT_DATUM", build_root_data(RootDatum(G`G0)) >);
@@ -301,9 +321,17 @@ intrinsic Print(G::GrpRed, level::MonStgElt)
       Append(~group_data, < "INNER_FORMS", InnerForms(G) >);
       printf "ReductiveGroup(%m)", group_data;
   else
-      printf "Reductive group with connected component %o", G`G0;
-      if level ne "Minimal" then
+      if IsSpecialOrthogonal(G) then
+         printf "special orthogonal group of %o", InnerForm(G,1);
+      elif IsOrthogonal(G) then
+	printf "orthogonal group of %o", InnerForm(G,1);
+      elif IsUnitary(G) then
+	printf "unitary group of %o", InnerForm(G,1);
+      else
+        printf "reductive group with connected component %o", G`G0;
+        if level ne "Minimal" then
 	  printf ", and component group %o", G`Comp;
+        end if;
       end if;
       if level eq "Maximal" then
 	  printf ", with inner forms %o", InnerForms(G);

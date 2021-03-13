@@ -187,6 +187,18 @@ intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
   return elt;
 end intrinsic;
 
+intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
+			  v::ModTupFldElt[FldNum[FldRat]]) -> CombFreeModElt
+{Construct an element of CFM whose underlying vector is v.}
+  elt := New(CombFreeModElt);
+  elt`vec := v;
+  elt`parent := CFM;
+  dim := Dimension(CFM`M);
+  elt`name := createElementString(Eltseq(v), CFM`names);
+
+  return elt;
+end intrinsic;
+
 /* access */
 
 intrinsic Parent(elt::CombFreeModElt) -> CombFreeMod
@@ -237,16 +249,26 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
   if Type(Universe(M1`names)) eq RngMPol then  
       U1 := Universe(M1`names);
       U2 := Universe(M2`names);
-      if BaseRing(U1) ne BaseRing(U2) or Ngens(U1) ne Ngens(U2) then
+      if Type(BaseRing(U1)) eq FldRat then
+        is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
+        if is_isom then psi := hom<Rationals() -> Rationals()|>; end if;
+      else
+	is_isom, psi := IsIsomorphic(BaseRing(U1), BaseRing(U2));
+      end if;
+      
+      if not is_isom or Ngens(U1) ne Ngens(U2) then
 	  return false;
       end if;
-      if (U1 ne U2) then
-        phi := hom< U1 -> U2 | [U2.i : i in [1..Ngens(U2)]]>;
+//if (U1 ne U2) then
+        phi := hom<U1 -> U2 | psi, GeneratorsSequence(U2)>;
+//        phi := hom< U1 -> U2 | [U2.i : i in [1..Ngens(U2)]]>;
         return &and[phi(M1`names[i]) eq M2`names[i] : i in [1..#M1`names]];
-       end if;
+//     end if;
   end if;
   if #M1`names ne #M2`names then return false; end if;
-  return &and[M1`names[i] eq M2`names[i] : i in [1..#M1`names]];
+// return &and[M1`names[i] eq M2`names[i] : i in [1..#M1`names]];
+  return &and[&cat Split(M1`names[i], " \n") eq &cat Split(M2`names[i], " \n")
+	    : i in [1..#M1`names]];
 end intrinsic;
 
 intrinsic Hash(CFM::CombFreeMod) -> RngIntElt
@@ -304,12 +326,17 @@ intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 	printf "CombinatorialFreeModule(%m, %o : params := %m)", BaseRing(CFM`M), names_str, params;  
 	return;
   end if;
-  desc := Sprintf("Free module of rank %o over %o",
-		  Dimension(CFM`M), BaseRing(CFM`M));
-  if (level eq "Minimal") then printf "%o", desc; return; end if; 
+  R := BaseRing(CFM`M);
+  if Type(R) eq FldOrd then 
+    R := NumberField(MaximalOrder(BaseRing(CFM`M)));
+  end if;
+  R := (Degree(R) eq 1) select Rationals() else R;
+  desc := Sprintf("free module of rank %o over %o",
+		  Dimension(CFM`M), R);
+  if (level ne "Maximal") then printf "%o", desc; return; end if; 
   names := CFM`names;
   MAX_LEN := 5;
-  if (level eq "Default") and (#names gt MAX_LEN) then
+  if (#names gt MAX_LEN) then
       names := names[1..MAX_LEN];
       suffix := "...";
   else

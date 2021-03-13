@@ -427,6 +427,32 @@ function my_facAlgExt(f)
   return res;
 end function;
 
+function get_nonlifts(lpolys)
+  nonlift_idxs := [];
+  for idx in [1..#lpolys] do
+    lpolys_f := lpolys[idx];
+    // This is sometimes problematic, when the base field is large
+    // magma might crash, e.g. disc = 229, genus = 1
+    // nonlift := &or[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
+    //		    | disc mod p ne 0];
+    nonlift := false;
+    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
+    for p in primes do
+      if Type(BaseRing(lpolys_f[p])) eq FldRat then
+         fac := Factorization(lpolys_f[p]);
+      else
+         fac := my_facAlgExt(lpolys_f[p]);
+      end if;
+      is_irred := (#fac eq 1) and (fac[1][2] eq 1);
+      nonlift or:= is_irred;
+    end for;
+    if nonlift then
+      Append(~nonlift_idxs, idx);
+    end if;
+  end for;
+  return nonlift_idxs;
+end function;
+
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
@@ -453,28 +479,7 @@ procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
   fs := HeckeEigenforms(M : Estimate := Estimate);
   lpolys := [LPolynomials(f : Estimate := Estimate,
 			  Precision := prec) : f in fs];
-  nonlift_idxs := [];
-  for idx in [1..#fs] do
-    lpolys_f := lpolys[idx];
-    // This is sometimes problematic, when the base field is large
-    // magma might crash, e.g. disc = 229, genus = 1
-    // nonlift := &or[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
-    //		    | disc mod p ne 0];
-    nonlift := false;
-    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
-    for p in primes do
-      if Type(BaseRing(lpolys_f[p])) eq FldRat then
-         fac := Factorization(lpolys_f[p]);
-      else
-         fac := my_facAlgExt(lpolys_f[p]);
-      end if;
-      is_irred := (#fac eq 1) and (fac[1][2] eq 1);
-      nonlift or:= is_irred;
-    end for;
-    if nonlift then
-      Append(~nonlift_idxs, idx);
-    end if;
-  end for;
+  nonlift_idxs := get_nonlifts(lpolys);
   id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
@@ -485,6 +490,41 @@ procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
   fname := id_str cat nonlift_str; 
   Save(M, fname);
 end procedure;
+
+function my_sum(seq)
+  if IsEmpty(seq) then return 0; end if;
+  return &+seq;
+end function;
+
+// d is a divisor of disc, and we tensor with the corresponding spinor norm
+function get_nonlift_dimension(disc, wts)
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipp := parseNippFile(nipp_fname);
+  assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
+  A := NippToForm(nipp[nipp_idx]);
+  G := OrthogonalGroup(A);
+  res := [* *];
+  for wt in wts do
+    k,j := Explode(wt);
+    W := HighestWeightRepresentation(G,[k+j-3, k-3]);
+    for d in Divisors(disc) do
+        spin := SpinorNormRepresentation(G, d);
+        W_spin := TensorProduct(W, spin);
+        M := AlgebraicModularForms(G, W_spin);
+        fs := HeckeEigenforms(M);
+        lpolys := [LPolynomials(f : Precision := 10) : f in fs];
+        nonlifts := get_nonlifts(lpolys);
+// we return the actual orbits, as it might shed more light
+// dim := my_sum([Degree(BaseRing(fs[i]`vec)) : i in nonlifts]);
+        dim := [Degree(BaseRing(fs[i]`vec)) : i in nonlifts];
+        Append(~res, <wt, d, dim>);
+    end for;
+  end for;
+  return res;
+end function;
 
 function analyticConductor(k, j)
   return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;

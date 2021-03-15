@@ -680,11 +680,15 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
     CC_x := PowerSeriesRing(CC);
     K := BaseRing(Parent(poly));
     r := Roots(DefiningPolynomial(K),CC)[1][1];
-    h := hom<K -> CC | r>;    
+    if Type(K) eq FldRat then
+      h := hom<K -> CC|>;
+    else 
+      h := hom<K -> CC | r>;
+    end if;
     return CC_x![h(c) : c in Eltseq(poly)];
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
-  D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
+  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2)));
   if assigned Weight(f`M)`weight then
      d := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];

@@ -1254,14 +1254,20 @@ function spinor_norm_rho(d, sigma, A)
     return rho(d, ChangeRing(Transpose(Matrix(sigma)), BaseRing(A)), A);
 end function;
 
+forward my_prod;
+
 intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
 				   name := "x") -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);
   Z_K := Integers(K);
-  D := Numerator(Determinant(A));
-  require Z_K!D in Z_K!!d :
+  num := Z_K!Numerator(Determinant(A));
+  denom := Z_K!Denominator(Determinant(A));
+  fac := Factorization(ideal< Z_K | num*denom>);
+  // We only care about the discriminant modulo squares in this case
+  D := my_prod([f[1] : f in fac | IsOdd(f[2])], Parent(ideal<Z_K|>));
+  require D subset Z_K!!d :
 		"d should divide the discriminant";
   n := Nrows(A);
   M := CombinatorialFreeModule(K, [name]);

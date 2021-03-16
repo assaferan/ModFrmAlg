@@ -12,7 +12,7 @@ freeze;
              Added multiplication by a non-invertible matrix 
 	     (so far, only a matrix on the underlying vector space)
 
-   04/20/20: Changed pullback to saveh the description intead of the function.
+   04/20/20: Changed pullback to save the description instead of the function.
 
    04/13/20: Modified DimensionOfHighestWeightModule, as it is not supported 
              in newer versions of Magma.
@@ -409,6 +409,10 @@ intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
   ret := GroupRepresentation(V`G, M, a :
 			     params := [* <"TENSOR_PRODUCT", [V,W]> *]);
 //  ret`tensor_product := [V,W];
+  if assigned V`weight and assigned W`weight then
+    ret`weight := <V`weight[1] * W`weight[1], V`weight[2] + W`weight[2],
+                  V`weight[3] + W`weight[3]>;
+  end if;
   return ret;
 end intrinsic;
 
@@ -1025,51 +1029,6 @@ intrinsic Kernel(phi::GrpRepHom) -> GrpRep
   return Subrepresentation(V,B);
 end intrinsic;
 
-// getGL3Contraction map returns the contraction homomorphism between Sym^a(V) \otimes
-// Sym^b(V^v) and Sym^{a-1}(V) \otimes Sym^{b-1}(V^v)
-// where V is the standard representation of GL3. K is the coefficient ring.
-
-// should change it to just specify what it does on basis vectors, that's enough
-
-function getGL3ContractionMap(a,b,K)
-    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
-    W_ab := getGL3Rep(a,b,K);
-    W_minus := getGL3Rep(a-1, b-1,K);
-    mon_basis := W_ab`tensor_product[1]`M`names;
-    alphas := [[Degree(b, i) : i in [1..3]] : b in mon_basis];
-    mon_dual_basis := W_ab`tensor_product[2]`M`names;
-    betas := [[Degree(b, i) : i in [1..3]] : b in mon_dual_basis];
-    coeffs := [[[alpha[i] * beta[i] : i in [1..3]] : beta in betas] : alpha in alphas];
-    idxs := [[[i : i in [1..3] | coeff[i] ne 0] : coeff in coeffs_row] :
-	     coeffs_row in coeffs];
-    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
-		     mon_dual_basis[j2] div Parent(mon_dual_basis[j2]).i> :
-		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
-    sym_minus := W_minus`tensor_product[1];
-    sym_dual_minus := W_minus`tensor_product[2];
-    mon_basis_minus := sym_minus`M`names;
-    mon_dual_basis_minus := sym_dual_minus`M`names;
-    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
-		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
-		     im_vec in image_vecs[j1][j2]] :
-		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
-    W_minus_image := [[[W_minus.Index(W_minus`M`names,
-				      Sprintf("%o",im_idx)) :
-		      im_idx in image_idxs[j1][j2]] :
-		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
-    function get_basis_image(coeffs, idxs, W_minus_image)
-	if IsEmpty(idxs) then return W_minus!0; end if;
-	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
-    end function;
-    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
-				      W_minus_image[j1][j2]) :
-		      j2 in [1..#image_idxs[j1]]] :
-			  j1 in [1..#image_idxs]];
-    return Homomorphism(W_ab, W_minus, basis_images);
-end function;
-
-
-
 intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
 {Return the fixed subspace of V under the group gamma.}
 //  require IsFinite(gamma) :
@@ -1295,14 +1254,20 @@ function spinor_norm_rho(d, sigma, A)
     return rho(d, ChangeRing(Transpose(Matrix(sigma)), BaseRing(A)), A);
 end function;
 
+forward my_prod;
+
 intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
 				   name := "x") -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);
   Z_K := Integers(K);
-  D := Numerator(Determinant(A));
-  require Z_K!D in Z_K!!d :
+  num := Z_K!Numerator(Determinant(A));
+  denom := Z_K!Denominator(Determinant(A));
+  fac := Factorization(ideal< Z_K | num*denom>);
+  // We only care about the discriminant modulo squares in this case
+  D := my_prod([f[1] : f in fac | IsOdd(f[2])], Parent(ideal<Z_K|>));
+  require D subset Z_K!!d :
 		"d should divide the discriminant";
   n := Nrows(A);
   M := CombinatorialFreeModule(K, [name]);
@@ -1312,7 +1277,9 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
   end function;
   return action;
   ", d, A);
-  return GroupRepresentation(GL(n,K), M, a);
+  V :=  GroupRepresentation(GL(n,K), M, a);
+  V`weight := <d, 0, 0>;
+  return V;
 end intrinsic;
 
 intrinsic Rho(G::GrpMat, k::RngIntElt, j::RngIntElt) -> GrpRep
@@ -1749,6 +1716,9 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   Q := ChangeRing(Q, F);
   if IsOrthogonal(G) then
     V := getSOHighestWeightRepresentationPolys(lambda, Q);
+    if NumberOfRows(Q) eq 5 then
+       V`weight := <1, lambda[1] - lambda[2], lambda[2]>;
+    end if;
   elif IsUnitary(G) then
     V := getGLHighestWeightRepresentationPolys(lambda, F, Degree(Parent(Q)));
   // Should check this out, but I believe this would work.
@@ -1765,6 +1735,50 @@ end intrinsic;
 // old code
 
 /*
+
+// getGL3Contraction map returns the contraction homomorphism between Sym^a(V) \otimes
+// Sym^b(V^v) and Sym^{a-1}(V) \otimes Sym^{b-1}(V^v)
+// where V is the standard representation of GL3. K is the coefficient ring.
+
+// should change it to just specify what it does on basis vectors, that's enough
+
+function getGL3ContractionMap(a,b,K)
+    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
+    W_ab := getGL3Rep(a,b,K);
+    W_minus := getGL3Rep(a-1, b-1,K);
+    mon_basis := W_ab`tensor_product[1]`M`names;
+    alphas := [[Degree(b, i) : i in [1..3]] : b in mon_basis];
+    mon_dual_basis := W_ab`tensor_product[2]`M`names;
+    betas := [[Degree(b, i) : i in [1..3]] : b in mon_dual_basis];
+    coeffs := [[[alpha[i] * beta[i] : i in [1..3]] : beta in betas] : alpha in alphas];
+    idxs := [[[i : i in [1..3] | coeff[i] ne 0] : coeff in coeffs_row] :
+	     coeffs_row in coeffs];
+    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
+		     mon_dual_basis[j2] div Parent(mon_dual_basis[j2]).i> :
+		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
+    sym_minus := W_minus`tensor_product[1];
+    sym_dual_minus := W_minus`tensor_product[2];
+    mon_basis_minus := sym_minus`M`names;
+    mon_dual_basis_minus := sym_dual_minus`M`names;
+    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
+		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
+		     im_vec in image_vecs[j1][j2]] :
+		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
+    W_minus_image := [[[W_minus.Index(W_minus`M`names,
+				      Sprintf("%o",im_idx)) :
+		      im_idx in image_idxs[j1][j2]] :
+		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
+    function get_basis_image(coeffs, idxs, W_minus_image)
+	if IsEmpty(idxs) then return W_minus!0; end if;
+	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
+    end function;
+    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
+				      W_minus_image[j1][j2]) :
+		      j2 in [1..#image_idxs[j1]]] :
+			  j1 in [1..#image_idxs]];
+    return Homomorphism(W_ab, W_minus, basis_images);
+end function;
+
 // getGL3HighestWeightRep - returns the highest weight representation of GL3 over K
 // of highest weight (a,b,0)
 // (at this point we do not consider the twist by the determinant)

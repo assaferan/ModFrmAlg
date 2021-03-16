@@ -572,7 +572,8 @@ end intrinsic;
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 		      Estimate := true, Orbits := true) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.}
-  n := Dimension(ReflexiveSpace(Module(f`M)));
+  L := Module(f`M);
+  n := Dimension(ReflexiveSpace(L));
 
   require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
 
@@ -587,7 +588,8 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
   K := Universe(evs);
 // K_x<x> := PolynomialRing(K);
   K_x<x> := PowerSeriesRing(K);
-  D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
+//D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
+  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2)));
   if assigned Weight(f`M)`weight then
      w := Weight(f`M)`weight[2];
   else
@@ -596,28 +598,40 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
      w := 0;
   end if;
   dim := Degree(K);
+  is_split := (L`Vpp[p]`V`AnisoDim lt 2);
+  // These explicit Satake polynomials are taken from Murphy's thesis 
   case n:
       when 3:
 	  L_poly := p*x^2 - evs[1]*x+1;
       when 4:
-	  L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
+          if is_split then
+	    L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
 		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
+          else
+       	    L_poly := (p*x-1)*(p*x+1)*(p^2*x^2-evs[1]*p*x+1);
+	  end if;
       when 5:
           if D mod p ne 0 then
 	     L_poly := p^(6+4*w)*x^4 - (evs[1]*p^(3+3*w))*x^3 +
 	            ((evs[2] + p^2 + 1)*p^(1+2*w))*x^2 -
 		    evs[1]*p^w*x + 1;
           else
-	     L := Module(f`M);
 	     eps_p := WittInvariant(L,BaseRing(L)!!p);
              L_poly := p^(3+2*w)*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*p^w*x+1;
              L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:
-	  L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
-		    ((1+p+p^2+evs[2])*p^5)*x^4 -
-		    ((2*evs[1]+evs[3])*p^3)*x^3 +
-		    ((1+p+p^2+evs[2])*p)*x^2 - evs[1]*x + 1;
+          if is_split then
+	    L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
+		      ((1+p+p^2+evs[2])*p^5)*x^4 -
+		      ((2*evs[1]+evs[3])*p^3)*x^3 +
+		      ((1+p+p^2+evs[2])*p)*x^2 - evs[1]*x + 1;
+	  else
+	    L_poly := (p^2*x-1)*(p^2*x+1)*(p^8*x^4 -
+		       p^4*evs[1]*x^3 +
+		       (1-p+p^2+p^3+evs[2])*p*x^2 -
+		       evs[1]*x+1);
+          end if;
       when 7:
 	  L_poly := p^15*x^6 - (evs[1]*p^10)*x^5 +
 		    ((evs[2]+1+p^2+p^4)*p^6)*x^4 -
@@ -625,13 +639,24 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 		    ((evs[2]+1+p^2+p^4)*p)*x^2 -
 		    evs[1]*x + 1;
       when 8:
-	  L_poly := p^24*x^8 - (evs[1]*p^18)*x^7 +
+          if is_split then
+      // This is the L-poly for a split SO_8
+	    L_poly := p^24*x^8 - (evs[1]*p^18)*x^7 +
 		    ((evs[2]+p^4 + 2*p^2 +1)*p^13)*x^6 -
 		    ((evs[3] + evs[1]*(p^2+p+1))*p^9)*x^5 +
 		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)*p^6)*x^4-
 		    ((evs[3] + evs[1]*(p^2+p+1))*p^3)*x^3 +
 		    ((evs[2]+p^4 + 2*p^2 +1)*p)*x^2 -
 		    evs[1]*x + 1;
+          else
+      // This is the L-poly for a nonsplit SO_8
+            L_poly := (p^3*x-1)*(p^3*x+1)*(p^18*x^6 -
+		    (evs[1]*p^12)*x^5 +
+	            (evs[2]+p^5+p^4+1)*p^7*x^4 -
+	            (evs[3]+evs[1]*(p^3+p^2-p+1))*p^3*x^3 +
+		    (evs[2]+p^5+p^4+1)*p*x^2 -
+		    evs[1]*x + 1);
+          end if;
    end case;
    if d ge 2*(n div 2) then
       K_x<x> := PolynomialRing(K);
@@ -680,11 +705,15 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
     CC_x := PowerSeriesRing(CC);
     K := BaseRing(Parent(poly));
     r := Roots(DefiningPolynomial(K),CC)[1][1];
-    h := hom<K -> CC | r>;    
+    if Type(K) eq FldRat then
+      h := hom<K -> CC|>;
+    else 
+      h := hom<K -> CC | r>;
+    end if;
     return CC_x![h(c) : c in Eltseq(poly)];
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
-  D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
+  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2)));
   if assigned Weight(f`M)`weight then
      d := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];

@@ -427,7 +427,7 @@ function my_facAlgExt(f)
   return res;
 end function;
 
-function get_nonlifts(lpolys)
+function get_nonlifts(lpolys, disc, prec)
   nonlift_idxs := [];
   for idx in [1..#lpolys] do
     lpolys_f := lpolys[idx];
@@ -479,7 +479,7 @@ procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
   fs := HeckeEigenforms(M : Estimate := Estimate);
   lpolys := [LPolynomials(f : Estimate := Estimate,
 			  Precision := prec) : f in fs];
-  nonlift_idxs := get_nonlifts(lpolys);
+  nonlift_idxs := get_nonlifts(lpolys, disc, prec);
   id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
@@ -516,7 +516,7 @@ function get_nonlift_dimension(disc, wts)
         M := AlgebraicModularForms(G, W_spin);
         fs := HeckeEigenforms(M);
         lpolys := [LPolynomials(f : Precision := 10) : f in fs];
-        nonlifts := get_nonlifts(lpolys);
+        nonlifts := get_nonlifts(lpolys, disc, 10);
 // we return the actual orbits, as it might shed more light
 // dim := my_sum([Degree(BaseRing(fs[i]`vec)) : i in nonlifts]);
         dim := [Degree(BaseRing(fs[i]`vec)) : i in nonlifts];
@@ -525,6 +525,34 @@ function get_nonlift_dimension(disc, wts)
   end for;
   return res;
 end function;
+
+procedure testLSeries(disc, wts, prec)
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipp := parseNippFile(nipp_fname);
+  assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
+  A := NippToForm(nipp[nipp_idx]);
+  G := OrthogonalGroup(A);
+  for wt in wts do
+    k,j := Explode(wt);
+    W := HighestWeightRepresentation(G,[k+j-3, k-3]);
+    for d in Divisors(disc) do
+        spin := SpinorNormRepresentation(G, d);
+        W_spin := TensorProduct(W, spin);
+        M := AlgebraicModularForms(G, W_spin);
+        fs := HeckeEigenforms(M);
+        lpolys := [LPolynomials(f : Precision := 10) : f in fs];
+        nonlifts := get_nonlifts(lpolys, disc, 10);
+        for idx in nonlifts do
+	  f := fs[idx];
+          lser := LSeries(f : Precision := prec);
+          assert CFENew(lser) eq 0;
+	end for;
+    end for;
+  end for;
+end procedure;
 
 function analyticConductor(k, j)
   return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;

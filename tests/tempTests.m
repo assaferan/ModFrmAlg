@@ -15,7 +15,7 @@ if assigned normalizeField then
 end if;
 
 import "tests/examples.m" : AlgebraicModularFormsExamples;
-import "tests/tests.m" : testExample;
+import "tests/tests.m" : testExample, testLSeries;
 import "modfrmalg/modfrmalg.m" : normalizeField;
 import "neighbors/hecke-CN1.m" : processNeighborWeight,
        HeckeOperatorCN1,
@@ -76,6 +76,9 @@ end for;
 
 M, timing := AlgebraicModularFormsTests(:num_primes := 3,
 					 decomposition := true);
+print "testing L series cmoputation for O(5)...";
+print "testing level 61, weights (3,0), (3,2) and (4,0)...";
+testLSeries(61, [[3,0],[3,2],[4,0]], 5);
 A := forms[5][2];
 G := SpecialOrthogonalGroup(A);
 W := SymmetricRepresentation(std_reps[5], 2);

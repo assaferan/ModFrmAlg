@@ -105,6 +105,9 @@ procedure printEstimate(start, ~count, ~elapsed,
 	printf "Estimated time remaining for T_%o^%o:"
 	       cat " %od %oh %om %os\n",
 	       Norm(pR), k, days, hours, mins, secs;
+
+        vprintf "AlgebraicModularForms", 2 :
+	  "Current memory usage:%o\n", GetMemoryUsage();
     end if;
 end procedure;
 

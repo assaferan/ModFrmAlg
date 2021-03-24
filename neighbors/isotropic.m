@@ -565,7 +565,7 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 end intrinsic;
 
 intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
-{ Returns an array consisting of all isotropic vectors. }
+{ Returns an array consisting of all isotropic subspaces of dimension k. }
 	// TODO: Relax this condition to allow for higher dimensional spaces.
 	// require k eq 1: "Must be one dimensional subspaces currently.";
 
@@ -652,8 +652,21 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	L := Module(M);
 	nProc := BuildNeighborProc(L, pR, k);
 	V := nProc`L`Vpp[pR]`V;
-	l := AllIsotropicSubspaces(V, k);
-	return #l;
+        // The first isotropic subspace.
+	space := FirstIsotropicSubspace(V, k);
+
+        l := 0;
+
+	while space ne [] do
+	    // Retrieve the isotropic subspace in the original coordinates.
+	    vecs := [Vector(Matrix(x) * Transpose(V`Basis)) : x in space];
+	    l +:= 1;
+	    // Next subspace.
+	    space := NextIsotropicSubspace(V, k);
+	end while;
+        // This requires a lot of memory for no reason.
+        // l := AllIsotropicSubspaces(V, k);
+	return l;
      
 	// Compute the residue class field.
 	F := ResidueClassField(pR);

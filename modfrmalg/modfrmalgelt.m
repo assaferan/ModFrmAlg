@@ -571,7 +571,8 @@ end intrinsic;
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 		      Estimate := true, Orbits := true) -> RngUPolElt
-{Compute the L-polynomial of f at the prime p up to precision x^d.}
+{Compute the L-polynomial of f at the prime p up to precision x^d.
+    Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
 
@@ -731,3 +732,119 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
   return LSeries(2*w+4, [-w-1+j,-w+j,j,j+1], D, local_factor :
 		 Sign := (-1)^w*nu(D,d), Precision := Precision);
 end intrinsic;
+
+function DualRoot(alpha, G)
+  return CoweightLattice(G)!(2/Norm(alpha) * alpha);
+end function;
+
+function get_monomial(R, coweight)
+  exps := Eltseq(coweight);
+  pos := [Maximum(e, 0) : e in exps];
+  neg := [Maximum(-e, 0) : e in exps];
+  return Monomial(R, pos cat neg);
+end function;
+
+function p_binom(r, k, p)
+  res := 1;
+  for l in [1..k] do
+    res *:= (p^(r-l+1)-1) / (p^l - 1);
+  end for;
+  return res;
+end function;
+
+function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
+  alphas := PositiveRoots(G);
+  rho := 1/2*&+alphas;
+  W := WeylGroup(G);
+  sum := 0;
+  for w in W do
+    w_mu := CorootAction(W)(mu, w);
+    // This might need handling of a denominator in general
+    w_mu := ChangeRing(w_mu, Integers());
+    e_w_mu := get_monomial(A, w_mu);
+    prod := K!e_w_mu;
+    for alpha in alphas do
+      alpha_d := DualRoot(alpha, G);
+      w_alpha_d := CorootAction(W)(alpha_d, w);
+      w_alpha_d := ChangeRing(w_alpha_d, Integers());
+      e_w_alpha_d := get_monomial(A, w_alpha_d);
+      prod *:= K!(1-sqrt_p^2*e_w_alpha_d) / K!(1-e_w_alpha_d);
+    end for;
+    sum +:= prod;
+  end for;
+  den := Denominator(sum);
+  assert IsMonomial(R!den);
+  exps := Exponents(den);
+  den_inv := Monomial(A, exps[r+1..2*r] cat exps[1..r]);
+  assert den_inv * den eq 1;
+  A_sum := Numerator(sum)*den_inv;
+  assert K!A_sum eq sum;
+  K_mod_I := &+[sqrt_p^(2*CoxeterLength(W,w)) : w in W];
+  num_neighbors := sqrt_p^(k*(k-1)) * p_binom(r,k,sqrt_p^2);
+  min_i := Maximum(1, r+a-k);
+  num_neighbors *:= &*[sqrt_p^(2*i) + 1 : i in [min_i..r+a-1]];
+  p_exp := &+[mu[i]*rho[i] : i in [1..r]];
+  sqrt_p_exp := Integers()!(2*p_exp);
+  satake_mu := sqrt_p^(-sqrt_p_exp) * num_neighbors / K_mod_I * A_sum;
+  return satake_mu;
+end function;
+
+function SatakePolynomial(M, p)
+  G := M`G;
+  L := Module(M);
+  V := L`Vpp[p]`V;
+  // This is to determine splitting or non-splitting.
+  a := V`AnisoDim;
+  r := V`WittIndex;
+  if (r eq 0) then return 1; end if;
+  // This is our patch for now to get the correct roots for the nonsplit case
+  // Should do something more generic to get the structure of a reductive group
+  if (a eq 2) and CartanName(RootDatum(G`G0))[1] eq "D" then
+    G := GroupOfLieType(RootDatum(Sprintf("D%o", r)), BaseRing(G`G0));
+  elif (a eq 1) and CartanName(RootDatum(G`G0))[1] eq "D"  then
+    G := GroupOfLieType(RootDatum(Sprintf("B%o", r)), BaseRing(G`G0));
+  else
+    G := G`G0; 
+  end if;
+  S<sqrt_p> := FunctionField(Rationals());
+  SS<[s]> := PolynomialRing(S, 2*r);
+  I := ideal<SS | [s[i]*s[i+r]-1 : i in [1..r]]>;
+  A := quo<SS|I>;
+  s := [Sprintf("s%o", i) : i in [1..r]];
+  s_inv := [Sprintf("s%o_inv", i) : i in [1..r]];
+  AssignNames(~A, s cat s_inv);
+  K := FieldOfFractions(A);
+  R<[t]> := PolynomialRing(S, r);
+  RR<[c]> := PolynomialRing(S, r);
+  coeffs := [];
+  for k in [1..r] do
+    mu := CoweightLattice(G)!([1 : i in [1..k]] cat [0 : i in [1..r-k]]);
+    satake_mu := SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
+    if (k eq r) and IsEven(a) then
+      mu := CoweightLattice(G)!([1 : i in [1..r-1]] cat [-1]);
+      satake_mu +:= SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
+    end if;
+    cfs, mons := CoefficientsAndMonomials(satake_mu);
+    exps := [Exponents(mon) : mon in mons];
+    betas := [Eltseq(Vector(e[1..r]) - Vector(e[r+1..2*r])) : e in exps];
+    abs_betas := [[Abs(b) : b in beta] : beta in betas];
+    // Here we verify that this is a polynomial in s_i + s_i^(-1)
+    abs_betas_idxs := [Index(betas, a) : a in abs_betas];
+    assert &and[cfs[i] eq cfs[abs_betas_idxs[i]] : i in [1..#cfs]];
+    satake_t := &+[cfs[Index(betas, a)]*Monomial(R, a) : a in Set(abs_betas)];
+    h := hom<R-> A | [A.i + A.(i+r) : i in [1..r]] >;
+    assert h(satake_t) eq satake_mu;
+    b := S!ConstantTerm(satake_t);
+    lc := LeadingCoefficient(satake_t);
+    assert lc*ElementarySymmetricPolynomial(R, k)+b eq satake_t;
+    Append(~coeffs, (-1)^k*(c[k] - b)/lc);
+  end for;
+  _<t> := PolynomialRing(RR);
+  t_poly :=  t^r;
+  if (r gt 0) then
+     t_poly +:= &+[coeffs[i]*t^(r-i) : i in [1..r]];
+  end if;
+  _<x> := PolynomialRing(RR);
+  x_poly := &+[Coefficient(t_poly, i)*x^(r-i)*(x^2+1)^i : i in [0..r]];
+  return x_poly;
+end function;

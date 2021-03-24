@@ -106,7 +106,7 @@ procedure printEstimate(start, ~count, ~elapsed,
 	       cat " %od %oh %om %os\n",
 	       Norm(pR), k, days, hours, mins, secs;
 
-        vprintf "AlgebraicModularForms", 2 :
+        vprintf AlgebraicModularForms, 2 :
 	  "Current memory usage:%o\n", GetMemoryUsage();
     end if;
 end procedure;

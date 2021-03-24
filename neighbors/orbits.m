@@ -22,7 +22,7 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	// Verify that the base rings agree.
 	require BaseRing(V) eq BaseRing(G): "Base fields must agree.";
 
-	// Retrieve all isotropic lines and store them in memory.
+	// Retrieve all isotropic subspaces and store them in memory.
 	list := AllIsotropicSubspaces(V, k);
 
 	// Set up the appropriate data structure so we can apply union-find.
@@ -112,6 +112,10 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 		   < sub< V | gens >, O[x] >);
 	end for;
 
+        delete keys;
+        delete O;
+        delete rev_lookup;
+        delete list;
 	// array;
 
 	return array;

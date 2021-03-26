@@ -568,8 +568,16 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
   return true;
 end intrinsic;
 
-// Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
+		      Estimate := true, Orbits := true) -> RngUPolElt
+{Compute the L-polynomial of f at the prime p up to precision x^d.
+    Currently only implemented for good primes. }
+    return LPolynomial(f, BaseRing(Module(f`M))!!p, d
+		       : Estimate := Estimate, Orbits := Orbits);
+end intrinsic;
+
+// Currently only implemented for good L-factors
+intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
 		      Estimate := true, Orbits := true) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
@@ -600,6 +608,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
   end if;
   dim := Degree(K);
   is_split := (L`Vpp[p]`V`AnisoDim lt 2);
+  p := Norm(p);
   // These explicit Satake polynomials are taken from Murphy's thesis 
   case n:
       when 3:
@@ -695,9 +704,6 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
   return L_polys;
 end intrinsic;
 
-// TODO - add directly LSeries(ModFrmAlgElt) so that it will compute
-// the coefficients it needs
-
 intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
 {Build the L-series corresponding to f.}
   function local_factor(p,d)
@@ -789,24 +795,25 @@ function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
   return satake_mu;
 end function;
 
-function SatakePolynomial(M, p)
-  G := M`G;
-  L := Module(M);
-  V := L`Vpp[p]`V;
-  // This is to determine splitting or non-splitting.
-  a := V`AnisoDim;
-  r := V`WittIndex;
-  if (r eq 0) then return 1; end if;
+function SatakePolynomialInner(G, a, r, F)
+  S<sqrt_p> := FunctionField(F);
+  RR<[c]> := PolynomialRing(S, r);
+  RR_x<x> := PolynomialRing(RR);
+  if r eq 0 then
+    return RR_x!1;
+  end if;
   // This is our patch for now to get the correct roots for the nonsplit case
   // Should do something more generic to get the structure of a reductive group
-  if (a eq 2) and CartanName(RootDatum(G`G0))[1] eq "D" then
-    G := GroupOfLieType(RootDatum(Sprintf("D%o", r)), BaseRing(G`G0));
-  elif (a eq 1) and CartanName(RootDatum(G`G0))[1] eq "D"  then
-    G := GroupOfLieType(RootDatum(Sprintf("B%o", r)), BaseRing(G`G0));
-  else
-    G := G`G0; 
+  cartan_type := CartanName(RootDatum(G`G0))[1];
+  if IsOdd(a) then
+	  //cartan_type := (cartan_type eq "D") select "B" else "D";
+    cartan_type := "B";
   end if;
-  S<sqrt_p> := FunctionField(Rationals());
+  G := GroupOfLieType(StandardRootDatum(cartan_type, r),
+		      BaseRing(G`G0));
+  
+  // We are doing it symbolically so that in the future we will be able to
+  // compute it once and then plug different ps
   SS<[s]> := PolynomialRing(S, 2*r);
   I := ideal<SS | [s[i]*s[i+r]-1 : i in [1..r]]>;
   A := quo<SS|I>;
@@ -815,7 +822,7 @@ function SatakePolynomial(M, p)
   AssignNames(~A, s cat s_inv);
   K := FieldOfFractions(A);
   R<[t]> := PolynomialRing(S, r);
-  RR<[c]> := PolynomialRing(S, r);
+  
   coeffs := [];
   for k in [1..r] do
     mu := CoweightLattice(G)!([1 : i in [1..k]] cat [0 : i in [1..r-k]]);
@@ -844,7 +851,106 @@ function SatakePolynomial(M, p)
   if (r gt 0) then
      t_poly +:= &+[coeffs[i]*t^(r-i) : i in [1..r]];
   end if;
-  _<x> := PolynomialRing(RR);
   x_poly := &+[Coefficient(t_poly, i)*x^(r-i)*(x^2+1)^i : i in [0..r]];
   return x_poly;
+end function;
+
+function SatakePolynomial(f, p : d := Infinity())
+  M := f`M;
+  G := M`G;
+  L := Module(M);
+  V := ReflexiveSpace(L);
+  n := Dimension(V);
+  // verify whether this is the number of eigenvalues we need.
+  n_evs := Minimum(d, n div 2);
+  // This is not the most efficient way - we could first check if the
+  // group is split at p or not (compute r) and then compute only up to r
+  // plugging in the eigenvalues
+  evs, _ := [HeckeEigensystem(f, k : Precision := [BaseRing(L)!!p])[1] :
+			       k in [1..n_evs]];
+  if n_evs lt n div 2 then
+    evs cat:= [0 : i in [n_evs+1..n div 2]];
+  end if;
+  evs_fld := Universe(evs);
+  evs_fld_x<x> := PowerSeriesRing(evs_fld); 
+  V := L`Vpp[p]`V;
+  // This is to determine splitting or non-splitting.
+  a := V`AnisoDim;
+  r := V`WittIndex;
+  x_poly := SatakePolynomialInner(G, a, r, evs_fld);
+  RR_x<x> := Parent(x_poly);
+  RR<[c]> := BaseRing(RR_x);
+  S<sqrt_p> := BaseRing(RR);
+  if (a eq 2) then
+    if (a + 2*r eq n) then
+      x_poly *:= (1-x)*(1+x);
+    else // ramified case, take extra care
+      eps := WittInvariant(L, BaseRing(L)!!p);
+      x_poly *:= 1 + (eps/sqrt_p^(n-2))*x;
+    end if;
+  end if;
+  // normalizing to have integral coefficients
+  nor_lp := Evaluate(x_poly, (sqrt_p)^(n-2) * x);
+  // in case it is too short
+  evs := evs cat [0 : i in [1..r - #evs]];
+  // in case it is too long
+  evs := evs[1..r];
+  ev_hom := hom< RR -> S | evs >;
+  S_x<x> := PolynomialRing(S);
+  ev_hom_poly := hom<RR_x -> S_x | ev_hom, [x] >;
+  // now we plug in sqrt(p) back again into the polynomial
+  K<sqrtp> := QuadraticField(p);
+  ev := hom<S -> K | sqrtp>;
+  K_x<x> := PolynomialRing(K);
+  ev_poly := hom<S_x -> K_x | ev, [x]>;
+  ret := evs_fld_x!ev_poly(ev_hom_poly(nor_lp));
+  _<x> := Parent(ret);
+  if d ge 2*(n div 2) then
+      evs_fld_x<x> := PolynomialRing(evs_fld);
+      return evs_fld_x!Eltseq(ret);
+  end if;
+  return ret + O(x^(d+1));
+end function;
+
+function SatakeLSeries(f : Precision := 0)
+  function local_factor(p,d)
+    poly := SatakePolynomial(f, p : d := d);
+    CC := ComplexField();
+    CC_x := PowerSeriesRing(CC);
+    K := BaseRing(Parent(poly));
+    r := Roots(DefiningPolynomial(K),CC)[1][1];
+    if Type(K) eq FldRat then
+      h := hom<K -> CC|>;
+    else 
+      h := hom<K -> CC | r>;
+    end if;
+    return CC_x![h(c) : c in Eltseq(poly)];
+  end function;
+  M := f`M;
+  L := Module(M);
+  n := Dimension(ReflexiveSpace(L));
+  D := Integers()!(Norm(Discriminant(L : GramFactor := 2)));
+
+  if assigned Weight(M)`lambda then
+    lambda := Weight(M)`lambda;
+    lambda := lambda[1..n div 2];
+    // Does this eork in general?
+    w := (#lambda gt 1) select lambda[1]-lambda[2] else lambda[1];
+    k := (n div 2)*(w+2);
+    sign := 1;
+    gammas := (#lambda gt 1) select [x + lambda[2]
+				       : x in [-w-1,-w,0,1]] else [0,w+1];
+  elif assigned Weight(M)`weight then
+     d := Weight(M)`weight[1];
+     w := Weight(M)`weight[2];
+     j := Weight(M)`weight[3];
+     sign := (-1)^w*nu(D,d);
+     k := 2*w+4;
+     gammas := [-w-1+j,-w+j,j,j+1];
+  else
+    error "LSeries parameters are unknown for this choice of weight.\n";
+  end if;
+  // We currently not include spinor norm
+  return LSeries(k, gammas, D, local_factor :
+		 Sign := sign, Precision := Precision);
 end function;

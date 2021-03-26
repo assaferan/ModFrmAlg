@@ -161,7 +161,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
 
 	    // Move to the next prime.
 	    idx +:= 1;
-	    acc_mass := &+[#AutomorphismGroup(rep)^(-1) : rep in genList];
+            //acc_mass := &+[#AutomorphismGroup(rep)^(-1) : rep in genList];
 	until /* (idx gt #ps)  or (acc_mass eq total_mass) */ true;
     until /* acc_mass eq total_mass*/ true;
 

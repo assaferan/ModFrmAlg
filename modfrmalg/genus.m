@@ -20,6 +20,7 @@ freeze;
 // imports
 
 import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
+import "../neighbors/inv-CN1.m" : Invariant;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -75,4 +76,45 @@ end intrinsic;
 intrinsic Representatives(G::GenusSym) -> SeqEnum
 { Return all lattices in the genus. }
 	return G`Representatives;
+end intrinsic;
+
+// constructor from external data
+intrinsic SetGenus(~M::ModFrmAlg, reps::SeqEnum[Lat] : GramFactor := 2)
+{Set the Genus of M to a list of lattices.}
+  M`genus := New(GenusSym);
+  M`genus`Representative := Module(M);
+
+  V_orig := ReflexiveSpace(Module(M));
+  F := BaseRing(V_orig);
+  // This might not work, as so far we have assumed all lattices to have
+  // the same inner product matrix, and different bases
+  // lats := [LatticeFromLat(rep : GramFactor := GramFactor) : rep in reps];
+  lats := [];
+
+  for rep in reps do
+    lat := LatticeFromLat(rep : GramFactor := GramFactor);
+    V := ReflexiveSpace(lat);
+    V_F := AmbientReflexiveSpace(ChangeRing(InnerForm(V),F));
+    pb := PseudoBasis(lat);
+    idls := [Integers(F)!!p[1] : p in pb];
+    basis := ChangeRing(Matrix([p[2] : p in pb]), F);
+    lat := LatticeWithBasis(V_F, basis, idls);
+    Append(~lats, lat);
+  end for;
+
+  M`genus`Representatives := lats;
+
+  invs := AssociativeArray();
+  for i in [1..#lats] do
+    // Compute the invariant associated to this genus rep.
+    inv := Invariant(lats[i]);
+
+    // Assign an empty list to the invariant hash if it hasn't been
+    //  assigned yet.
+    if not IsDefined(invs, inv) then invs[inv] := []; end if;
+
+    // Add to list.
+    Append(~invs[inv], < lats[i], i >);
+  end for;
+  M`genus`RepresentativesAssoc := invs;
 end intrinsic;

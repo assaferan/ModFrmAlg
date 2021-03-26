@@ -410,6 +410,49 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := false, Orbits := false) -> GenusSym
 	return M`genus;
 end intrinsic;
 
+intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
+				: BeCareful := false)
+{Set the automorphism groups of the lattices in the genus of M.}
+  reps := Representatives(Genus(M));
+  // Set the automorphism groups of the lattices as an attribute,
+  // to remember for later
+  for i in [1..#reps] do
+     reps[i]`AutomorphismGroup := autgps[i];
+  end for;
+  gamma_reps := autgps;
+  assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
+			    BaseRing(M`W`G));
+	
+  gammas := [sub<M`W`G|
+		[Transpose(PullUp(Matrix(g), reps[i], reps[i] :
+				  BeCareful := BeCareful)) :
+			  g in Generators(gamma_reps[i])]> :
+	    i in [1..#reps]];
+        
+  if GetVerbose("AlgebraicModularForms") ge 2 then
+     printf "The sizes of the automorphism groups are %o.\n",
+		   [#x : x in gammas];
+     printf "Computing the fixed subspaces ";
+     print "(space of algebraic modular forms)";
+     t0 := Cputime();
+  end if;
+    
+  M`H := [FixedSubspace(gamma, M`W) : gamma in gammas];
+  dims := Sort([<Dimension(M`H[idx]), idx> : idx in [1..#M`H]]);
+  perm := [tup[2] : tup in dims];
+  perm_inv := [Index(perm,i) : i in [1..#M`H]];
+  // now these are in ascending order
+  M`H := [M`H[i] : i in perm];
+  // Have to reorder the genus representatives to match
+  M`genus`Representatives := [M`genus`Representatives[i] :
+				 i in perm];
+  for inv in Keys(M`genus`RepresentativesAssoc) do
+    M`genus`RepresentativesAssoc[inv] :=
+	    [<tup[1], perm_inv[tup[2]]> :
+		   tup in M`genus`RepresentativesAssoc[inv] ];
+  end for;
+end intrinsic;
+
 procedure ModFrmAlgInit(M : BeCareful := false,
 			    Force := false,
 			    Orbits := false)
@@ -437,6 +480,8 @@ procedure ModFrmAlgInit(M : BeCareful := false,
 	gamma_reps := [AutomorphismGroup(r :
 					 Special := IsSpecialOrthogonal(M)) :
 		       r in reps];
+        SetAutomorphismGroups(~M, gamma_reps : BeCareful := BeCareful);
+/*
 	assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
 			    BaseRing(M`W`G));
 	
@@ -478,6 +523,7 @@ procedure ModFrmAlgInit(M : BeCareful := false,
 		[<tup[1], perm_inv[tup[2]]> :
 		 tup in M`genus`RepresentativesAssoc[inv] ];
 	end for;
+*/
     end if;
 
 end procedure;

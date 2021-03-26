@@ -232,10 +232,10 @@ matrix provided. }
   return lat;
 end intrinsic;
 
-intrinsic LatticeFromLat(L::Lat) -> ModDedLat
+intrinsic LatticeFromLat(L::Lat : GramFactor := 1) -> ModDedLat
 { Builds a ModDedLat structure from a native Lat structure. }
   // The inner form.
-  innerForm := InnerProductMatrix(L);
+  innerForm := (1/GramFactor) * InnerProductMatrix(L);
 
   // The ambient reflexive space.
   Q := AmbientReflexiveSpace(innerForm);
@@ -691,8 +691,8 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 		      special := false, BeCareful := false) -> BoolElt, Mtrx
 { Determines whether the two specified lattices are isometric. }
   // Verify that both lattices reside in the same reflexive space.
-  require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
-		"Both lattices must belong to the same reflexive space.";
+//  require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
+//		"Both lattices must belong to the same reflexive space.";
 
   // Retrieve the ZLattices for each lattice.
   L1 := ZLattice(lat1);

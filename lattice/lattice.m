@@ -1,9 +1,11 @@
 freeze;
 /****-*-magma-******a********************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                             Eran Assaf                                 
-                                                                            
+                        Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+                   
    FILE: lattice.m
 
    Implementation file for lattice routines
@@ -134,9 +136,15 @@ intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
    else
      factor := 2;
    end if;
-   disc := IsEven(Rank(lat)) select "discrminant" else "half-discriminant";
+   if IsEven(Rank(lat)) then
+      disc := "discriminant";
+      half := false;
+   else
+      disc := "half-discriminant";
+      half := true;
+   end if;
    printf "lattice whose %o has norm %o", disc,
-           Norm(Discriminant(lat : GramFactor := factor));
+     Norm(Discriminant(lat : GramFactor := factor, Half := half));
    if level eq "Maximal" then
      printf "%o", Module(lat);
    end if;
@@ -618,23 +626,26 @@ intrinsic Discriminant(lambda::ModDedLat, pi::ModDedLat) -> RngOrdFracIdl
   return &*ElementaryDivisors(lambda, pi);
 end intrinsic;
 
-intrinsic Discriminant(lat::ModDedLat : GramFactor := 1) -> RngOrdFracIdl
+intrinsic Discriminant(lat::ModDedLat :
+		       GramFactor := 1, Half := false) -> RngOrdFracIdl
 { Compute the discriminant of the lattice. }
   // Return the discriminant if it's already been computed.
   if not assigned lat`Discriminant then 
      lat`Discriminant := Discriminant(DualLattice(lat), lat);
   end if;
 
-  if GramFactor eq 1 then
-     return lat`Discriminant;
-  elif GramFactor eq 2 then
+  ret := lat`Discriminant;
+
+  if GramFactor eq 2 then
      r := Rank(lat);
-     if IsEven(r) then
-        return 2^r * lat`Discriminant;
-     else
-        return 2^(r-1) * lat`Discriminant;
-     end if;
+     ret *:= 2^r;
   end if;
+
+  if Half then
+    ret := 1/2*ret;
+  end if;
+
+  return ret;
 end intrinsic;
 
 
@@ -688,7 +699,7 @@ intrinsic Index(lat1::ModDedLat, lat2::ModDedLat) -> RngOrdFracIdl
 end intrinsic;
 
 intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
-		      special := false, BeCareful := false) -> BoolElt, Mtrx
+		      Special := false, BeCareful := false) -> BoolElt, Mtrx
 { Determines whether the two specified lattices are isometric. }
   // Verify that both lattices reside in the same reflexive space.
 //  require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
@@ -706,7 +717,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
   // f := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
 
   // Currently, this only works for SO, where det in -1,1
-  if special and Determinant(f) eq -1 then
+  if Special and Determinant(f) eq -1 then
       // Look at the generators of the automorphism group of the
       //  first lattice.
       gens := Generators(AutomorphismGroup(lat1));

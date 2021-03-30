@@ -2,8 +2,11 @@ freeze;
 
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+
                                                                             
    FILE: genus.m (class for all genus related data and computations)
 
@@ -86,9 +89,7 @@ intrinsic SetGenus(~M::ModFrmAlg, reps::SeqEnum[Lat] : GramFactor := 2)
 
   V_orig := ReflexiveSpace(Module(M));
   F := BaseRing(V_orig);
-  // This might not work, as so far we have assumed all lattices to have
-  // the same inner product matrix, and different bases
-  // lats := [LatticeFromLat(rep : GramFactor := GramFactor) : rep in reps];
+  
   lats := [];
 
   for rep in reps do

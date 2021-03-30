@@ -2,9 +2,11 @@ freeze;
 
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
-                                                                            
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
 
    05/29/20: Modified SkipToNeighbor to handle non-liftable isotropic subspaces
@@ -117,8 +119,8 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 				idx, H :
 				BeCareful := false,
 				UseLLL := false,
-				weight := 1,
-				special := false)
+				Weight := 1,
+				Special := false)
     // Build the neighbor lattice corresponding to the
     //  current state of nProc.
     nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
@@ -149,7 +151,7 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
     for j in [1..#array] do
 	// Check for isometry.
 	iso, g := IsIsometric(nLat, array[j][1] :
-			      special := special, BeCareful := BeCareful);
+			      Special := Special, BeCareful := BeCareful);
 
 	// If isometric, flag as found,
 	//  increment Hecke matrix, and move on.
@@ -159,14 +161,7 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 	    if GetVerbose("AlgebraicModularForms") ge 2 then
 		printf "Neighbor is isometric to genus %o.\n", space_idx;
 	    end if;
-	    
-	    // calculating gamma_i_j, for i = idx, j the index of the
-	    // p-neighbor (nLat), and j* = space_idx
-	    /*
-	    g_pulled := Transpose(PullUp(Matrix(g), nLat, array[j][1] :
-			   BeCareful := BeCareful));
-	    */
-	    // gg := W`G!ChangeRing(g_pulled, BaseRing(W`G));
+	   
 	    gg := W`G!ChangeRing(Transpose(g), BaseRing(W`G));
 
 	    if GetVerbose("AlgebraicModularForms") ge 2 then
@@ -177,7 +172,7 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 	    iota := H[space_idx]`embedding;
 	    for vec_idx in [1..Dimension(H[space_idx])] do
 	    	vec := gg * (iota(H[space_idx].vec_idx));
-		hecke[space_idx][vec_idx][idx] +:= weight * vec;
+		hecke[space_idx][vec_idx][idx] +:= Weight * vec;
 	    end for;
 	    break;
 	end if;
@@ -263,8 +258,8 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
-				      weight := w,
-				      special := IsSpecialOrthogonal(M));
+				      Weight := w,
+				      Special := IsSpecialOrthogonal(M));
 		// Update nProc in preparation for the next neighbor
 		//  lattice.
 		GetNextNeighbor(~nProc
@@ -281,7 +276,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	    processNeighborWeight(~nProc, invs, ~hecke, idx, M`H :
 				  BeCareful := BeCareful,
 				  UseLLL := UseLLL,
-				  special := IsSpecialOrthogonal(M));
+				  Special := IsSpecialOrthogonal(M));
 	    // Update nProc in preparation for the next neighbor
 	    //  lattice.
 	    GetNextNeighbor(~nProc
@@ -303,17 +298,8 @@ function HeckeOperatorCN1(M, pR, k
     // The genus representatives.
     reps := Representatives(Genus(M));
 
-//    rep_idxs := [idx : idx in [1..#reps] | Dimension(M`H[idx]) ne 0];
-//    rep_spaces := [M`H[idx] : idx in rep_idxs];
-
-   hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]] :
-	       h in M`H];
-
-//    hecke := [ [ [* M`W!0 : idx in rep_idxs *] : vec_idx in [1..Dimension(h)]] :
-//	       h in rep_spaces];
-
-    // Keeping track of the gamma_i_j
-    //  isom := [ [[] : h1 in H] : h2 in H ];
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+		 : h in M`H];
 
     // An associative array indexed by a specified invariant of an isometry
     //  class. This data structure allows us to bypass a number of isometry
@@ -325,7 +311,6 @@ function HeckeOperatorCN1(M, pR, k
     n := Dimension(Q);
 
     fullCount := #M`H * NumberOfNeighbors(M, pR, k);
-//    fullCount := #rep_idxs * NumberOfNeighbors(M, pR, k);
     count := 0;
     elapsed := 0;
     start := Realtime();
@@ -334,7 +319,6 @@ function HeckeOperatorCN1(M, pR, k
 	   //   for idx in [1..#rep_idxs] do
 	// The current isometry class under consideration.
 	L := reps[idx];
-//L := reps[rep_idxs[idx]];
 
 	// Build neighboring procedure for this lattice.
 	nProc := BuildNeighborProc(L, pR, k
@@ -344,7 +328,6 @@ function HeckeOperatorCN1(M, pR, k
 	    printf "Computing %o%o-neighbors for isometry class "
 		   cat "representative #%o...\n", pR,
 		   k eq 1 select "" else "^" cat IntegerToString(k),
-					   //		   reps_idxs[idx];
 					   idx;
 	end if;
 	
@@ -400,8 +383,8 @@ function HeckeOperatorCN1(M, pR, k
 		    processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
 					  BeCareful := BeCareful,
 					  UseLLL := UseLLL,
-					  weight := w,
-					  special := IsSpecialOrthogonal(M));
+					  Weight := w,
+					  Special := IsSpecialOrthogonal(M));
 		    // Update nProc in preparation for the next neighbor
 		    //  lattice.
 		    GetNextNeighbor(~nProc
@@ -418,7 +401,7 @@ function HeckeOperatorCN1(M, pR, k
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H :
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
-				      special := IsSpecialOrthogonal(M));
+				      Special := IsSpecialOrthogonal(M));
 		// Update nProc in preparation for the next neighbor
 		//  lattice.
 		GetNextNeighbor(~nProc
@@ -432,17 +415,11 @@ function HeckeOperatorCN1(M, pR, k
     end for;
 
     iota := [h`embedding : h in M`H];
-//    iota := [h`embedding : h in rep_spaces];
-
 
     mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
 		      vec_idx in [1..Dimension(M`H[space_idx])]] :
            space_idx in [1..#M`H]] : idx in [1..#M`H]];
-/*
-     mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
-		      vec_idx in [1..Dimension(rep_spaces[space_idx])]] :
-           space_idx in [1..#rep_idxs]] : idx in [1..#rep_idxs]];
-*/
+
     vert_blocks := [&cat mat : mat in mats];
 
     empty_operator := MatrixAlgebra(BaseRing(M),0)![];
@@ -472,8 +449,8 @@ procedure processNeighborWeightSparse(~nProc, inv, ~hecke,
 				      idx, H, space_idx, vec_idx :
 				      BeCareful := false,
 				      UseLLL := false,
-				      weight := [],
-				      special := false)
+				      Weight := [],
+				      Special := false)
     // Build the neighbor lattice corresponding to the
     //  current state of nProc.
     nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
@@ -491,14 +468,14 @@ procedure processNeighborWeightSparse(~nProc, inv, ~hecke,
 
     // Check for isometry.
     iso, g := IsIsometric(nLat, inv[2] :
-			  special := special, BeCareful := BeCareful);
+			  Special := Special, BeCareful := BeCareful);
     
     if not iso then return; end if;
 
     iota := H[space_idx]`embedding;
     W := Codomain(iota);
 
-    w := &+[Matrix(getMatrixAction(W, Transpose(W`G!g))) : g in weight];
+    w := &+[Matrix(getMatrixAction(W, Transpose(W`G!g))) : g in Weight];
    	    
     gg := W`G!ChangeRing(Transpose(g), BaseRing(W`G));
 
@@ -590,3 +567,267 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
     end for;
     return ret;
 end function;
+
+
+procedure processNeighborWeightWithGenus(~nProc, ~reps, ~invs, ~hecke,
+					 idx, ~H :
+					 BeCareful := false,
+					 UseLLL := false,
+					 Weight := 1,
+					 Special := false)
+    // Build the neighbor lattice corresponding to the
+    //  current state of nProc.
+    nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
+
+    if GetVerbose("AlgebraicModularForms") ge 2 then
+	printf "Processing neighbor corresponding to isotropic subspace ";
+	printf "indexed by %o.\n", nProc`isoSubspace;
+	if GetVerbose("AlgebraicModularForms") ge 3 then
+	    printf "Lattice is %o\n", nLat;
+	end if;
+    end if;
+
+    // Compute the invariant of the neighbor lattice.
+    inv := Invariant(nLat);
+
+    // Retrieve the array of isometry classes matching this
+    //  invariant.
+    if not IsDefined(invs, inv) then
+       invs[inv] := [];
+    end if;
+    array := invs[inv];
+
+    // Flag to determine whether an isometry class
+    //  was actually found. This is a failsafe.
+    found := false;
+
+    iota := H[idx]`embedding;
+    
+    W := Codomain(iota);
+    
+    for j in [1..#array] do
+	// Check for isometry.
+	iso, g := IsIsometric(nLat, array[j][1] :
+			      Special := Special, BeCareful := BeCareful);
+
+	// If isometric, flag as found,
+	//  increment Hecke matrix, and move on.
+	if iso then
+	    space_idx := array[j][2];
+	    
+	    if GetVerbose("AlgebraicModularForms") ge 2 then
+		printf "Neighbor is isometric to genus %o.\n", space_idx;
+	    end if;
+	   
+	    gg := W`G!ChangeRing(Transpose(g), BaseRing(W`G));
+
+	    if GetVerbose("AlgebraicModularForms") ge 2 then
+		print "Updating the Hecke operator...";
+	    end if;
+	    
+	    found := true;
+	    iota := H[space_idx]`embedding;
+	    for vec_idx in [1..Dimension(H[space_idx])] do
+	    	vec := gg * (iota(H[space_idx].vec_idx));
+		hecke[space_idx][vec_idx][idx] +:= Weight * vec;
+	    end for;
+	    break;
+	end if;
+    end for;
+
+    if not found then
+      Append(~reps, nLat);
+      Append(~invs[inv], <nLat, #reps>);
+      gamma_rep := AutomorphismGroup(nLat : Special := Special);
+      gamma := sub<W`G|
+		[Transpose(PullUp(Matrix(g), nLat, nLat :
+				  BeCareful := BeCareful)) :
+			  g in Generators(gamma_rep)]>;
+      h := FixedSubspace(gamma, W);
+      for h_idx in [1..#H] do
+	for v_idx in [1..Dimension(H[h_idx])] do
+	  Append(~hecke[h_idx][v_idx], W!0);
+        end for;
+      end for;
+
+      Append(~H, h);
+      Append(~hecke, [ [* W!0 : hh in H *] : i in [1..Dimension(h)]]);
+
+      if GetVerbose("AlgebraicModularForms") ge 2 then
+	 print "Updating the Hecke operator...";
+      end if;
+	    
+      iota := h`embedding;
+      for vec_idx in [1..Dimension(h)] do
+	vec := iota(h.vec_idx);
+	hecke[#reps][vec_idx][idx] +:= Weight * vec;
+      end for;
+    end if;
+  
+end procedure;
+
+
+procedure HeckeOperatorAndGenusCN1(~M, pR, k, ~result
+				   : BeCareful := false,
+				   UseLLL := false,
+				   Estimate := true,
+				   Orbits := true)
+   
+    L := Module(M);
+    reps := [L];
+    invs := AssociativeArray();
+    invs[Invariant(L)] := [<L, 1>];
+    gamma_rep := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
+    gamma := sub<M`W`G|
+		[Transpose(PullUp(Matrix(g), L, L :
+				  BeCareful := BeCareful)) :
+			  g in Generators(gamma_rep)]>;
+    M`H := [FixedSubspace(gamma, M`W)];
+
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+		 : h in M`H];
+
+    Q := ReflexiveSpace(Module(M));
+    n := Dimension(Q);
+
+    fullCount := #M`H * NumberOfNeighbors(M, pR, k);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+
+    idx := 1;
+    while (idx le #M`H) do
+	   //   for idx in [1..#rep_idxs] do
+	// The current isometry class under consideration.
+	L := reps[idx];
+
+	// Build neighboring procedure for this lattice.
+	nProc := BuildNeighborProc(L, pR, k
+				   : BeCareful := BeCareful);
+
+	if GetVerbose("AlgebraicModularForms") ge 1 then
+	    printf "Computing %o%o-neighbors for isometry class "
+		   cat "representative #%o...\n", pR,
+		   k eq 1 select "" else "^" cat IntegerToString(k),
+					   idx;
+	end if;
+	
+	if Orbits then
+	    // The affine vector space.
+	    V := nProc`L`Vpp[pR]`V;
+
+	    // The base field.
+	    F := BaseRing(V);
+
+	    // The automorphism group restricted to the affine space.
+	    G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
+
+	    gens := [PullUp(Matrix(g), L, L :
+			    BeCareful := BeCareful) :
+		     g in Generators(G)];
+
+	    pMaximalBasis :=
+		ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
+
+	    conj_gens := [pMaximalBasis * g * pMaximalBasis^(-1) :
+		     g in gens];
+
+	    gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]
+			  : g in conj_gens];
+		 
+	    Aut := sub<GL(n, F) | gens_modp>;
+	    fp_aut, psi := FPGroup(Aut);
+
+	    // The isotropic orbit data.
+	    isoOrbits := IsotropicOrbits(V, Aut, k);
+	    
+	    for orbit in isoOrbits do
+		skew0 := Zero(MatrixRing(F, k));
+		// Skip to the neighbor associated to this orbit.
+		SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
+		// In case it doesn't lift
+		if IsEmpty(nProc`X) then
+		    continue;
+		end if;
+		mat_gen_seq := [[gens[Index(gens_modp,
+					    Eltseq(Aut.Abs(i)))]^Sign(i) :
+				 i in Eltseq(g@@psi)] :
+				g in orbit[2]];
+		mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+			      &*seq : seq in mat_gen_seq];
+
+		w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+			g in mat_lifts];
+		// Changing the skew matrix, but not the isotropic
+		// subspace mod p
+		repeat
+	            processNeighborWeightWithGenus(~nProc, ~reps, ~invs,
+						   ~hecke, idx, ~M`H:
+						   BeCareful := BeCareful,
+						   UseLLL := UseLLL,
+						   Weight := w,
+						   Special :=
+						   IsSpecialOrthogonal(M));
+		    // Update nProc in preparation for the next neighbor
+		    //  lattice.
+		    GetNextNeighbor(~nProc
+				    : BeCareful := BeCareful);
+		    if Estimate then
+			printEstimate(start, ~count, ~elapsed,
+				      fullCount, pR, k :
+				      increment := #orbit[2]);
+		    end if;
+		until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
+	    end for;
+	else
+	    while nProc`isoSubspace ne [] do
+		processNeighborWeightWithGenus(~nProc, ~reps, ~invs,
+					       ~hecke, idx, ~M`H :
+					       BeCareful := BeCareful,
+					       UseLLL := UseLLL,
+					       Special :=
+					       IsSpecialOrthogonal(M));
+		// Update nProc in preparation for the next neighbor
+		//  lattice.
+		GetNextNeighbor(~nProc
+				: BeCareful := BeCareful);
+		if Estimate then
+		    printEstimate(start, ~count, ~elapsed,
+				  fullCount, pR, k);
+		end if;
+	    end while;
+	end if;
+        idx +:= 1;
+    end while;
+
+    // update genus
+    M`genus := New(GenusSym);
+    M`genus`Representative := M`L;
+    M`genus`Representatives := reps;
+    M`genus`RepresentativesAssoc := invs;
+	     
+    iota := [h`embedding : h in M`H];
+
+    mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
+		      vec_idx in [1..Dimension(M`H[space_idx])]] :
+           space_idx in [1..#M`H]] : idx in [1..#M`H]];
+
+    vert_blocks := [&cat mat : mat in mats];
+
+    empty_operator := MatrixAlgebra(BaseRing(M),0)![];
+    
+    if IsEmpty(vert_blocks) then result := empty_operator; return; end if;
+    if IsEmpty(vert_blocks[1]) then result := empty_operator; return; end if;
+    
+    vert_mats := [* Matrix(blk) : blk in vert_blocks |
+		  not IsEmpty(blk[1]) *];
+
+    if IsEmpty(vert_mats) then result := empty_operator; return; end if;
+
+    // would have done a one liner, but there are universe issues
+    result := vert_mats[1];
+    for idx in [2..#vert_mats] do
+	result := HorizontalJoin(result, vert_mats[idx]);
+    end for;
+    
+end procedure;

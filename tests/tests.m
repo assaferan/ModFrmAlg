@@ -1,8 +1,11 @@
 freeze;
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+                
                                                                             
    FILE: tests.m (functions for testing examples)
 
@@ -545,6 +548,7 @@ procedure testLSeries(disc, wts, prec)
         fs := HeckeEigenforms(M);
         lpolys := [LPolynomials(f : Precision := 10) : f in fs];
         nonlifts := get_nonlifts(lpolys, disc, 10);
+        printf "For wt = %o, d = %o there are %o nonlifts. The dimensions of their Galois orbits are %o.\n", wt, d, #nonlifts, [Degree(BaseRing(fs[idx]`vec)) : idx in nonlifts]; 
         for idx in nonlifts do
 	  f := fs[idx];
           lser := LSeries(f : Precision := prec);

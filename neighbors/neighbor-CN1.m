@@ -2,8 +2,11 @@ freeze;
 
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+                      
                                                                             
    FILE: neighbor-CN1.m (Implementation of  computing p-neighbor lattices)
 

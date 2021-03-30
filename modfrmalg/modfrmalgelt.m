@@ -2,8 +2,11 @@ freeze;
 
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                     Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+             
                                                                             
    FILE: modfrmalgelt.m (main structure file)
 
@@ -627,7 +630,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
 		    evs[1]*p^w*x + 1;
           else
 	     eps_p := WittInvariant(L,BaseRing(L)!!p);
-             L_poly := p^(3+2*w)*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*p^w*x+1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p - nu(D,p)*(evs[1] + dim))*p^w*x+1;
              L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:

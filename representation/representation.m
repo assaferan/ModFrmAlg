@@ -1734,7 +1734,6 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   return V;
 end intrinsic;
 
-
 // old code
 
 /*

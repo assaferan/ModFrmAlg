@@ -723,7 +723,8 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
     return CC_x![h(c) : c in Eltseq(poly)];
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
-  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2)));
+  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2,
+				     Half := IsOdd(n))));
   if assigned Weight(f`M)`weight then
      d := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];

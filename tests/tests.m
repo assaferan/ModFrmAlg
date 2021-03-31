@@ -530,13 +530,10 @@ function get_nonlift_dimension(disc, wts)
   return res;
 end function;
 
+forward get_quinary_lattice;
+
 procedure testLSeries(disc, wts, prec)
-  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
-  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
-  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
-			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
-  assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
+  nipp, nipp_idx := get_quinary_lattice(disc);
   A := NippToForm(nipp[nipp_idx]);
   G := OrthogonalGroup(A);
   for wt in wts do
@@ -753,14 +750,6 @@ procedure testRamaTornariaTable3ANTS()
 	     [73,129,455,647,1660]]]
 	   ];
 			     
-/*
-  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
-  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
-  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
-			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
-  assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
-*/
   nipp, nipp_idx := get_quinary_lattice(disc);
   for lat_idx in [1,2] do
     vprintf AlgebraicModularForms, 1 : "testing lattice no. %o...\n", lat_idx;
@@ -840,3 +829,50 @@ procedure testRamaTornariaTable1ANTS()
   lser := LSeries(f : Precision := 30);
   assert CFENew(lser) lt 10^(-30);
 end procedure;
+
+
+// These functions are for debugging bad Euler factors
+
+function check_signs(f, signs, evs, ps, w, j, D, d, eps_ps, dim, x, Precision)
+  lpolys := AssociativeArray();
+  for i in [1..#ps] do
+    s := signs[i];
+    p := ps[i];
+    L_poly := p^(3+2*w)*x^2+(s[1]*p + s[2]*evs[i][1] + s[3]*dim)*p^w*x+1;
+    L_poly *:= eps_ps[i]*p^(1+w)*x+1;
+    lpolys[p] := L_poly;
+  end for;
+  function local_factor(p,d)
+    if p in ps then
+      poly := lpolys[p];
+    else
+      poly := LPolynomial(f,p,d);
+    end if;
+    CC := ComplexField();
+    CC_x := PowerSeriesRing(CC);
+    K := BaseRing(Parent(poly));
+    r := Roots(DefiningPolynomial(K),CC)[1][1];
+    if Type(K) eq FldRat then
+      h := hom<K -> CC|>;
+    else 
+      h := hom<K -> CC | r>;
+    end if;
+    return CC_x![h(c) : c in Eltseq(poly)];
+  end function;
+  lser := LSeries(2*w+4, [-w-1+j,-w+j,j,j+1], D, local_factor :
+                 Sign := (-1)^w*nu(D,d), Precision := Precision);
+  return CFENew(lser);
+end function;
+
+function find_signs(f, evs, ps, w, j, D, d, eps_ps, dim, x)
+  signs := CartesianPower(CartesianPower([-1,0,1],3),#ps);
+  prec := 1;
+  while (#signs gt 1) do 
+     tmp := [<s, check_signs(f, s, evs, ps, w, j, D, d, eps_ps, dim, x, prec)>
+		 : s in signs];
+     signs := [x[1] : x in tmp | IsZero(x[2])];
+     prec +:= 1;
+  end while;
+  if IsEmpty(signs) then return false, _; end if;
+  return true, signs[1];
+end function;

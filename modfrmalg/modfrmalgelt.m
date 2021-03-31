@@ -603,6 +603,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
   D := Integers()!(Norm(Discriminant(Module(f`M) :
 				     GramFactor := 2, Half := IsOdd(n))));
   if assigned Weight(f`M)`weight then
+     dw := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];
   else
     // In this case, we don't really know the weight.
@@ -629,8 +630,8 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
 		    evs[1]*p^w*x + 1;
           else
 	     eps_p := (-1)^w*WittInvariant(L,BaseRing(L)!!p);
-             nu_p := (d mod p eq 0) select nu(D,p) else 1;
-             L_poly := p^(3+2*w)*x^2-(eps_p*p + nu(D,p)*(evs[1] + 1))*p^w*x+1;
+             nu_p := (dw mod p eq 0) select nu(D,p) else 1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p - nu(D,p)*(evs[1] + 1))*p^w*x+1;
              L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:

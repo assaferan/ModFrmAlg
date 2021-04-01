@@ -923,7 +923,7 @@ procedure write_lser_invariants(lser, num_coeffs, fname)
 				      : pt in CriticalPoints(lser)];
   lser_invs["motivic_weight"] := MotivicWeight(lser);
   lser_invs["degree"] := Degree(lser);
-  lser_invs["num_euler"] := Floor(Sqrt(num_coeffs));
+  num_euler := Floor(Sqrt(num_coeffs));
   lser_invs["euler_factors"] := [<p, EulerFactor(lser, p)>
 				    : p in PrimesUpTo(num_euler)];
 

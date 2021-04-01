@@ -911,7 +911,7 @@ function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   fname_pre := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o",
 		       disc, g, wt_str, nipp_idx);
   fname := fname_pre cat ".amf"; 
-  if FileExists(path() cat fname) then
+  if FileExists(path() cat fname : ShowErrors := false) then
     M := AlgebraicModularForms(fname);
   else
     A := NippToForm(nipp[nipp_idx]);

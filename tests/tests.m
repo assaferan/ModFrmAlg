@@ -433,6 +433,11 @@ end function;
 
 function get_nonlifts(lpolys, disc, prec)
   nonlift_idxs := [];
+  if Type(prec) eq SeqEnum then
+    primes := [p : p in prec | disc mod p ne 0];
+  else
+    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
+  end if;
   for idx in [1..#lpolys] do
     lpolys_f := lpolys[idx];
     // This is sometimes problematic, when the base field is large
@@ -440,7 +445,6 @@ function get_nonlifts(lpolys, disc, prec)
     // nonlift := &or[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
     //		    | disc mod p ne 0];
     nonlift := false;
-    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
     for p in primes do
       if Type(BaseRing(lpolys_f[p])) eq FldRat then
          fac := Factorization(lpolys_f[p]);
@@ -876,3 +880,45 @@ function find_signs(f, evs, ps, w, j, D, d, eps_ps, dim, x)
   if IsEmpty(signs) then return false, _; end if;
   return true, signs[1];
 end function;
+
+// In order to find out interesting things
+// Right now focus on disc le 256
+// wt is a pair [k,j] for Paramodular P_{k,j}
+// !!! TODO - the hard coded 139 is the number for (k,j) = (3,0), (4,0)
+// Should replace by reading from the Edgar file !!!
+procedure get_lser(table_idx, nipp_idx, wt : prec := 139, Estimate := false)
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipp := parseNippFile(nipp_fname);
+  disc := nipp[nipp_idx]`D;
+  g := nipp[nipp_idx]`genus;
+  A := NippToForm(nipp[nipp_idx]);
+  k,j := Explode(wt);
+  G := OrthogonalGroup(A);
+  W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
+  M := AlgebraicModularForms(G, W);
+  fs := HeckeEigenforms(M : Estimate := Estimate);
+  // This is just for checking irreducibility
+  irred_primes := [];
+  // The odds that even one of them is reducible by chance are slim
+  // But we're doing 2 to make sure.
+  p := 2;
+  for i in [1..2] do  
+    while (disc mod p eq 0) do
+      p := NextPrime(p);
+    end while;
+    Append(~irred_primes, p);
+    p := NextPrime(p);
+  end for;
+  lpolys := [LPolynomials(f : Estimate := Estimate,
+			  Precision := irred_primes) : f in fs];
+  nonlift_idxs := get_nonlifts(lpolys, disc, irred_primes);
+  for idx in nonlift_idxs do
+    lser := LSeries(fs[nonlift_idxs]);
+    coeffs := LGetCoefficients(lser, prec);
+  end for;
+  fname := Sprintf("lser_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
+		  prec, disc, g, wt, nipp_idx);
+  Save(M, fname);
+end procedure;

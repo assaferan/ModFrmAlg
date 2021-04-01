@@ -691,7 +691,10 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
 
   m := n div 2;
 
-  if (Precision eq 0) then
+  if Type(Precision) eq SeqEnum then
+    Ps := [Factorization(Integers(BaseRing(f`M)) !! p)[1][1] :
+			p in Precision];
+  elif (Precision eq 0) then
     Ps := [p : p in Keys(f`Eigenvalues[1])
 	   | &and[p in Keys(f`Eigenvalues[j]) : j in [1..m]]];
   else

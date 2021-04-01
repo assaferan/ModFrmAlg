@@ -962,9 +962,24 @@ procedure get_lsers(table_idx, nipp_idx, wt :
 		: Estimate := Estimate);
 end procedure;
 
+// This is needed due to unexplained magma crashes
+function createLSerBatchFile(tid, idx, k, j)
+  fname := Sprintf("batch_files/lser_single_%o_%o_%o_%o.m", tid, idx, k, j);
+  f := Open(fname, "w");
+  output_str := "AttachSpec(\"ModFrmAlg.spec\");\n";
+  output_str cat:= "import \"tests/tests.m\" : get_lsers;\n";
+  output_str cat:= "time0 := Cputime();\n";
+  output_str cat:= Sprintf("get_lsers(%o, %o, [%o, %o]);\n", tid, idx, k, j);
+  output_str cat:= "printf \"elapsed: %%o\\n\", Cputime()-time0;\n";
+  output_str cat:= "exit;\n";
+  fprintf f, output_str;
+  delete f;
+  return fname;
+end function;
+
 procedure prepareLSerBatchFile(t_idx, start, upto, wt)
   k,j := Explode(wt);
-cmds := [Sprintf("table_idx:=%o idx:=%o k:=%o j:=%o batch_files/lser_single_job.m", t_idx, idx, k, j) : idx in [start..upto]];
+  cmds := [createLSerBatchFile(t_idx, idx, k, j) : idx in [start..upto]];
   fname := Sprintf("batch_files/lser_%o_%o_%o_%o_%o.sh",
 		   t_idx, start, upto, k, j);
   f := Open(fname, "w");

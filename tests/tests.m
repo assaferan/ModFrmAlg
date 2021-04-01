@@ -906,7 +906,7 @@ end procedure;
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
-procedure compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
+function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   wt_str := Join([Sprintf("%o", x) : x in wt], "_");
   fname_pre := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o",
 		       disc, g, wt_str, nipp_idx);
@@ -937,7 +937,8 @@ procedure compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
     lser := lsers[lser_idx];
     write_lser_invariants(lser, prec, lser_fname);
   end for;
-end procedure;
+  return lsers;
+end function;
 
 
 // get the first prec*sqrt(disc) coefficients of the L-series
@@ -953,8 +954,9 @@ procedure get_lsers(table_idx, nipp_idx, wt :
   g := nipp[nipp_idx]`genus;
   num_coeffs := Ceiling(Sqrt(disc)*prec);
   for i in [1..num_coeffs div chunk] do
-	compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
+      lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
 		      : Estimate := Estimate);
+      if IsEmpty(lsers) then return; end if;
   end for;
   compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
 		: Estimate := Estimate);

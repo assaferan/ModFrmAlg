@@ -915,10 +915,14 @@ procedure get_lser(table_idx, nipp_idx, wt : prec := 139, Estimate := false)
 			  Precision := irred_primes) : f in fs];
   nonlift_idxs := get_nonlifts(lpolys, disc, irred_primes);
   for idx in nonlift_idxs do
-    lser := LSeries(fs[nonlift_idxs]);
+    lser := LSeries(fs[idx]);
     coeffs := LGetCoefficients(lser, prec);
   end for;
+  wt_str := Join([Sprintf("%o", x) : x in wt], "_");
   fname := Sprintf("lser_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
-		  prec, disc, g, wt, nipp_idx);
-  Save(M, fname);
+		  prec, disc, g, wt_str, nipp_idx);
+  if Estimate then
+    printf "Saving to file %o.\n", fname;
+  end if;
+  Save(M, fname : Overwrite);
 end procedure;

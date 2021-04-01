@@ -190,7 +190,7 @@ function testExample(example : num_primes := 0, use_existing := false,
 			       orbits := true, useLLL := true,
 			       decomposition := true)
     fname := Sprintf("Example_%o.dat", example`name);
-    if use_existing and FileExists(path() cat fname) then
+    if use_existing and FileExists(path() cat fname : ShowErrors := false) then
 	M := AlgebraicModularForms(fname);
     else
 	if example`group eq "Unitary" then
@@ -881,10 +881,7 @@ end function;
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
-// !!! TODO - the hard coded 139 is the number for (k,j) = (3,0), (4,0)
-// Should replace by reading from the Edgar file !!!
-function compute_lsers(disc, g, nipp, nipp_idx, wt :
-		       prec := 139, Estimate := false)
+function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   wt_str := Join([Sprintf("%o", x) : x in wt], "_");
   fname := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		    disc, g, wt_str, nipp_idx);
@@ -912,19 +909,23 @@ function compute_lsers(disc, g, nipp, nipp_idx, wt :
   return lsers; 
 end function;
 
+// get the first prec*sqrt(disc) coefficients of the L-series
+// !!! TODO - the hard coded 138.84 is the number for (k,j) = (3,0), (4,0)
+// Should replace by reading from the Edgar file !!!
 function get_lsers(table_idx, nipp_idx, wt :
-		   prec := 139, Estimate := false, chunk := 10)
+		   prec := 138.84, Estimate := false, chunk := 10)
   nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
   nipp := parseNippFile(nipp_fname);
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
-  for i in [1..prec div chunk] do
-     lsers := compute_lsers(disc, g, nipp, nipp_idx, wt :
-			    prec := i*chunk, Estimate := Estimate);
+  num_coeffs := Ceiling(Sqrt(disc)*prec);
+  for i in [1..num_coeffs div chunk] do
+	lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
+			       : Estimate := Estimate);
   end for;
-  lsers := compute_lsers(disc, g, nipp, nipp_idx, wt :
-			 prec := prec, Estimate := Estimate);
+  lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
+		       : Estimate := Estimate);
   return lsers;
 end function;

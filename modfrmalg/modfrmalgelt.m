@@ -610,6 +610,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
     // In this case, we don't really know the weight.
     // We guess it is trivial. Could we infer it from W?
      w := 0;
+     dw := 1;
   end if;
   if not IsDefined(L`Vpp, p) then
     pR := Factorization(Integers(BaseRing(L))!!p)[1][1]; 

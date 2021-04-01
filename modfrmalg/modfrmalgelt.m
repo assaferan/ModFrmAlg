@@ -613,7 +613,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
   end if;
   if not IsDefined(L`Vpp, p) then
     pR := Factorization(Integers(BaseRing(L))!!p)[1][1]; 
-    BuildNeighborProc(L, pR, 1);
+    nProc := BuildNeighborProc(L, pR, 1);
   end if;
   is_split := (L`Vpp[p]`V`AnisoDim lt 2);
   p := Norm(p);

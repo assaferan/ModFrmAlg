@@ -431,13 +431,24 @@ function my_facAlgExt(f)
   return res;
 end function;
 
-function get_nonlifts(lpolys, disc, prec)
+// Checks which fs are nonlifts using irreduciblity of the lpolynomials
+// The number of lpolynomials checked is prec.
+// The odds that even one of them is reducible by chance are slim
+// But we're doing 2 to make sure.
+function get_nonlifts(fs, disc : prec := 2, Estimate := false)
+  // This is just for checking irreducibility
+  primes := [];
+  p := 2;
+  for i in [1..prec] do  
+    while (disc mod p eq 0) do
+      p := NextPrime(p);
+    end while;
+    Append(~primes, p);
+    p := NextPrime(p);
+  end for;
+  lpolys := [LPolynomials(f : Estimate := Estimate,
+			  Precision := primes) : f in fs];
   nonlift_idxs := [];
-  if Type(prec) eq SeqEnum then
-    primes := [p : p in prec | disc mod p ne 0];
-  else
-    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
-  end if;
   for idx in [1..#lpolys] do
     lpolys_f := lpolys[idx];
     // This is sometimes problematic, when the base field is large
@@ -472,22 +483,12 @@ procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   A := NippToForm(nipp[nipp_idx]);
-  // G := SpecialOrthogonalGroup(A);
-  // std := StandardRepresentation(GL(5, Rationals()));
   k,j := Explode(wt);
-//sym_j := SymmetricRepresentation(std, j);
-//alt := AlternatingRepresentation(std, 2);
-// sym_k_3 := SymmetricRepresentation(alt, k-3);
-// W := TensorProduct(sym_j, sym_k_3);
   G := OrthogonalGroup(A);
   W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
-// M := AlgebraicModularForms(G, W);
   M := AlgebraicModularForms(G, W);
-// D := Decomposition(M, 100);
   fs := HeckeEigenforms(M : Estimate := Estimate);
-  lpolys := [LPolynomials(f : Estimate := Estimate,
-			  Precision := prec) : f in fs];
-  nonlift_idxs := get_nonlifts(lpolys, disc, prec);
+  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
   id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
@@ -523,10 +524,7 @@ function get_nonlift_dimension(disc, wts)
         W_spin := TensorProduct(W, spin);
         M := AlgebraicModularForms(G, W_spin);
         fs := HeckeEigenforms(M);
-        lpolys := [LPolynomials(f : Precision := 10) : f in fs];
-        nonlifts := get_nonlifts(lpolys, disc, 10);
-// we return the actual orbits, as it might shed more light
-// dim := my_sum([Degree(BaseRing(fs[i]`vec)) : i in nonlifts]);
+        nonlifts := get_nonlifts(fs, disc);
         dim := [Degree(BaseRing(fs[i]`vec)) : i in nonlifts];
         Append(~res, <wt, d, dim>);
     end for;
@@ -548,8 +546,7 @@ procedure testLSeries(disc, wts, prec)
         W_spin := TensorProduct(W, spin);
         M := AlgebraicModularForms(G, W_spin);
         fs := HeckeEigenforms(M);
-        lpolys := [LPolynomials(f : Precision := 10) : f in fs];
-        nonlifts := get_nonlifts(lpolys, disc, 10);
+        nonlifts := get_nonlifts(fs, disc);
         printf "For wt = %o, d = %o there are %o nonlifts. The dimensions of their Galois orbits are %o.\n", wt, d, #nonlifts, [Degree(BaseRing(fs[idx]`vec)) : idx in nonlifts]; 
         for idx in nonlifts do
 	  f := fs[idx];
@@ -886,43 +883,48 @@ end function;
 // wt is a pair [k,j] for Paramodular P_{k,j}
 // !!! TODO - the hard coded 139 is the number for (k,j) = (3,0), (4,0)
 // Should replace by reading from the Edgar file !!!
-procedure get_lser(table_idx, nipp_idx, wt : prec := 139, Estimate := false)
+function compute_lsers(disc, g, nipp, nipp_idx, wt :
+		       prec := 139, Estimate := false)
+  wt_str := Join([Sprintf("%o", x) : x in wt], "_");
+  fname := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o.amf",
+		    disc, g, wt_str, nipp_idx);
+  if FileExists(path() cat fname) then
+    M := AlgebraicModularForms(fname);
+  else
+    A := NippToForm(nipp[nipp_idx]);
+    k,j := Explode(wt);
+    G := OrthogonalGroup(A);
+    W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
+    M := AlgebraicModularForms(G, W);
+  end if;
+  fs := HeckeEigenforms(M : Estimate := Estimate);
+  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
+  lsers := [];
+  for idx in nonlift_idxs do
+    lser := LSeries(fs[idx]);
+    coeffs := LGetCoefficients(lser, prec);
+    Append(~lsers, lser);
+  end for;
+  if Estimate then
+    printf "Saving to file %o.\n", fname;
+  end if;
+  Save(M, fname : Overwrite);
+  return lsers; 
+end function;
+
+function get_lsers(table_idx, nipp_idx, wt :
+		   prec := 139, Estimate := false, chunk := 10)
   nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
   nipp := parseNippFile(nipp_fname);
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
-  A := NippToForm(nipp[nipp_idx]);
-  k,j := Explode(wt);
-  G := OrthogonalGroup(A);
-  W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
-  M := AlgebraicModularForms(G, W);
-  fs := HeckeEigenforms(M : Estimate := Estimate);
-  // This is just for checking irreducibility
-  irred_primes := [];
-  // The odds that even one of them is reducible by chance are slim
-  // But we're doing 2 to make sure.
-  p := 2;
-  for i in [1..2] do  
-    while (disc mod p eq 0) do
-      p := NextPrime(p);
-    end while;
-    Append(~irred_primes, p);
-    p := NextPrime(p);
+  for i in [1..prec div chunk] do
+     lsers := compute_lsers(disc, g, nipp, nipp_idx, wt :
+			    prec := i*chunk, Estimate := Estimate);
   end for;
-  lpolys := [LPolynomials(f : Estimate := Estimate,
-			  Precision := irred_primes) : f in fs];
-  nonlift_idxs := get_nonlifts(lpolys, disc, irred_primes);
-  for idx in nonlift_idxs do
-    lser := LSeries(fs[idx]);
-    coeffs := LGetCoefficients(lser, prec);
-  end for;
-  wt_str := Join([Sprintf("%o", x) : x in wt], "_");
-  fname := Sprintf("lser_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
-		  prec, disc, g, wt_str, nipp_idx);
-  if Estimate then
-    printf "Saving to file %o.\n", fname;
-  end if;
-  Save(M, fname : Overwrite);
-end procedure;
+  lsers := compute_lsers(disc, g, nipp, nipp_idx, wt :
+			 prec := prec, Estimate := Estimate);
+  return lsers;
+end function;

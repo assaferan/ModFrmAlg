@@ -909,10 +909,35 @@ function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   return lsers; 
 end function;
 
+procedure write_lser_invariants(lser, num_coeffs, fname)
+  lser_invs := AssociativeArray();
+  lser_invs["dirichlet"] := LGetCoefficients(lser, num_coeffs);
+  lser_data := LSeriesData(lser);
+  lser_invs["weight"] := lser_data[1];
+  lser_invs["conductor"] := lser_data[2];
+  lser_invs["gamma_shifts"] := lser_data[3];
+  lser_invs["sign"] := lser_data[5];
+  lser_invs["poles"] := lser_data[6];
+  lser_invs["residues"] := lser_data[7];
+  lser_invs["critical_values"] := [<pt, Evaluate(lser, pt)>
+				      : pt in CriticalPoints(lser)];
+  lser_invs["motivic_weight"] := MotivicWeight(lser);
+  lser_invs["degree"] := Degree(lser);
+  lser_invs["num_euler"] := Floor(Sqrt(num_coeffs));
+  lser_invs["euler_factors"] := [<p, EulerFactor(lser, p)>
+				    : p in PrimesUpTo(num_euler)];
+
+  file := Open(fname, "w");
+  for key in Keys(lser_invs) do
+    fprintf file, "%o := %m;\n", key, lser_invs[key];
+  end for;
+  delete file;
+end procedure;
+
 // get the first prec*sqrt(disc) coefficients of the L-series
 // !!! TODO - the hard coded 138.84 is the number for (k,j) = (3,0), (4,0)
 // Should replace by reading from the Edgar file !!!
-function get_lsers(table_idx, nipp_idx, wt :
+procedure get_lsers(table_idx, nipp_idx, wt :
 		   prec := 138.84, Estimate := false, chunk := 10)
   nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
@@ -927,5 +952,10 @@ function get_lsers(table_idx, nipp_idx, wt :
   end for;
   lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
 		       : Estimate := Estimate);
-  return lsers;
-end function;
+  for lser_idx in [1..#lsers] do
+    wt_str := Join([Sprintf("%o", x) : x in wt], "_");
+    fname := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o_f_%o.m",
+		     disc, g, wt_str, nipp_idx, lser_idx);
+    write_lser_invariants(lser, num_coeffs, fname);
+  end for;
+end procedure;

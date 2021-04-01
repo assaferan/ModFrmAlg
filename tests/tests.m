@@ -961,3 +961,23 @@ procedure get_lsers(table_idx, nipp_idx, wt :
   compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
 		: Estimate := Estimate);
 end procedure;
+
+procedure prepareLSerBatchFile(t_idx, start, end, wt)
+  k,j := Explode(wt);
+  cmds := [Sprintf("table_idx:=%o idx:=%o k:=%o j:=%o batch_files/lser_single_job.m", t_idx, idx, k, j) for idx in [start..end]];
+  fname := Sprintf("batch_files/lpolys_box_%o.sh", N_an);
+  f := Open(fname, "w");
+  output_str := "#!/bin/bash\n";
+  all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  
+  output_str cat:= "PROCESSES_TO_RUN=(" cat all_cmds cat ")\n";
+  output_str cat:= "for i in ${PROCESSES_TO_RUN[@]}; do\n";
+  output_str cat:= "\t magma -b ${i%%/*}/./${i##*/} > ${i}.log 2>&1 &\n";
+  output_str cat:= "done\n";
+// output_str cat:= "wait\n";
+  fprintf f, output_str;
+  delete f;
+  chmod_cmd := Sprintf("chmod +x %o", fname);
+  System(chmod_cmd);
+  // we will run it from outside
+  // System("./" cat fname);
+end procedure;

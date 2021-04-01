@@ -965,7 +965,7 @@ end procedure;
 procedure prepareLSerBatchFile(t_idx, start, end, wt)
   k,j := Explode(wt);
   cmds := [Sprintf("table_idx:=%o idx:=%o k:=%o j:=%o batch_files/lser_single_job.m", t_idx, idx, k, j) for idx in [start..end]];
-  fname := Sprintf("batch_files/lpolys_box_%o.sh", N_an);
+  fname := Sprintf("batch_files/lser_%o_%o_%o_%o_%o.sh", t_idx, start, end, k, j);
   f := Open(fname, "w");
   output_str := "#!/bin/bash\n";
   all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  

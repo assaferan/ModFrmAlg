@@ -878,6 +878,31 @@ function find_signs(f, evs, ps, w, j, D, d, eps_ps, dim, x)
   return true, signs[1];
 end function;
 
+procedure write_lser_invariants(lser, num_coeffs, fname)
+  lser_invs := AssociativeArray();
+  lser_invs["dirichlet"] := LGetCoefficients(lser, num_coeffs);
+  lser_data := LSeriesData(lser);
+  lser_invs["weight"] := lser_data[1];
+  lser_invs["conductor"] := lser_data[2];
+  lser_invs["gamma_shifts"] := lser_data[3];
+  lser_invs["sign"] := lser_data[5];
+  lser_invs["poles"] := lser_data[6];
+  lser_invs["residues"] := lser_data[7];
+  lser_invs["critical_values"] := [<pt, Evaluate(lser, pt)>
+				      : pt in CriticalPoints(lser)];
+  lser_invs["motivic_weight"] := MotivicWeight(lser);
+  lser_invs["degree"] := Degree(lser);
+  num_euler := Floor(Sqrt(num_coeffs));
+  lser_invs["euler_factors"] := [<p, EulerFactor(lser, p)>
+				    : p in PrimesUpTo(num_euler)];
+
+  file := Open(path() cat fname, "w");
+  for key in Keys(lser_invs) do
+    fprintf file, "%o := %m;\n", key, lser_invs[key];
+  end for;
+  delete file;
+end procedure;
+
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
@@ -914,30 +939,6 @@ procedure compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   end for;
 end procedure;
 
-procedure write_lser_invariants(lser, num_coeffs, fname)
-  lser_invs := AssociativeArray();
-  lser_invs["dirichlet"] := LGetCoefficients(lser, num_coeffs);
-  lser_data := LSeriesData(lser);
-  lser_invs["weight"] := lser_data[1];
-  lser_invs["conductor"] := lser_data[2];
-  lser_invs["gamma_shifts"] := lser_data[3];
-  lser_invs["sign"] := lser_data[5];
-  lser_invs["poles"] := lser_data[6];
-  lser_invs["residues"] := lser_data[7];
-  lser_invs["critical_values"] := [<pt, Evaluate(lser, pt)>
-				      : pt in CriticalPoints(lser)];
-  lser_invs["motivic_weight"] := MotivicWeight(lser);
-  lser_invs["degree"] := Degree(lser);
-  num_euler := Floor(Sqrt(num_coeffs));
-  lser_invs["euler_factors"] := [<p, EulerFactor(lser, p)>
-				    : p in PrimesUpTo(num_euler)];
-
-  file := Open(path() cat fname, "w");
-  for key in Keys(lser_invs) do
-    fprintf file, "%o := %m;\n", key, lser_invs[key];
-  end for;
-  delete file;
-end procedure;
 
 // get the first prec*sqrt(disc) coefficients of the L-series
 // !!! TODO - the hard coded 138.84 is the number for (k,j) = (3,0), (4,0)

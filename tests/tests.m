@@ -956,6 +956,7 @@ procedure get_lsers(table_idx, nipp_idx, wt :
     wt_str := Join([Sprintf("%o", x) : x in wt], "_");
     fname := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o_f_%o.m",
 		     disc, g, wt_str, nipp_idx, lser_idx);
+    lser := lsers[lser_idx];
     write_lser_invariants(lser, num_coeffs, fname);
   end for;
 end procedure;

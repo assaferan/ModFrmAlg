@@ -2,8 +2,11 @@ freeze;
 
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                     Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+             
                                                                             
    FILE: modfrmalgelt.m (main structure file)
 
@@ -350,7 +353,8 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true) -> List
 	    // If the weight is non-trivial all forms are cuspidal
             // !!! TODO - do the general case, we might have some
             // multiplicity of the trivial representation
-            if Rank(Weight(M)) gt 1 then
+            if (Rank(Weight(M)) gt 1) or
+	       ((assigned Weight(M)`weight) and (Weight(M)`weight[1] ne 1)) then
               mform`IsCuspidal := true;
 	    else
 	      mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
@@ -595,18 +599,17 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
     evs cat:= [0 : i in [n_evs+1..n div 2]];
   end if;
   K := Universe(evs);
-// K_x<x> := PolynomialRing(K);
   K_x<x> := PowerSeriesRing(K);
-//D := Integers()!(2^(n-1)*Norm(Discriminant(Module(f`M))));
-  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2)));
+  D := Integers()!(Norm(Discriminant(Module(f`M) :
+				     GramFactor := 2, Half := IsOdd(n))));
   if assigned Weight(f`M)`weight then
+     dw := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];
   else
     // In this case, we don't really know the weight.
     // We guess it is trivial. Could we infer it from W?
      w := 0;
   end if;
-  dim := Degree(K);
   is_split := (L`Vpp[p]`V`AnisoDim lt 2);
   p := Norm(p);
   // These explicit Satake polynomials are taken from Murphy's thesis 
@@ -626,8 +629,9 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
 	            ((evs[2] + p^2 + 1)*p^(1+2*w))*x^2 -
 		    evs[1]*p^w*x + 1;
           else
-	     eps_p := WittInvariant(L,BaseRing(L)!!p);
-             L_poly := p^(3+2*w)*x^2-(eps_p*p + nu(D,p)*(evs[1] + dim))*p^w*x+1;
+	     eps_p := (-1)^w*WittInvariant(L,BaseRing(L)!!p);
+             nu_p := (dw mod p eq 0) select nu(D,p) else 1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p - nu(D,p)*(evs[1] + 1))*p^w*x+1;
              L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:
@@ -720,7 +724,8 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
     return CC_x![h(c) : c in Eltseq(poly)];
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
-  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2)));
+  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2,
+				     Half := IsOdd(n))));
   if assigned Weight(f`M)`weight then
      d := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];

@@ -2,8 +2,11 @@ freeze;
 
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+ 
                                                                             
    FILE: modfrmalg.m (Class of space of algebraic modular forms)
 
@@ -358,7 +361,7 @@ intrinsic Print(M::ModFrmAlg, level::MonStgElt) {}
 	else
           weight := "weight ";
           if Type(R) eq FldOrd then 
-            R := NumberField(MaximalOrder(BaseRing(CFM`M)));
+            R := NumberField(MaximalOrder(R));
           end if;
           R := (Degree(R) eq 1) select Rationals() else R;
           weight cat:= (assigned M`W`lambda) select Sprintf("%o", M`W`lambda)
@@ -481,51 +484,7 @@ procedure ModFrmAlgInit(M : BeCareful := false,
 					 Special := IsSpecialOrthogonal(M)) :
 		       r in reps];
         SetAutomorphismGroups(~M, gamma_reps : BeCareful := BeCareful);
-/*
-	assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
-			    BaseRing(M`W`G));
-	
-	gammas := [sub<M`W`G|
-		      [Transpose(PullUp(Matrix(g), reps[i], reps[i] :
-					BeCareful := BeCareful)) :
-		       g in Generators(gamma_reps[i])]> :
-		   i in [1..#reps]];
-        
-	if GetVerbose("AlgebraicModularForms") ge 2 then
-	    printf "The sizes of the automorphism groups are %o.\n",
-		   [#x : x in gammas];
-	    printf "Computing the fixed subspaces ";
-	    print "(space of algebraic modular forms)";
-	    t0 := Cputime();
-	end if;
-    
-	M`H := [FixedSubspace(gamma, M`W) : gamma in gammas];
-
-	if GetVerbose("AlgebraicModularForms") ge 2 then	
-	    printf "Obtained spaces of dimensions %o.\n",
-		   [Dimension(h) : h in M`H];
-	    printf "\t\t\t\t (%o seconds)\n", Cputime() - t0;
-	end if;
-
-	// Sort representatives according to dimension
-	// That way computation of hecke images of standard vectors
-	// will be more efficient
-	dims := Sort([<Dimension(M`H[idx]), idx> : idx in [1..#M`H]]);
-	perm := [tup[2] : tup in dims];
-	perm_inv := [Index(perm,i) : i in [1..#M`H]];
-	// now these are in ascending order
-	M`H := [M`H[i] : i in perm];
-	// Have to reorder the genus representatives to match
-	M`genus`Representatives := [M`genus`Representatives[i] :
-				    i in perm];
-	for inv in Keys(M`genus`RepresentativesAssoc) do
-	    M`genus`RepresentativesAssoc[inv] :=
-		[<tup[1], perm_inv[tup[2]]> :
-		 tup in M`genus`RepresentativesAssoc[inv] ];
-	end for;
-*/
     end if;
-
 end procedure;
 
 intrinsic Dimension(M::ModFrmAlg) -> RngIntElt

@@ -1,8 +1,11 @@
 freeze;
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+                
                                                                             
    FILE: tests.m (functions for testing examples)
 
@@ -25,6 +28,7 @@ import "../io/path.m" : path;
 import "../neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
 import "../neighbors/inv-CN1.m" : Invariant;
 import "../lattice_db/nipp_parse.m" : parseNippFile, NippToForm;
+import "../representation/representation.m" : nu;
 
 forward testExample;
 forward testUnitaryMassFormula;
@@ -526,13 +530,10 @@ function get_nonlift_dimension(disc, wts)
   return res;
 end function;
 
+forward get_quinary_lattice;
+
 procedure testLSeries(disc, wts, prec)
-  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
-  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
-  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
-			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
-  assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
+  nipp, nipp_idx := get_quinary_lattice(disc);
   A := NippToForm(nipp[nipp_idx]);
   G := OrthogonalGroup(A);
   for wt in wts do
@@ -545,6 +546,7 @@ procedure testLSeries(disc, wts, prec)
         fs := HeckeEigenforms(M);
         lpolys := [LPolynomials(f : Precision := 10) : f in fs];
         nonlifts := get_nonlifts(lpolys, disc, 10);
+        printf "For wt = %o, d = %o there are %o nonlifts. The dimensions of their Galois orbits are %o.\n", wt, d, #nonlifts, [Degree(BaseRing(fs[idx]`vec)) : idx in nonlifts]; 
         for idx in nonlifts do
 	  f := fs[idx];
           lser := LSeries(f : Precision := prec);
@@ -707,3 +709,170 @@ procedure LaunchCommands(cmds)
     System(cmd);
   end for;
 end procedure;
+
+function get_quinary_lattice(disc)
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipp := parseNippFile(nipp_fname);
+  assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
+  return nipp, nipp_idx;
+end function;
+
+procedure testRamaTornariaTable3ANTS()
+  ps := [5,61];
+  disc := &*ps;
+  divs := Divisors(disc);
+  dims := [[[8,9,13],[],[1],[1,1,8,13]],[[1,1,1,1,3,6,8,13],[1,1],[1],[8,13]]];
+  kers := [{1},{2,3,4,5,7}];
+  traces := [[[[1,-21,12,-28,-10],
+	     [57,119,69,505,1338],
+	     [73,129,455,647,1660]],
+	    [],
+	    [[-4,-12,-4,9,-13]],
+	    [[-2,2,-2,-19,21],
+	     [2,-6,10,-3,29],
+	     [3,-27,-6,-58,-54],
+	     [81,157,325,669,1652]]],
+	   [[[2,14,25,62,164],
+	     [-7,-3,28,-9,-4],
+	     [-2,2,-2,-19,21],
+	     [2,-6,10,-3,29],
+	     [-10,12,-20,-3,239],
+	     [29,59,314,309,612],
+	     [3,-27,-6,-58,-54],
+	     [81,157,325,669,1652]],
+	    [[-7,-3,-22,-9,-4],
+	     [-4,-12,-4,9,-13]],
+	    [[-6,-4,-20,13,-23]],			   
+	    [[1,-21,12,-28,-10],
+	     [73,129,455,647,1660]]]
+	   ];
+			     
+  nipp, nipp_idx := get_quinary_lattice(disc);
+  for lat_idx in [1,2] do
+    vprintf AlgebraicModularForms, 1 : "testing lattice no. %o...\n", lat_idx;
+    A := NippToForm(nipp[nipp_idx-1+lat_idx]);
+    G := OrthogonalGroup(A);
+    for div_idx in [1..#divs] do
+      d := divs[div_idx];
+      vprintf AlgebraicModularForms, 1 : "testing d = %o...\n", d;
+      vprintf AlgebraicModularForms, 1 : "checking dimensions...\n";
+      spin := SpinorNormRepresentation(G, d);
+      M := AlgebraicModularForms(G, spin);
+      fs := HeckeEigenforms(M);
+      if (d eq 1) then 
+        cusps := [f : f in fs | not f`IsEisenstein];
+      else
+        cusps := fs;
+      end if;
+      f_dims := [Degree(BaseRing(f`vec)) : f in cusps];
+      assert f_dims eq dims[lat_idx][div_idx];
+      if d eq 1 then
+        vprintf AlgebraicModularForms, 1 : "checking ker(theta)...\n";
+        reps := Representatives(Genus(M));
+        weights := [#AutomorphismGroup(rep)^(-1) : rep in reps];
+        invs := [Invariant(rep) : rep in reps];
+        thetas := [* &+[weights[i]*f`vec[i] *
+		    PowerSeriesRing(BaseRing(f`vec))!invs[i]
+		  : i in [1..#reps]] : f in cusps *];
+        ker := {i : i in [1..#thetas] | IsEmpty(Coefficients(thetas[i]))};
+        assert ker eq kers[lat_idx];
+      end if;
+      vprintf AlgebraicModularForms, 1 : "checking traces...\n";
+      for dim in Set(f_dims) do
+	 dim_idxs := [idx : idx in [1..#cusps] | f_dims[idx] eq dim];
+         dim_traces := Set([]);
+         for f_idx in dim_idxs do
+	  f := cusps[f_idx];
+	  evs, primes := HeckeEigensystem(f,1 : Precision := 11);
+          bad_primes := [i : i in [1..#primes] | Norm(primes[i]) in ps];
+          for idx in bad_primes do
+	    evs[idx] +:= 1;
+            if (d mod Norm(primes[idx]) eq 0) then
+	      // eps_p := WittInvariant(Module(M), primes[idx]);
+              evs[idx] *:= nu(disc, Norm(primes[idx]));
+            end if;
+          end for;
+          tr_evs := [Trace(ev) : ev in evs];
+          Include(~dim_traces, tr_evs);
+        end for;
+        tr_idxs := [idx : idx in [1..#dims[lat_idx][div_idx]]
+			| dims[lat_idx][div_idx][idx] eq dim];
+        dim_tr_test := Set([traces[lat_idx][div_idx][idx] : idx in tr_idxs]);
+        assert dim_traces eq dim_tr_test;
+     end for;
+    end for;
+  end for;
+end procedure;
+
+procedure testRamaTornariaTable1ANTS()
+  traces_1 := [-8,-10,-4,-14,-22,-4,-47,-12,41,50,-504,-102,174,30,42,156,-252,472,106,-481,-744,927,-632,-297,2,-992,-1222,1436,-954,19,516,-258, 1080, 1030, -974, -1119, 1152, 108, -2707, -182, 2568, -2804, -3035, 583, 2276, 6754, 360, 3569, -3346, 2220, -2780, -3878, -819, 6112, -5343, -808, 3592, 2954, -8334, -2942, 6360, -856, 3548, -6322, -9443, 108, 1596, -2129, 1856, 480, 1704, 4601, 6298, -4998, 7706, -18293, 5316, 4324, -4679, -3476, -910, 3552, -4878, 15213, -6909, -7130, 12908, -4005, -7334, -77, 12248, 6447, -14197, 1960, 3288];
+
+  traces_2 := [10,11,-44,-9,-67,-158,260,41,-198,-187,2744,-730,800,442,-5052];
+
+  disc := 167;
+  nipp, nipp_idx := get_quinary_lattice(disc);
+  A := NippToForm(nipp[nipp_idx]);
+  G := OrthogonalGroup(A);
+  d := 167;
+  spin := SpinorNormRepresentation(G, d);
+  M := AlgebraicModularForms(G, spin);
+  fs := HeckeEigenforms(M);
+  assert #fs eq 1;
+  f := fs[1];
+  evs1 := HeckeEigensystem(f, 1 : Precision := 500);
+  evs2 := HeckeEigensystem(f, 2 : Precision := 50);
+  assert traces_1 eq evs1;
+  assert traces_2 eq evs2;
+  lser := LSeries(f : Precision := 30);
+  assert CFENew(lser) lt 10^(-30);
+end procedure;
+
+
+// These functions are for debugging bad Euler factors
+
+function check_signs(f, signs, evs, ps, w, j, D, d, eps_ps, dim, x, Precision)
+  lpolys := AssociativeArray();
+  for i in [1..#ps] do
+    s := signs[i];
+    p := ps[i];
+    L_poly := p^(3+2*w)*x^2+(s[1]*p + s[2]*evs[i][1] + s[3]*dim)*p^w*x+1;
+    L_poly *:= eps_ps[i]*p^(1+w)*x+1;
+    lpolys[p] := L_poly;
+  end for;
+  function local_factor(p,d)
+    if p in ps then
+      poly := lpolys[p];
+    else
+      poly := LPolynomial(f,p,d);
+    end if;
+    CC := ComplexField();
+    CC_x := PowerSeriesRing(CC);
+    K := BaseRing(Parent(poly));
+    r := Roots(DefiningPolynomial(K),CC)[1][1];
+    if Type(K) eq FldRat then
+      h := hom<K -> CC|>;
+    else 
+      h := hom<K -> CC | r>;
+    end if;
+    return CC_x![h(c) : c in Eltseq(poly)];
+  end function;
+  lser := LSeries(2*w+4, [-w-1+j,-w+j,j,j+1], D, local_factor :
+                 Sign := (-1)^w*nu(D,d), Precision := Precision);
+  return CFENew(lser);
+end function;
+
+function find_signs(f, evs, ps, w, j, D, d, eps_ps, dim, x)
+  signs := CartesianPower(CartesianPower([-1,0,1],3),#ps);
+  prec := 1;
+  while (#signs gt 1) do 
+     tmp := [<s, check_signs(f, s, evs, ps, w, j, D, d, eps_ps, dim, x, prec)>
+		 : s in signs];
+     signs := [x[1] : x in tmp | IsZero(x[2])];
+     prec +:= 1;
+  end while;
+  if IsEmpty(signs) then return false, _; end if;
+  return true, signs[1];
+end function;

@@ -1,8 +1,11 @@
 freeze;
 /****-*-magma-**************************************************************
                                                                             
-                    Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+                           
                                                                             
    FILE: representation.m (class for group representations)
 
@@ -1250,9 +1253,11 @@ function rho(d, sigma, A)
 end function;
 
 // Is this the spinor norm of sigma or of its transpose???
-function spinor_norm_rho(d, sigma, A)
+intrinsic SpinorNormRho(d::RngIntElt, sigma::GrpMatElt, A::AlgMatElt)
+  -> RngIntElt
+{The spinor norm of sigma w.r.t. O(A), d divisor of disc(A).}
     return rho(d, ChangeRing(Transpose(Matrix(sigma)), BaseRing(A)), A);
-end function;
+end intrinsic;
 
 forward my_prod;
 
@@ -1267,13 +1272,13 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
   fac := Factorization(ideal< Z_K | num*denom>);
   // We only care about the discriminant modulo squares in this case
   D := my_prod([f[1] : f in fac | IsOdd(f[2])], Parent(ideal<Z_K|>));
-  require D subset Z_K!!d :
-		"d should divide the discriminant";
+//  require D subset Z_K!!d :
+//		"d should divide the discriminant";
   n := Nrows(A);
   M := CombinatorialFreeModule(K, [name]);
   a := Sprintf("
   function action(g,m,V)
-  	return spinor_norm_rho(%m, g, %m)*(V`M).m;   
+  	return SpinorNormRho(%m, g, %m)*(V`M).m;   
   end function;
   return action;
   ", d, A);
@@ -1730,7 +1735,6 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   V`grp := G;
   return V;
 end intrinsic;
-
 
 // old code
 

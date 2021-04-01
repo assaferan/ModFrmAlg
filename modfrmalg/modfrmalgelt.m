@@ -43,6 +43,7 @@ freeze;
 
 import "modfrmalg.m" : ModFrmAlgInit;
 
+import "../neighbors/neighbor-CN1.m" : BuildNeighborProcess;
 import "../representation/representation.m" : nu;
 
 ///////////////////////////////////////////////////////////////////
@@ -609,6 +610,10 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
     // In this case, we don't really know the weight.
     // We guess it is trivial. Could we infer it from W?
      w := 0;
+  end if;
+  if not IsDefined(L`Vpp, p) then
+    pR := Factorization(Integers(BaseRing(L))!!p)[1][1]; 
+    BuildNeighborProcess(L, pR, 1);
   end if;
   is_split := (L`Vpp[p]`V`AnisoDim lt 2);
   p := Norm(p);

@@ -881,10 +881,11 @@ end function;
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
-function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
+procedure compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   wt_str := Join([Sprintf("%o", x) : x in wt], "_");
-  fname := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o.amf",
-		    disc, g, wt_str, nipp_idx);
+  fname_pre := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o",
+		       disc, g, wt_str, nipp_idx);
+  fname := fname_pre cat ".amf"; 
   if FileExists(path() cat fname) then
     M := AlgebraicModularForms(fname);
   else
@@ -906,8 +907,12 @@ function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
     printf "Saving to file %o.\n", fname;
   end if;
   Save(M, fname : Overwrite);
-  return lsers; 
-end function;
+  for lser_idx in [1..#lsers] do
+    lser_fname := Sprintf("%o_f_%o.m", fname_pre, lser_idx);
+    lser := lsers[lser_idx];
+    write_lser_invariants(lser, prec, lser_fname);
+  end for;
+end procedure;
 
 procedure write_lser_invariants(lser, num_coeffs, fname)
   lser_invs := AssociativeArray();
@@ -927,7 +932,7 @@ procedure write_lser_invariants(lser, num_coeffs, fname)
   lser_invs["euler_factors"] := [<p, EulerFactor(lser, p)>
 				    : p in PrimesUpTo(num_euler)];
 
-  file := Open(fname, "w");
+  file := Open(path() cat fname, "w");
   for key in Keys(lser_invs) do
     fprintf file, "%o := %m;\n", key, lser_invs[key];
   end for;
@@ -947,16 +952,9 @@ procedure get_lsers(table_idx, nipp_idx, wt :
   g := nipp[nipp_idx]`genus;
   num_coeffs := Ceiling(Sqrt(disc)*prec);
   for i in [1..num_coeffs div chunk] do
-	lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
-			       : Estimate := Estimate);
+	compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
+		      : Estimate := Estimate);
   end for;
-  lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
-		       : Estimate := Estimate);
-  for lser_idx in [1..#lsers] do
-    wt_str := Join([Sprintf("%o", x) : x in wt], "_");
-    fname := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o_f_%o.m",
-		     disc, g, wt_str, nipp_idx, lser_idx);
-    lser := lsers[lser_idx];
-    write_lser_invariants(lser, num_coeffs, fname);
-  end for;
+  compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
+		: Estimate := Estimate);
 end procedure;

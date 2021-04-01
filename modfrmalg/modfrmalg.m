@@ -361,7 +361,7 @@ intrinsic Print(M::ModFrmAlg, level::MonStgElt) {}
 	else
           weight := "weight ";
           if Type(R) eq FldOrd then 
-            R := NumberField(MaximalOrder(BaseRing(CFM`M)));
+            R := NumberField(MaximalOrder(R));
           end if;
           R := (Degree(R) eq 1) select Rationals() else R;
           weight cat:= (assigned M`W`lambda) select Sprintf("%o", M`W`lambda)

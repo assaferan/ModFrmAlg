@@ -245,7 +245,11 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	*];
 
 	// Write data to file.
-	Write(file, data, "Magma" : Overwrite := Overwrite);
+        // !!! Magma adds blank spaces and later can't read them !!!
+	// Write(file, data, "Magma" : Overwrite := Overwrite);
+        F := Open(file, "w");
+        fprintf F, "%m", data;
+        delete F;
 end intrinsic;
 
 intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg

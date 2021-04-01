@@ -1253,9 +1253,11 @@ function rho(d, sigma, A)
 end function;
 
 // Is this the spinor norm of sigma or of its transpose???
-function spinor_norm_rho(d, sigma, A)
+intrinsic SpinorNormRho(d::RngIntElt, sigma::GrpMatElt, A::AlgMatElt)
+  -> RngIntElt
+{The spinor norm of sigma w.r.t. O(A), d divisor of disc(A).}
     return rho(d, ChangeRing(Transpose(Matrix(sigma)), BaseRing(A)), A);
-end function;
+end intrinsic;
 
 forward my_prod;
 
@@ -1276,7 +1278,7 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
   M := CombinatorialFreeModule(K, [name]);
   a := Sprintf("
   function action(g,m,V)
-  	return spinor_norm_rho(%m, g, %m)*(V`M).m;   
+  	return SpinorNormRho(%m, g, %m)*(V`M).m;   
   end function;
   return action;
   ", d, A);

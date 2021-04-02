@@ -954,9 +954,12 @@ procedure get_lsers(table_idx, nipp_idx, wt :
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   num_coeffs := Ceiling(Sqrt(disc)*prec);
+  time0 := Cputime();
   for i in [1..num_coeffs div chunk] do
       lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
 		      : Estimate := Estimate);
+      printf "computed %o coefficients. elapsed: %o\n",
+	i*chunk, Cputime()-time0;
       if IsEmpty(lsers) then return; end if;
   end for;
   lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs

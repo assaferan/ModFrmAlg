@@ -924,7 +924,7 @@ function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
   lsers := [];
   for idx in nonlift_idxs do
-    lser := LSeries(fs[idx]);
+    lser := LSeries(fs[idx] : Estimate := Estimate);
     coeffs := LGetCoefficients(lser, prec);
     Append(~lsers, lser);
   end for;

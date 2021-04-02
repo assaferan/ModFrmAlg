@@ -883,8 +883,8 @@ procedure write_lser_invariants(lser, num_coeffs, fname)
   lser_invs["dirichlet"] := LGetCoefficients(lser, num_coeffs);
   lser_data := LSeriesData(lser);
   lser_invs["weight"] := lser_data[1];
-  lser_invs["conductor"] := lser_data[2];
-  lser_invs["gamma_shifts"] := lser_data[3];
+  lser_invs["gamma_shifts"] := lser_data[2];
+  lser_invs["conductor"] := lser_data[3];
   lser_invs["sign"] := lser_data[5];
   lser_invs["poles"] := lser_data[6];
   lser_invs["residues"] := lser_data[7];

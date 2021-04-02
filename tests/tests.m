@@ -958,7 +958,7 @@ procedure get_lsers(table_idx, nipp_idx, wt :
 		      : Estimate := Estimate);
       if IsEmpty(lsers) then return; end if;
   end for;
-  compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
+  lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
 		: Estimate := Estimate);
 end procedure;
 

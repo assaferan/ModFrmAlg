@@ -717,10 +717,10 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
   return L_polys;
 end intrinsic;
 
-intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
+intrinsic LSeries(f::ModFrmAlgElt : Precision := 0, Estimate := true) -> LSer
 {Build the L-series corresponding to f.}
   function local_factor(p,d)
-    poly := LPolynomial(f, p, d);
+    poly := LPolynomial(f, p, d : Estimate := Estimate);
     CC := ComplexField();
     CC_x := PowerSeriesRing(CC);
     K := BaseRing(Parent(poly));

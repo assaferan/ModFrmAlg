@@ -558,7 +558,10 @@ procedure testLSeries(disc, wts, prec)
 end procedure;
 
 function analyticConductor(k, j)
-  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
+//  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
+  // These differ from the theory, but seem to work in practice
+  gamma_shifts := [k-5/2,k-3/2,k+j-3/2, k+j-1/2];
+  return &*[Abs(kappa) + 3 : kappa in gamma_shifts];
 end function;
 
 function getWeightsByAnalyticConductor(N_an)

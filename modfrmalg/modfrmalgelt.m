@@ -43,6 +43,7 @@ freeze;
 
 import "modfrmalg.m" : ModFrmAlgInit;
 
+import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../representation/representation.m" : nu;
 
 ///////////////////////////////////////////////////////////////////
@@ -609,6 +610,11 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
     // In this case, we don't really know the weight.
     // We guess it is trivial. Could we infer it from W?
      w := 0;
+     dw := 1;
+  end if;
+  if not IsDefined(L`Vpp, p) then
+    pR := Factorization(Integers(BaseRing(L))!!p)[1][1]; 
+    nProc := BuildNeighborProc(L, pR, 1);
   end if;
   is_split := (L`Vpp[p]`V`AnisoDim lt 2);
   p := Norm(p);
@@ -691,7 +697,10 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
 
   m := n div 2;
 
-  if (Precision eq 0) then
+  if Type(Precision) eq SeqEnum then
+    Ps := [Factorization(Integers(BaseRing(f`M)) !! p)[1][1] :
+			p in Precision];
+  elif (Precision eq 0) then
     Ps := [p : p in Keys(f`Eigenvalues[1])
 	   | &and[p in Keys(f`Eigenvalues[j]) : j in [1..m]]];
   else
@@ -708,10 +717,10 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
   return L_polys;
 end intrinsic;
 
-intrinsic LSeries(f::ModFrmAlgElt : Precision := 0) -> LSer
+intrinsic LSeries(f::ModFrmAlgElt : Precision := 0, Estimate := true) -> LSer
 {Build the L-series corresponding to f.}
   function local_factor(p,d)
-    poly := LPolynomial(f, p, d);
+    poly := LPolynomial(f, p, d : Estimate := Estimate);
     CC := ComplexField();
     CC_x := PowerSeriesRing(CC);
     K := BaseRing(Parent(poly));

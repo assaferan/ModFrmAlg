@@ -190,7 +190,7 @@ function testExample(example : num_primes := 0, use_existing := false,
 			       orbits := true, useLLL := true,
 			       decomposition := true)
     fname := Sprintf("Example_%o.dat", example`name);
-    if use_existing and FileExists(path() cat fname) then
+    if use_existing and FileExists(path() cat fname : ShowErrors := false) then
 	M := AlgebraicModularForms(fname);
     else
 	if example`group eq "Unitary" then
@@ -431,7 +431,23 @@ function my_facAlgExt(f)
   return res;
 end function;
 
-function get_nonlifts(lpolys, disc, prec)
+// Checks which fs are nonlifts using irreduciblity of the lpolynomials
+// The number of lpolynomials checked is prec.
+// The odds that even one of them is reducible by chance are slim
+// But we're doing 2 to make sure.
+function get_nonlifts(fs, disc : prec := 2, Estimate := false)
+  // This is just for checking irreducibility
+  primes := [];
+  p := 2;
+  for i in [1..prec] do  
+    while (disc mod p eq 0) do
+      p := NextPrime(p);
+    end while;
+    Append(~primes, p);
+    p := NextPrime(p);
+  end for;
+  lpolys := [LPolynomials(f : Estimate := Estimate,
+			  Precision := primes) : f in fs];
   nonlift_idxs := [];
   for idx in [1..#lpolys] do
     lpolys_f := lpolys[idx];
@@ -440,7 +456,6 @@ function get_nonlifts(lpolys, disc, prec)
     // nonlift := &or[IsIrreducible(lpolys_f[p]) : p in PrimesUpTo(prec)
     //		    | disc mod p ne 0];
     nonlift := false;
-    primes := [p : p in PrimesUpTo(prec) | disc mod p ne 0];
     for p in primes do
       if Type(BaseRing(lpolys_f[p])) eq FldRat then
          fac := Factorization(lpolys_f[p]);
@@ -468,22 +483,12 @@ procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   A := NippToForm(nipp[nipp_idx]);
-  // G := SpecialOrthogonalGroup(A);
-  // std := StandardRepresentation(GL(5, Rationals()));
   k,j := Explode(wt);
-//sym_j := SymmetricRepresentation(std, j);
-//alt := AlternatingRepresentation(std, 2);
-// sym_k_3 := SymmetricRepresentation(alt, k-3);
-// W := TensorProduct(sym_j, sym_k_3);
   G := OrthogonalGroup(A);
   W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
-// M := AlgebraicModularForms(G, W);
   M := AlgebraicModularForms(G, W);
-// D := Decomposition(M, 100);
   fs := HeckeEigenforms(M : Estimate := Estimate);
-  lpolys := [LPolynomials(f : Estimate := Estimate,
-			  Precision := prec) : f in fs];
-  nonlift_idxs := get_nonlifts(lpolys, disc, prec);
+  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
   id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
@@ -519,10 +524,7 @@ function get_nonlift_dimension(disc, wts)
         W_spin := TensorProduct(W, spin);
         M := AlgebraicModularForms(G, W_spin);
         fs := HeckeEigenforms(M);
-        lpolys := [LPolynomials(f : Precision := 10) : f in fs];
-        nonlifts := get_nonlifts(lpolys, disc, 10);
-// we return the actual orbits, as it might shed more light
-// dim := my_sum([Degree(BaseRing(fs[i]`vec)) : i in nonlifts]);
+        nonlifts := get_nonlifts(fs, disc);
         dim := [Degree(BaseRing(fs[i]`vec)) : i in nonlifts];
         Append(~res, <wt, d, dim>);
     end for;
@@ -544,8 +546,7 @@ procedure testLSeries(disc, wts, prec)
         W_spin := TensorProduct(W, spin);
         M := AlgebraicModularForms(G, W_spin);
         fs := HeckeEigenforms(M);
-        lpolys := [LPolynomials(f : Precision := 10) : f in fs];
-        nonlifts := get_nonlifts(lpolys, disc, 10);
+        nonlifts := get_nonlifts(fs, disc);
         printf "For wt = %o, d = %o there are %o nonlifts. The dimensions of their Galois orbits are %o.\n", wt, d, #nonlifts, [Degree(BaseRing(fs[idx]`vec)) : idx in nonlifts]; 
         for idx in nonlifts do
 	  f := fs[idx];
@@ -557,7 +558,10 @@ procedure testLSeries(disc, wts, prec)
 end procedure;
 
 function analyticConductor(k, j)
-  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
+//  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
+  // These differ from the theory, but seem to work in practice
+  gamma_shifts := [k-5/2,k-3/2,k+j-3/2, k+j-1/2];
+  return &*[Abs(kappa) + 3 : kappa in gamma_shifts];
 end function;
 
 function getWeightsByAnalyticConductor(N_an)
@@ -876,3 +880,127 @@ function find_signs(f, evs, ps, w, j, D, d, eps_ps, dim, x)
   if IsEmpty(signs) then return false, _; end if;
   return true, signs[1];
 end function;
+
+procedure write_lser_invariants(lser, num_coeffs, fname)
+  lser_invs := AssociativeArray();
+  lser_invs["dirichlet"] := LGetCoefficients(lser, num_coeffs);
+  lser_data := LSeriesData(lser);
+  lser_invs["weight"] := lser_data[1];
+  lser_invs["gamma_shifts"] := lser_data[2];
+  lser_invs["conductor"] := lser_data[3];
+  lser_invs["sign"] := lser_data[5];
+  lser_invs["poles"] := lser_data[6];
+  lser_invs["residues"] := lser_data[7];
+// save for later - else it tries to compute all necessary coefficients
+//  lser_invs["critical_values"] := [<pt, Evaluate(lser, pt)>
+//				      : pt in CriticalPoints(lser)];
+  lser_invs["motivic_weight"] := MotivicWeight(lser);
+  lser_invs["degree"] := Degree(lser);
+  num_euler := Floor(Sqrt(num_coeffs));
+  lser_invs["euler_factors"] := [<p, EulerFactor(lser, p)>
+				    : p in PrimesUpTo(num_euler)];
+
+  file := Open(path() cat fname, "w");
+  for key in Keys(lser_invs) do
+    fprintf file, "%o := %m;\n", key, lser_invs[key];
+  end for;
+  delete file;
+end procedure;
+
+// In order to find out interesting things
+// Right now focus on disc le 256
+// wt is a pair [k,j] for Paramodular P_{k,j}
+function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
+  wt_str := Join([Sprintf("%o", x) : x in wt], "_");
+  fname_pre := Sprintf("lser_disc_%o_genus_%o_wt_%o_idx_%o",
+		       disc, g, wt_str, nipp_idx);
+  fname := fname_pre cat ".amf"; 
+  if FileExists(path() cat fname : ShowErrors := false) then
+    M := AlgebraicModularForms(fname);
+  else
+    A := NippToForm(nipp[nipp_idx]);
+    k,j := Explode(wt);
+    G := OrthogonalGroup(A);
+    W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
+    M := AlgebraicModularForms(G, W);
+  end if;
+  fs := HeckeEigenforms(M : Estimate := Estimate);
+  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
+  lsers := [];
+  for idx in nonlift_idxs do
+    lser := LSeries(fs[idx] : Estimate := Estimate);
+    coeffs := LGetCoefficients(lser, prec);
+    Append(~lsers, lser);
+  end for;
+  if Estimate then
+    printf "Saving to file %o.\n", fname;
+  end if;
+  Save(M, fname : Overwrite);
+  for lser_idx in [1..#lsers] do
+    lser_fname := Sprintf("%o_f_%o.m", fname_pre, lser_idx);
+    lser := lsers[lser_idx];
+    write_lser_invariants(lser, prec, lser_fname);
+  end for;
+  return lsers;
+end function;
+
+
+// get the first prec*sqrt(disc) coefficients of the L-series
+// !!! TODO - the hard coded 138.84 is the number for (k,j) = (3,0), (4,0)
+// Should replace by reading from the Edgar file !!!
+procedure get_lsers(table_idx, nipp_idx, wt :
+		   prec := 138.84, Estimate := false, chunk := 10)
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipp := parseNippFile(nipp_fname);
+  disc := nipp[nipp_idx]`D;
+  g := nipp[nipp_idx]`genus;
+  num_coeffs := Ceiling(Sqrt(disc)*prec);
+  time0 := Cputime();
+  for i in [1..num_coeffs div chunk] do
+      lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, i*chunk
+		      : Estimate := Estimate);
+      printf "computed %o coefficients. elapsed: %o\n",
+	i*chunk, Cputime()-time0;
+      if IsEmpty(lsers) then return; end if;
+  end for;
+  lsers := compute_lsers(disc, g, nipp, nipp_idx, wt, num_coeffs
+		: Estimate := Estimate);
+end procedure;
+
+// This is needed due to unexplained magma crashes
+function createLSerBatchFile(tid, idx, k, j)
+  fname := Sprintf("batch_files/lser_single_%o_%o_%o_%o.m", tid, idx, k, j);
+  f := Open(fname, "w");
+  output_str := "AttachSpec(\"ModFrmAlg.spec\");\n";
+  output_str cat:= "import \"tests/tests.m\" : get_lsers;\n";
+  output_str cat:= "time0 := Cputime();\n";
+  output_str cat:= Sprintf("get_lsers(%o, %o, [%o, %o]);\n", tid, idx, k, j);
+  output_str cat:= "printf \"elapsed: %%o\\n\", Cputime()-time0;\n";
+  output_str cat:= "exit;\n";
+  fprintf f, output_str;
+  delete f;
+  return fname;
+end function;
+
+procedure prepareLSerBatchFile(t_idx, start, upto, wt)
+  k,j := Explode(wt);
+  cmds := [createLSerBatchFile(t_idx, idx, k, j) : idx in [start..upto]];
+  fname := Sprintf("batch_files/lser_%o_%o_%o_%o_%o.sh",
+		   t_idx, start, upto, k, j);
+  f := Open(fname, "w");
+  output_str := "#!/bin/bash\n";
+  all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  
+  output_str cat:= "PROCESSES_TO_RUN=(" cat all_cmds cat ")\n";
+  output_str cat:= "for i in ${PROCESSES_TO_RUN[@]}; do\n";
+  output_str cat:= "\t magma -b ${i%%/*}/./${i##*/} > ${i}.log 2>&1 &\n";
+  output_str cat:= "done\n";
+// output_str cat:= "wait\n";
+  fprintf f, output_str;
+  delete f;
+  chmod_cmd := Sprintf("chmod +x %o", fname);
+  System(chmod_cmd);
+  // we will run it from outside
+  // System("./" cat fname);
+end procedure;

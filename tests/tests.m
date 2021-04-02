@@ -888,8 +888,9 @@ procedure write_lser_invariants(lser, num_coeffs, fname)
   lser_invs["sign"] := lser_data[5];
   lser_invs["poles"] := lser_data[6];
   lser_invs["residues"] := lser_data[7];
-  lser_invs["critical_values"] := [<pt, Evaluate(lser, pt)>
-				      : pt in CriticalPoints(lser)];
+// save for later - else it tries to compute all necessary coefficients
+//  lser_invs["critical_values"] := [<pt, Evaluate(lser, pt)>
+//				      : pt in CriticalPoints(lser)];
   lser_invs["motivic_weight"] := MotivicWeight(lser);
   lser_invs["degree"] := Degree(lser);
   num_euler := Floor(Sqrt(num_coeffs));

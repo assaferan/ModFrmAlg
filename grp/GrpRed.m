@@ -21,6 +21,71 @@ freeze;
  
  ***************************************************************************/
 
+// Here we list the intrinsics that this file defines
+// ReductiveGroup(G0::GrpLie, Comp::Grp) -> GrpRed
+// ReductiveGroup(group_data::List) -> GrpRed
+// SymplecticGroup(symp::RfxSpace) -> GrpRed
+// SymplecticGroup(innerForm::AlgMatElt) -> GrpRed
+// SymplecticGroup(n::RngIntElt, F::Fld) -> GrpRed
+// OrthogonalGroup(quad::RfxSpace) -> GrpRed
+// OrthogonalGroup(innerForm::AlgMatElt) -> GrpRed
+// OrthogonalGroup(n::RngIntElt, F::Fld) -> GrpRed
+// SpecialOrthogonalGroup(quad::RfxSpace) -> GrpRed
+// SpecialOrthogonalGroup(innerForm::AlgMatElt) -> GrpRed
+// SpecialOrthogonalGroup(n::RngIntElt, F::Fld) -> GrpRed
+// UnitaryGroup(hermit::RfxSpace) -> GrpRed
+// UnitaryGroup(innerForm::AlgMatElt) -> GrpRed
+// UnitaryGroup(n::RngIntElt, F::Fld) -> GrpRed
+// ConnectedComponent(G::GrpRed) -> GrpRed
+// ComponentGroup(G::GrpRed) -> GrpRed
+// SplittingField(G::GrpRed) -> Fld
+// DefinitionField(G::GrpRed) -> Fld
+// CartanName(G::GrpRed) -> MonStgElt
+// InnerForm(G::GrpRed, i::RngIntElt) -> RfxSpace
+// InnerForms(G::GrpRed) -> SeqEnum
+// Dimension(G::GrpRed) -> RngIntElt
+// Rank(G::GrpRed) -> RngIntElt
+// IsConnected(G::GrpRed) -> BoolElt
+// IsOrthogonal(G::GrpRed) -> BoolElt
+// IsSymplectic(G::GrpRed) -> BoolElt
+// IsUnitary(G::GrpRed) -> BoolElt
+// IsSpecialOrthogonal(G::GrpRed) -> BoolElt
+// IsCompact(G::GrpRed) -> BoolElt
+// Print(G::GrpRed, level::MonStgElt)
+// Parent(g::GrpRedElt) -> GrpRed
+// IsCoercible(G::GrpRed, g::.) -> Bool, GrpRedElt
+// Print(g::GrpRedElt, level::MonStgElt)
+// '*'(g1::GrpRedElt, g2::GrpRedElt) -> GrpRedElt
+// '^'(g::GrpRedElt, n::RngIntElt) -> GrpRedElt
+// GeneralLinearAlgberaicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// LinearAlgebraicGroup(I::SeqEnum[RngMPolElt]) -> GrpRed
+// CoordinateRing(G::GrpRed) -> RngMPolRes
+// SpecialLinearAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// MultiplicativeAlgebraicGroup(k::Fld) -> GrpRed
+// AdditiveAlgebraicGroup(k::Fld) -> GrpRed
+// BilinearAlgebraicGroup(S::AlgMatElt[Fld]) -> GrpRed
+// SymplecticAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// OrthogonalAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// SpecialOrthogonalAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// SplitOrthogonalAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// SplitSpecialOrthogonalAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// DiagonalMatricesAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// UpperTriangularMatricesAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// UpperTriangularUnipotentMatricesAlgebraicGroup(n::RngIntElt, k::Fld) -> GrpRed
+// Eltseq(g::GrpRedElt) -> SeqEnum
+// IdentityComponent(G::GrpRed) -> GrpRed
+// 'eq'(G1::GrpRed, G2::GrpRed) -> BoolElt
+// Centralizer(G::GrpRed, S::SeqEnum[GrpRedElt]) -> GrpRed
+// Centralizer(G::GrpRed, g::GrpRedElt) -> GrpRed
+// Normalizer(G::GrpRed, S::SeqEnum[GrpRedElt]) -> GrpRed
+// IsCommutative(G::GrpRed) -> BoolElt
+// IsAbelian(G::GrpRed) -> BoolElt
+// LieAlgebra(G::GrpRed) -> AlgMatLie
+// IsSemisimple(G::GrpRed) -> BoolElt
+// IsDiagonalizable(G::GrpRed) -> BoolElt
+// IsTorus(G::GrpRed) -> BoolElt
+// IsSolvable(G::GrpRed) -> BoolElt
+
 // imports
 
 // !!! TODO : Fix this terrible patch

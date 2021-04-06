@@ -1,3 +1,22 @@
+/****-*-magma-**************************************************************
+
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+
+                                                                            
+   FILE: nipp_parse.m (file for parsing Nipp database files of quinary lattices)
+
+   04/06/21: Added this documentation and listed the intrinsics.
+
+ 
+ ***************************************************************************/
+
+// Here are the intrinsics this file defines
+// ParseNippFile(fname::MonStgElt) -> SeqEnum[Rec]
+// NippToForm(nipp_entry::Rec) -> AlgMatElt
+
 // TODO : Change the main export methods to intrinsics
 freeze;
 
@@ -82,7 +101,8 @@ function initDescDict()
   return desc_to_field;
 end function;
 
-function parseNippFile(fname)
+intrinsic ParseNippFile(fname::MonStgElt) -> SeqEnum[Rec]
+{.}
   r := Read(fname);
   start := Index(r, "D=");
   r := r[start..#r];
@@ -95,9 +115,10 @@ function parseNippFile(fname)
     Append(~genera, latGen);
   end while;
   return genera;
-end function;
+end intrinsic;
 
-function NippToForm(nipp_entry)
+intrinsic NippToForm(nipp_entry::Rec) -> AlgMatElt
+{.}
   // We take the first lattice, but it doesn't matter to us
   a := nipp_entry`lattices[1]`form;
   off_diag := [x / 2 : x in a[6..#a]];
@@ -106,31 +127,4 @@ function NippToForm(nipp_entry)
   columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..4]];
   a_magma := &cat[columns[i] cat [a[i]] : i in [1..5]];
   return SymmetricMatrix(a_magma);
-end function;
-
-// old code
-
-/*
-procedure parseEntry(~rec, entry, fieldName, sep : desc := desc)
-  s := Split(entry, sep);
-  if #desc gt 0 then 
-    assert s[1] eq desc;
-  end if;
-  rec``fieldName := eval s[2];
-end procedure;
-*/
-
-/*
-procedure parseSeqEntry(~rec, entry, fieldName, sep :
-			desc := "", offset := 1, multiple := false)
-  s := Split(entry, sep);
-  if #desc gt 0 then 
-    assert s[1] eq desc;
-  end if;
-  if multiple then 
-    rec``fieldName  := [eval s[j] : j in [offset+1..#s]];
-  else
-    rec``fieldName := eval s[offset+1];
-  end if;
-end procedure;
-*/
+end intrinsic;

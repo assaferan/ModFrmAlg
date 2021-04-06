@@ -73,6 +73,69 @@ freeze;
  
  ***************************************************************************/
 
+// Here are the intrinsics this file defines
+// GroupRepresentation(G::Grp, M::CombFreeMod, action_desc::MonStgElt) -> GrpRep
+// Subrepresentation(V::GrpRep, t::.) -> GrpRep, GrpRepHom
+// TrivialRepresentation(G::Grp, R::Rng) -> GrpRep
+// StandardRepresentation(G::GrpMat) -> GrpRep
+// DeterminantRepresentation(G::GrpMat) -> GrpRep
+// SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
+// AlternatingRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
+// DualRepresentation(V::GrpRep) -> GrpRep
+// TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
+// TensorPower(V::GrpRep, d::RngIntElt) -> GrpRep
+// Pullback(V::GrpRep, f_desc::MonStgElt, H::Grp) -> GrpRep
+// Rank(V::GrpRep) -> RngIntElt
+// Dimension(V::GrpRep) -> RngIntElt
+// Ngens(V::GrpRep) -> RngIntElt
+// Basis(V::GrpRep) -> SeqEnum
+// BaseRing(V::GrpRep) -> Rng
+// Group(V::GrpRep) -> Grp
+// CFM(V::GrpRep) -> CombFreeMod
+// ChangeRing(V::GrpRep, R::Rng) -> GrpRep
+// Print(V::GrpRep, level::MonStgElt)
+// '.'(V::GrpRep, i::RngIntElt) -> GrpRepElt
+// IsCoercible(V::GrpRep, x::Any) -> BoolElt, .
+// 'in'(elt::GrpRepElt, V::GrpRep) -> BoolElt
+// GroupRepresentationElement(V::GrpRep, m::CombFreeModElt) -> GrpRepElt
+// Parent(elt::GrpRepElt) -> GrpRep
+// Eltseq(elt::GrpRepElt) -> SeqEnum
+// Print(elt::GrpRepElt, level::MonStgElt)
+// getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
+// '*'(g::GrpElt, v::GrpRepElt) -> GrpRepElt
+// '*'(m::AlgMatElt, v::GrpRepElt) -> GrpRepElt
+// '+'(elt_l::GrpRepElt, elt_r::GrpRepElt) -> GrpRepElt
+// '-'(elt_l::GrpRepElt, elt_r::GrpRepElt) -> GrpRepElt
+// '*'(scalar::RngElt, elt::GrpRepElt) -> GrpRepElt
+// 'eq'(V1::GrpRep, V2::GrpRep) -> BoolElt
+// Hash(V::GrpRep) -> RngIntElt
+// 'eq'(v1::GrpRepElt, v2::GrpRepElt) -> BoolElt
+// Hash(v::GrpRepElt) -> RngIntElt
+// 'in'(v::., V::GrpRep) -> BoolElt
+// Intersection(V::GrpRep, W::GrpRep) -> GrpRep
+// 'meet'(V::GrpRep, W::GrpRep) -> GrpRep
+// Homomorphism(V::GrpRep, W::GrpRep, f::UserProgram) -> GrpRepHom
+// Homomorphism(V::GrpRep, W::GrpRep, f::Map) -> GrpRepHom
+// Homomorphism(V::GrpRep, W::GrpRep, basis_images::SeqEnum) -> GrpRepHom
+// Homomorphism(V::GrpRep, W::GrpRep, f::CombFreeModHom) -> GrpRepHom
+// Domain(phi::GrpRepHom) -> GrpRep
+// Codomain(phi::GrpRepHom) -> GrpRep
+// Print(phi::GrpRepHom, level::MonStgElt)
+// Evaluate(phi::GrpRepHom, v::GrpRepElt) -> GrpRepElt
+// '@@'(v::GrpRepElt, phi::GrpRepHom) -> GrpRepElt
+// '@'(v::GrpRepElt, phi::GrpRepHom) -> GrpRepElt
+// Kernel(phi::GrpRepHom) -> GrpRep
+// FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
+// FixedSubspace(gamma::GrpMat, G::GrpLie, pbMap::Map, weight::SeqEnum) -> ModTupFld
+// GroupRepresentation(G::GrpLie, hw::SeqEnum) -> GrpRep
+// SpinorNormRho(d::RngIntElt, sigma::GrpMatElt, A::AlgMatElt)
+// SpinorNormRepresentation(G::GrpRed, d::RngIntElt) -> GrpRep
+// Rho(G::GrpMat, k::RngIntElt, j::RngIntElt) -> GrpRep
+// SymSpinor(G::GrpRed, d::RngIntElt, k::RngIntElt) -> GrpRep
+// AltSpinor(G::GrpRed, d::RngIntElt, j::RngIntElt) -> GrpRep
+// HighestWeightRepresentation(G::GrpRed, lambda::SeqEnum) -> GrpRep
+// 
+
 import "../orthogonal/linalg.m" : Restrict;
 
 forward projLocalization;
@@ -866,31 +929,6 @@ intrinsic 'meet'(V::GrpRep, W::GrpRep) -> GrpRep
   return Intersection(V, W);
 end intrinsic;
 
-// This function is here simply due to our interest in GL3, U3, O3
-// TODO : 1. Move it to the tests and examples.
-//        2. Create a more general function for such constructions for
-//           arbitrary dimensions.
-
-function getGL3Rep(a, b, K)
-    G := GL(3, K);
-    V := StandardRepresentation(G);
-    V_dual := DualRepresentation(V);
-    sym_a := SymmetricRepresentation(V,a);
-    sym_b_dual := SymmetricRepresentation(V_dual,b);
-    return TensorProduct(sym_a, sym_b_dual);
-end function;
-
-// this is for highest weight a >= 2b >= 0
-// Is that correct? Verify!
-function getSO5Rep(a, b, K)
-    G := GL(5, K);
-    V := StandardRepresentation(G);
-    alt := AlternatingRepresentation(V,2);
-    sym_a_b := SymmetricRepresentation(V,a-b);
-    sym_b_alt := SymmetricRepresentation(alt,b);
-    return TensorProduct(sym_a_b, sym_b_alt);
-end function;
-
 /***************************************************
 
 GrpRepHom - Homomorphism of group representations
@@ -1034,11 +1072,6 @@ end intrinsic;
 
 intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
 {Return the fixed subspace of V under the group gamma.}
-//  require IsFinite(gamma) :
-//		"At the moment this is only supported for finite groups";
-//  char := Characteristic(BaseRing(V));
-//  require (char eq 0) or (GCD(#gamma, char) eq 1) :
-//    "At the moment this only works when characteristic is prime to the gro// up size";
   gamma_gens := Generators(gamma);
   if GetVerbose("AlgebraicModularForms") ge 2 then
       printf "Calculating the fixed subspace for the group gamma";
@@ -1050,10 +1083,6 @@ intrinsic FixedSubspace(gamma::GrpMat, V::GrpRep) -> GrpRep
       printf "Calculating kernel...\n";
   end if;
   X := HorizontalJoin([Matrix(g) - 1 : g in gamma_actions]);
-//  GL_V := GL(Dimension(V), BaseRing(V));
-//  gamma_image := sub<GL_V | gamma_actions>;
-//  trace := &+[Matrix(g) : g in gamma_image];
-//  return Subrepresentation(V, Basis(Image(trace)));
   return Subrepresentation(V, Basis(Nullspace(X)));
 end intrinsic;
 
@@ -1735,100 +1764,3 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   V`grp := G;
   return V;
 end intrinsic;
-
-// old code
-
-/*
-
-// getGL3Contraction map returns the contraction homomorphism between Sym^a(V) \otimes
-// Sym^b(V^v) and Sym^{a-1}(V) \otimes Sym^{b-1}(V^v)
-// where V is the standard representation of GL3. K is the coefficient ring.
-
-// should change it to just specify what it does on basis vectors, that's enough
-
-function getGL3ContractionMap(a,b,K)
-    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
-    W_ab := getGL3Rep(a,b,K);
-    W_minus := getGL3Rep(a-1, b-1,K);
-    mon_basis := W_ab`tensor_product[1]`M`names;
-    alphas := [[Degree(b, i) : i in [1..3]] : b in mon_basis];
-    mon_dual_basis := W_ab`tensor_product[2]`M`names;
-    betas := [[Degree(b, i) : i in [1..3]] : b in mon_dual_basis];
-    coeffs := [[[alpha[i] * beta[i] : i in [1..3]] : beta in betas] : alpha in alphas];
-    idxs := [[[i : i in [1..3] | coeff[i] ne 0] : coeff in coeffs_row] :
-	     coeffs_row in coeffs];
-    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
-		     mon_dual_basis[j2] div Parent(mon_dual_basis[j2]).i> :
-		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
-    sym_minus := W_minus`tensor_product[1];
-    sym_dual_minus := W_minus`tensor_product[2];
-    mon_basis_minus := sym_minus`M`names;
-    mon_dual_basis_minus := sym_dual_minus`M`names;
-    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
-		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
-		     im_vec in image_vecs[j1][j2]] :
-		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
-    W_minus_image := [[[W_minus.Index(W_minus`M`names,
-				      Sprintf("%o",im_idx)) :
-		      im_idx in image_idxs[j1][j2]] :
-		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
-    function get_basis_image(coeffs, idxs, W_minus_image)
-	if IsEmpty(idxs) then return W_minus!0; end if;
-	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
-    end function;
-    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
-				      W_minus_image[j1][j2]) :
-		      j2 in [1..#image_idxs[j1]]] :
-			  j1 in [1..#image_idxs]];
-    return Homomorphism(W_ab, W_minus, basis_images);
-end function;
-
-// getGL3HighestWeightRep - returns the highest weight representation of GL3 over K
-// of highest weight (a,b,0)
-// (at this point we do not consider the twist by the determinant)
-
-intrinsic getGL3HighestWeightRep(a::RngIntElt,b::RngIntElt,K::Rng) -> GrpRep
-{.}
-    if (a eq 0) or (b eq 0) then return getGL3Rep(a,b,K); end if;
-    return Kernel(getGL3ContractionMap(a,b,K));
-end intrinsic;
-
-// TODO!! Think about how to do this one - what is exactly the contraction?
-// Need to have the quadratic form
-function getSO5ContractionMap(a,b,K)
-    assert (a gt 0) and (b gt 0); // Otherwise there is no meaning to his map (0)
-    W_ab := getSO5Rep(a,b,K);
-    W_minus := getSO5Rep(a-1, b-1,K);
-    mon_basis := W_ab`tensor_product[1]`M`names;
-    alphas := [[Degree(b, i) : i in [1..5]] : b in mon_basis];
-    mon_alt_basis := W_ab`tensor_product[2]`M`names;
-    betas := [[Degree(b, i) : i in [1..10]] : b in mon_alt_basis];
-    coeffs := [[[alpha[i] * beta[i] : i in [1..5]] : beta in betas] : alpha in alphas];
-    idxs := [[[i : i in [1..5] | coeff[i] ne 0] : coeff in coeffs_row] :
-	     coeffs_row in coeffs];
-    image_vecs := [[[<mon_basis[j1] div (Parent(mon_basis[j1]).i),
-		     mon_alt_basis[j2] div Parent(mon_alt_basis[j2]).i> :
-		     i in idxs[j1][j2]] : j2 in [1..#idxs[j1]]] : j1 in [1..#idxs]];
-    sym_minus := W_minus`tensor_product[1];
-    sym_dual_minus := W_minus`tensor_product[2];
-    mon_basis_minus := sym_minus`M`names;
-    mon_dual_basis_minus := sym_dual_minus`M`names;
-    image_idxs := [[[<sym_minus.Index(mon_basis_minus, im_vec[1]),
-		      sym_dual_minus.Index(mon_dual_basis_minus,im_vec[2])> :
-		     im_vec in image_vecs[j1][j2]] :
-		    j2 in [1..#image_vecs[j1]]] : j1 in [1..#image_vecs]];
-    W_minus_image := [[[W_minus.Index(W_minus`M`names,
-				      Sprintf("%o",im_idx)) :
-		      im_idx in image_idxs[j1][j2]] :
-		       j2 in [1..#image_idxs[j1]]] : j1 in [1..#image_idxs]];
-    function get_basis_image(coeffs, idxs, W_minus_image)
-	if IsEmpty(idxs) then return W_minus!0; end if;
-	return &+[coeffs[idxs[i]] * W_minus_image[i] : i in [1..#idxs]];
-    end function;
-    basis_images := &cat [[get_basis_image(coeffs[j1][j2], idxs[j1][j2],
-				      W_minus_image[j1][j2]) :
-		      j2 in [1..#image_idxs[j1]]] :
-			  j1 in [1..#image_idxs]];
-    return Homomorphism(W_ab, W_minus, basis_images);
-end function;
-*/

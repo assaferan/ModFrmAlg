@@ -23,11 +23,14 @@ freeze;
  
  ***************************************************************************/
 
+// Here we list the intrinsics that this file defines
+// AlgebraicModularFormsTests() -> SeqEnum, SeqEnum
+
+
 import "examples.m" : AlgebraicModularFormsExamples;
 import "../io/path.m" : path;
 import "../neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
 import "../neighbors/inv-CN1.m" : Invariant;
-import "../lattice_db/nipp_parse.m" : parseNippFile, NippToForm;
 import "../representation/representation.m" : nu;
 
 forward testExample;
@@ -479,7 +482,7 @@ procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
   nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
+  nipp := ParseNippFile(nipp_fname);
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   A := NippToForm(nipp[nipp_idx]);
@@ -511,7 +514,7 @@ function get_nonlift_dimension(disc, wts)
   assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
+  nipp := ParseNippFile(nipp_fname);
   assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
   A := NippToForm(nipp[nipp_idx]);
   G := OrthogonalGroup(A);
@@ -619,7 +622,7 @@ function getBoxByAnalyticConductor(N_an)
   nipp_fnames := [Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[i]+1, nipp_maxs[i+1])
 		     : i in [1..num_tables]];
-  nipps := [parseNippFile(fname) : fname in nipp_fnames];
+  nipps := [ParseNippFile(fname) : fname in nipp_fnames];
   nipp_lens := [#nipp : nipp in nipps];
   res := [];
   for w in weights do
@@ -719,7 +722,7 @@ function get_quinary_lattice(disc)
   assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge disc};
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
+  nipp := ParseNippFile(nipp_fname);
   assert exists(nipp_idx){i : i in [1..#nipp] | nipp[i]`D eq disc};
   return nipp, nipp_idx;
 end function;
@@ -953,7 +956,7 @@ procedure get_lsers(table_idx, nipp_idx, wt :
   nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
   nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
-  nipp := parseNippFile(nipp_fname);
+  nipp := ParseNippFile(nipp_fname);
   disc := nipp[nipp_idx]`D;
   g := nipp[nipp_idx]`genus;
   num_coeffs := Ceiling(Sqrt(disc)*prec);
@@ -1004,3 +1007,76 @@ procedure prepareLSerBatchFile(t_idx, start, upto, wt)
   // we will run it from outside
   // System("./" cat fname);
 end procedure;
+
+// Checking conditions in Lehman Proposition 3
+function IsFormReduced(a,b,c,r,s,t)
+  // Condition (1)
+  if a gt b then return false; end if;
+  if b gt c then return false; end if;
+  // Condition (2)
+  if not (((r gt 0) and (s gt 0) and (t gt 0)) or
+	  ((r le 0) and (s le 0) and (t le 0))) then
+    return false;
+  end if;
+  // Condition (3)
+  if a lt Abs(t) then return false; end if;
+  if a lt Abs(s) then return false; end if;
+  if b lt Abs(r) then return false; end if;
+  // Condition (4)
+  if a+b+r+s+t lt 0 then return false; end if;
+  // Condition (5)
+  if a eq t and s gt 2*r then return false; end if;
+  if a eq s and t gt 2*r then return false; end if;
+  if b eq r and t gt 2*s then return false; end if;
+  // Condition (6) 
+  if a eq -t and s ne 0 then return false; end if;
+  if a eq -s and t ne 0 then return false; end if;
+  if b eq -r and t ne 0 then return false; end if;
+  // Condition (7) 
+  if a+b+r+s+t eq 0 and 2*a+2*s+t gt 0 then return false; end if;
+  // Condition (8)
+  if a eq b and Abs(r) gt Abs(s) then return false; end if;
+  if b eq c and Abs(s) gt Abs(t) then return false; end if;
+  return true;
+end function;
+
+function TernaryFormMatrix(a,b,c,r,s,t)
+  return SymmetricMatrix([2*a,t,2*b,s,r,2*c]);
+end function;
+
+function TernaryQuadraticForms(d)
+  forms := [];
+  max_a := Floor(Root(d/2, 3)); 
+  for a in [1..max_a] do
+    max_b := Floor(Sqrt(d/(2*a)));
+    for b in [a..max_b] do
+      min_c := Ceiling(Maximum(b, d/(4*a*b)));
+      max_c := Floor(d/(2*a*b));
+      for c in [min_c..max_c] do
+        for r in [-b..0] do
+	  for s in [-a..0] do
+	    for t in [-a..0] do
+	      A := TernaryFormMatrix(a,b,c,r,s,t);
+	      disc := Determinant(A)/2;
+	      if disc eq d and IsFormReduced(a,b,c,r,s,t) then
+		Append(~forms, A);
+              end if;
+	    end for;
+          end for;
+	end for;
+        for r in [1..b] do
+	  for s in [1..a] do
+	    for t in [1..a] do
+	      A := TernaryFormMatrix(a,b,c,r,s,t);
+	      disc := Determinant(A)/2;
+	      if disc eq d and IsFormReduced(a,b,c,r,s,t) then
+		Append(~forms, A);
+              end if;
+	    end for;
+          end for;
+	end for;
+      end for;
+    end for;
+   end for;
+   return forms;
+end function;

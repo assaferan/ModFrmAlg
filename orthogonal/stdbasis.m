@@ -1,3 +1,23 @@
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+          
+                                                                            
+   FILE: stdbasis.m (Standard Basis for Reflexive spaces)
+
+   Implementation file for splitting hyperbolic planes and finding Witt decomposition.
+
+   04/06/21: Added this documentation, listed intrinsics
+ 
+ ***************************************************************************/
+
+// Here are the intrinsics this file defines
+// Decompose(M::ModMatFldElt) -> AlgMatElt, AlgMatElt
+// Decompose(M::AlgMatElt) -> AlgMatElt, AlgMatElt
+
 // The goal of this script is to convert a quadratic form defined over a finite
 //  field into a standard form. This means that the quadratic form will be
 //  expressed as hyperbolic + anisotropic + radical where the hyperbolic

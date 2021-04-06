@@ -39,6 +39,24 @@ freeze;
  
  ***************************************************************************/
 
+// Here are the intrinsics this file defines
+// Print(f::ModFrmAlgElt)
+// HeckeEigenvalues(f::ModFrmAlgElt, p::RngIntElt) -> SeqEnum
+// HeckeEigenvalues(f::ModFrmAlgElt, pR::RngInt) -> SeqEnum
+// HeckeEigenvalues(f::ModFrmAlgElt, pR::RngOrdIdl) -> SeqEnum
+// HeckeEigensystems(M::ModFrmAlg, k::RngIntElt) -> List, SeqEnum
+// DisplayHeckeEigensystem(f::ModFrmAlgElt)
+// HeckeEigensystem(f::ModFrmAlgElt) -> List, SeqEnum
+// HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt) -> List, SeqEnum
+// HeckeEigenforms(M::ModFrmAlg) -> List
+// EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
+// ModularForm(f::ModFrmAlgElt) -> ModFrmElt
+// 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
+// LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt) -> RngUPolElt
+// LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt) -> RngUPolElt
+// LPolynomials(f::ModFrmAlgElt) -> SeqEnum[RngUPolElt]
+// LSeries(f::ModFrmAlgElt) -> LSer
+
 // imports
 
 import "modfrmalg.m" : ModFrmAlgInit;

@@ -74,6 +74,36 @@ freeze;
  
  ***************************************************************************/
 
+// Here are the intrinsics this file defines
+// AlgebraicModularForms(G::GrpRed, weight::GrpRep, level::AlgMatElt) -> ModFrmAlg
+// AlgebraicModularForms(G::GrpRed, weight::GrpRep) -> ModFrmAlg
+// AlgebraicModularForms(G::GrpRed) -> ModFrmAlg
+// OrthogonalModularForms(innerForm::AlgMatElt, weight::GrpRep) -> ModFrmAlg
+// OrthogonalModularForms(innerForm::AlgMatElt) -> ModFrmAlg
+// UnitaryModularForms(innerForm::AlgMatElt, weight::GrpRep) -> ModFrmAlg
+// UnitaryModularForms(innerForm::AlgMatElt) -> ModFrmAlg
+// UnitaryModularForms(F::Fld, n::RngIntElt, weight::GrpRep) -> ModFrmAlg
+// UnitaryModularForms(F::Fld, n::RngIntElt) -> ModFrmAlg
+// UnitaryModularForms(F::Fld, n::RngIntElt, weight::SeqEnum, char::RngIntElt) -> ModFrmAlg
+// UnitaryModularForms(F::Fld, innerForm::AlgMatElt, weight::SeqEnum, char::RngIntElt) -> ModFrmAlg
+// OrthogonalModularForms(F::Fld, innerForm::AlgMatElt, weight::SeqEnum, char::RngIntElt) -> ModFrmAlg
+// Print(M::ModFrmAlg, level::MonStgElt)
+// IsSpecialOrthogonal(M::ModFrmAlg) -> BoolElt
+// IsOrthogonal(M::ModFrmAlg) -> BoolElt
+// Module(M::ModFrmAlg) -> ModDedLat
+// Level(M::ModFrmAlg) -> ModDedLat
+// BaseRing(M::ModFrmAlg) -> FldOrd
+// InnerForm(M::ModFrmAlg) -> AlgMatElt
+// Genus(M::ModFrmAlg) -> GenusSym
+// SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum)
+// Dimension(M::ModFrmAlg) -> RngIntElt
+// CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
+// CuspidalHeckeOperator(M::ModFrmAlg, p::RngIntElt) -> AlgMatElt
+// 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
+// Representation(M::ModFrmAlg) -> ModTupFld
+// VectorSpace(M::ModFrmAlg) -> ModtupFld
+// Weight(M::ModFrmAlg) -> GrpRep
+
 // imports
 
 import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
@@ -256,13 +286,13 @@ intrinsic UnitaryModularForms(innerForm::AlgMatElt[Rng]) -> ModFrmAlg
 end intrinsic;
 
 intrinsic UnitaryModularForms(F::Fld, n::RngIntElt,
-					 weight::GrpRep) ->ModFrmAlg
+					 weight::GrpRep) -> ModFrmAlg
 {.}
   innerForm := IdentityMatrix(F,n);
   return UnitaryModularForms(innerForm, weight);
 end intrinsic;
 
-intrinsic UnitaryModularForms(F::Fld, n::RngIntElt) ->ModFrmAlg
+intrinsic UnitaryModularForms(F::Fld, n::RngIntElt) -> ModFrmAlg
 {.}
   return UnitaryModularForms(IdentityMatrix(F, n));
 end intrinsic;

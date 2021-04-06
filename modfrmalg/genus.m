@@ -20,6 +20,14 @@ freeze;
  
  ***************************************************************************/
 
+// Here we list the intrinsics that this file defines
+// Print(gen::GenusSym)
+// GenusReps(M::ModFrmAlg) -> SeqEnum
+// Representative(G::GenusSym) -> .
+// Representatives(G::GenusSym) -> SeqEnum
+// SetGenus(~M::ModFrmAlg, reps::SeqEnum[Lat])
+
+
 // imports
 
 import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
@@ -58,15 +66,13 @@ intrinsic GenusReps(M::ModFrmAlg
 	: BeCareful := false, Force := false, Orbits := false) -> SeqEnum
 { Computes the genus representatives of the inner form associated to the
 	   space of algebraic modular forms provided. }
-// This was here before - but we don't need to initialize the space for the genus representatives
-// That's overworking.
-/*
-	// Initialize the space of algebraic modular forms so we can query the
-	//  genus representatives.
-	ModFrmAlgInit(M
-		: BeCareful := BeCareful, Force := Force, Orbits := Orbits);
-*/
-        computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
+
+        gram := IsOrthogonal(M) select 2 else 1;
+        disc := Discriminant(Level(M) : Half, GramFactor := gram); 
+        fac := Factorization(disc);
+        is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+        computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force,
+		    UseMass := not is_sqrfree);
 
 	return M`genus`Representatives;
 end intrinsic;

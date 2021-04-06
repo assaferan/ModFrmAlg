@@ -12,8 +12,6 @@ freeze;
 
    Implementation file for useful linear algebra functions.
 
-   !!! TODO : move to the utils folder
-
    05/29/20 : Modified Decomposition to use also Hecke operators at primes
               dividing the level.
 

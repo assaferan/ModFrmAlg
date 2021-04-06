@@ -136,7 +136,7 @@ freeze;
 // HighestWeightRepresentation(G::GrpRed, lambda::SeqEnum) -> GrpRep
 // 
 
-import "../orthogonal/linalg.m" : Restrict;
+import "../utils/linalg.m" : Restrict;
 
 forward projLocalization;
 forward spinor_norm_rho;

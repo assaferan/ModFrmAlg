@@ -1,10 +1,185 @@
+freeze;
+/****-*-magma-**************************************************************
+                                                                            
+                    Algebraic Modular Forms in Magma
+                        
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch         
+                
+                                                                            
+   FILE: helper.m (helper and utility functions)
+
+   04/06/21 : Added this documentation, listed intrinsics
+ 
+ ***************************************************************************/
+
 /***********************************************
 
  03/10/20 : Turned MVM into several intrinsics
 
 ***********************************************/
 
+// Here we list the intrinsics that this file defines
+// RandomSymmetric(FF::Fld, dim::RngElt) -> Mtrx
+// RandomSymmetric(R::RngOrd, dim::RngIntElt, maxNorm::RngIntElt) -> AlgMatElt
+// RandomSymmetricInt(Dim::RngElt, Max::RngElt) -> Mtrx
+// RandomLattice(Dim::RngElt, Max::RngElt) -> Lat
+// QF2(M::AlgMatElt) -> RngMPolElt
+// QF2(M::AlgMatElt) -> RngMPolElt
+// MVM(M::AlgMatElt, v::ModMatFldElt, alpha::FldAut) -> ModTupFldElt
+// MVM(M::AlgMatElt, v::ModTupFldElt, alpha::FldAut) -> ModTupFldElt
+// MVM(M::ModMatFldElt, v::ModTupFldElt, alpha::FldAut) -> ModTupFldElt
+// MVM(M::AlgMatElt, v::ModMatFldElt) -> ModTupFldElt
+// MVM(M::AlgMatElt, v::ModTupFldElt) -> ModTupFldElt
+
 // helper functions
+
+// This one is because magma doesn't sum an empty set
+function my_sum(seq)
+  if IsEmpty(seq) then return 0; end if;
+  return &+seq;
+end function;
+
+// These functions are because sometimes factoring a polynmoial over a number
+// field in magma takes unreasonably long time. This worls faster.
+// This is based on "Factoring Polynomials over Algebraic Number Fields" by
+// S. Landau, SIAM journal on computing 14.1 (1985) : 184-195. 
+
+// my_eval evaluates an element in F[x][y] at the point (x,y)
+// (for technical reason this does not work direcly)
+function my_eval(f, x, y)
+  coeffs := [Evaluate(c, x) : c in Eltseq(f)];
+  return &+[coeffs[i]*y^(i-1) : i in [1..#coeffs]];
+end function;
+
+// This function performs squarefree factorization 
+function my_facAlgExtSqrf(F)
+   K<alpha> := BaseRing(F);
+   QQ := BaseRing(K); // That should be the rationals, maybe as a number field
+   Q_y<y> := PolynomialRing(QQ);
+   Q_yx<x> := PolynomialRing(Q_y);
+   F_y := Q_yx![Eltseq(c) : c in Eltseq(F)];
+   Q_x<x> := PolynomialRing(QQ);
+   Q_xy<y> := PolynomialRing(Q_x);
+   F_y := my_eval(F_y, y, x);
+   mipo := Evaluate(MinimalPolynomial(alpha), y);
+   mipo *:= Denominator(mipo);
+   shift := 0;
+   k := 0;
+   count := 0;
+   shiftBuf := false;
+   f := F_y * Denominator(F_y);
+   factors := [];
+   tmp := [f];
+   repeat
+     tmp2 := [];
+     for iter in tmp do
+       oldF := iter * Denominator(iter);
+       if (shift eq 0) then
+	 f := oldF;
+       else
+         f := my_eval(oldF, x-shift*y, y);
+         f *:= Denominator(f);
+       end if;
+       norm := Resultant(mipo, f);
+       normFactors := Factorization(norm);
+       if (#normFactors ge 1) and (normFactors[1][1] in QQ) then
+         normFactors := normFactors[2..#normFactors];
+       end if;
+       if (#normFactors eq 1) and (normFactors[1][2] eq 1) then
+	  Append(~factors, oldF);
+          continue;
+       end if;
+       if #normFactors ge 1 then
+         i := normFactors[1];
+       end if;
+       shiftBuf := false;
+       if not ((#normFactors eq 2) and (Degree(i[1]) le Degree(f))) then
+         if shift ne 0 then
+	   buf := f;
+         else
+	   buf := oldF;
+         end if;
+         shiftBuf := true;
+       else
+         buf := oldF;	   
+       end if;
+       count := 0;
+       for i in normFactors do
+	 if shiftBuf then
+	   factor := Gcd(buf, i[1]);
+         else
+	   if shift eq 0 then
+      	     factor := Gcd(buf, i[1]);
+           else
+	     factor := Gcd(buf, (i[1])(x+shift*y));
+           end if;
+	 end if;
+         buf div:= factor;
+         if shiftBuf then
+	   if shift ne 0 then
+	     factor := factor(x+shift*y);
+	   end if;
+	 end if;
+         if (i[2] eq 1) or (Degree(factor) eq 1) then
+	   Append(~factors, factor);
+         else
+           Append(~tmp2, factor);
+	 end if;
+         if buf in QQ then
+	   break;
+         end if;
+         count +:= 1;
+         if ((#normFactors - 1) eq count) then
+	   if shiftBuf then
+	     if normFactors[#normFactors][2] eq 1 then
+	       Append(~factors, my_eval(buf, x+shift*y, y));
+             else
+	       Append(~tmp2, my_eval(buf, x+shift*y, y));
+	     end if;
+	   else
+	     if normFactors[#normFactors][2] eq 1 then
+               Append(~factors, buf);
+             else
+	       Append(~tmp2, buf);
+	     end if;  
+	   end if;
+           buf := 1;
+           break;
+	 end if;
+       end for;
+     end for;
+     k +:= 1;
+     if (shift eq 0) then
+       shift +:= 1;
+       k := 1;
+     end if;
+     if (k eq 2) then
+       shift := -shift;
+     end if;
+     if (k eq 3) then
+       shift := -shift;
+       shift +:= 1;
+       k := 1;
+     end if;
+     tmp := tmp2;
+   until IsEmpty(tmp);
+   K_x<x> := Parent(F);
+   return [my_eval(f, x, alpha) : f in factors];
+end function;
+
+// This is the final factorization function
+
+function my_facAlgExt(f)
+  res := [];
+  sqfree_fac := SquareFreeFactorization(f);
+  for fa in sqfree_fac do
+    f, a := Explode(fa);
+    f_fac := my_facAlgExtSqrf(f);
+    res cat:= [<g, a> : g in f_fac];
+  end for;
+  return res;
+end function;
 
 // Constructs a random symmetric matrix over a specified finite field of a specified dimension.
 intrinsic RandomSymmetric(FF::Fld, dim::RngElt) -> Mtrx

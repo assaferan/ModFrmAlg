@@ -110,7 +110,8 @@ end function;
 
 forward UnitaryMass, OrthogonalMass;
 
-procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
+procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
+			      UseMass := false)
     // Do not compute the genus representatives if they've already been
     //  computed and we aren't forcing a recomputation.
     if not Force and assigned M`genus then return; end if;
@@ -134,16 +135,16 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
     V := ReflexiveSpace(Module(M));
     // something crashes in orthogonal mass
     // until we figure it out we leave it be
-/*
-    if SpaceType(V) eq "Hermitian" then
+    if UseMass then
+      if SpaceType(V) eq "Hermitian" then
 	K := BaseRing(V);
 	// !!! TODO :
 	// replace with the calculation of mass relative to this lattice
 	total_mass := UnitaryMass(K, Dimension(Module(M)));
-    else
+      else
 	total_mass := OrthogonalMass(Module(M));
+      end if;
     end if;
-*/
     repeat
 	repeat
 	    // Increment norm by 10.
@@ -163,9 +164,16 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false)
 
 	    // Move to the next prime.
 	    idx +:= 1;
-            //acc_mass := &+[#AutomorphismGroup(rep)^(-1) : rep in genList];
-	until /* (idx gt #ps)  or (acc_mass eq total_mass) */ true;
-    until /* acc_mass eq total_mass*/ true;
+            if UseMass then
+              acc_mass := &+[#AutomorphismGroup(rep)^(-1) : rep in genList];
+            end if;
+            inner_stop_cond := UseMass select
+	      ((idx gt #ps)  or (acc_mass eq total_mass)) else true;
+//until /* (idx gt #ps)  or (acc_mass eq total_mass) */ true;
+       until inner_stop_cond;
+       stop_cond := UseMass select acc_mass eq total_mass else true;
+//until /* acc_mass eq total_mass*/ true;
+     until stop_cond;
 
 
     // Assign the genus symbol for the space of algebraic modular forms.

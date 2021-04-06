@@ -2,7 +2,8 @@ freeze;
 /****-*-magma-**************************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+               E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch          
                                                                             
    FILE: orbits.m (Scripts for computing isotropic line 
    	 	  	   orbits under the automorphism group.)
@@ -13,6 +14,8 @@ freeze;
  
 ****************************************************************************/
 
+// Here are the intrinsics this file defines
+// IsotropicOrbits(V::ModTupFld, G::GrpMat, k::RngIntElt) -> SeqEnum
 
 declare attributes ModTupFld: parent, rank, isom;
 

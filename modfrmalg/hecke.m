@@ -3,7 +3,9 @@ freeze;
 /****-*-magma-**************************************************************
                                                                             
                     Algebraic Modular Forms in Magma                          
-                            Eran Assaf                                 
+                     
+                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+         using lattices over number fields by M. Kirschmer and D. Lorch        
                                                                             
    FILE: hecke.m (class for Hecke Operators data on spaces of algebraic
                   modular forms)
@@ -31,6 +33,7 @@ freeze;
    03/29/20: Fixed a bug in HeckeOperator - when needed to identify base
              rings of ideal and ModFrmAlg, the resulting ideal was not prime
              Now uses Generators(pR) instead of Basis(pR)
+b
 
    03/26/20: Modified to use the orbit method only for one-dimensional
              representations, until we get it to work in higher dimensions.
@@ -40,6 +43,29 @@ freeze;
    03/10/20: started from the orthogonal modular forms structure
  
  ***************************************************************************/
+
+// Here are the intrinsics this file defines
+// SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl, k::RngIntElt)
+// SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR:RngOrdIdl)
+// SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt, k::RngIntElt)
+// SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt)
+// SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, p::RngIntElt, k::RngIntElt)
+// SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, p::RngIntElt)
+// HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> AlgMatElt
+// HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl) -> AlgMatElt
+// HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt) -> AlgMatElt
+// HeckeOperator(M::ModFrmAlg, pR::RngInt) -> AlgMatElt
+// HeckeOperator(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> AlgMatElt
+// HeckeOperator(M::ModFrmAlg, p::RngIntElt) -> AlgMatElt
+// HeckeOperators(M::ModFrmAlg, k::RngIntElt) -> SeqEnum, SeqEnum
+// HeckeOperators(M::ModFrmAlg) -> SeqEnum, SeqEnum
+// HeckeImages(M::ModFrmAlg, i::RngIntElt, n::RngIntElt, k::RngIntElt) -> SeqEnum
+// HeckeImages(M::ModFrmAlg, i::RngIntElt, ps::SeqEnum, k::RngIntElt) -> SeqEnum
+// HeckeOperatorAndGenus(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> AlgMatElt
+// HeckeOperatorAndGenus(M::ModFrmAlg, pR::RngOrdIdl) -> AlgMatElt
+// HeckeOperatorAndGenus(M::ModFrmAlg, pR::RngInt, k::RngIntElt) -> AlgMatElt
+// HeckeOperatorAndGenus(M::ModFrmAlg, p::RngIntElt) -> AlgMatElt
+// HeckeOperatorAndGenus(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> AlgMatElt
 
 //imports
 

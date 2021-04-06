@@ -40,6 +40,22 @@ freeze;
  
 ***************************************************************************/
 
+// Here are the intrinsics this file defines
+// BuildTrivialReflexiveSpace(F::FldFin, dim::RngIntElt) -> ModTupFld
+// BuildReflexiveSpace(M::ModMatFldElt) -> ModTupFld
+// BuildReflexiveSpace(M::AlgMatElt, alpha::FldAut) ->  ModTupFld
+// FirstIsotropicSubspace(V::ModTupFld, k::RngIntElt) -> SeqEnum
+// NextIsotropicSubspace(V::ModTupFld, k::RngIntElt) -> SeqEnum
+// IsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
+// AllIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
+// NumberOfIsotropicSubspaces(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> RngIntElt
+// NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> RngIntElt
+// NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> RngIntElt
+// NumberOfNeighbors(M::ModFrmAlg, pR::RngInt, k::RngIntElt) -> RngIntElt
+// NumberOfNeighbors(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> RngIntElt
+// BuildQuadraticSpace(M::ModMatFldElt) -> ModTupFld
+// BuildQuadraticSpace(M::AlgMatElt) -> ModTupFld
+
 declare type IsoParam;
 declare attributes IsoParam:
 	// A list of valid pivots.

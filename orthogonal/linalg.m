@@ -33,6 +33,11 @@ freeze;
  
  ***************************************************************************/
 
+// Here are the intrinsics this file defines
+// EigenspaceDecomposition(array::Assoc) -> List, SeqEnum
+// Decomposition(M::ModFrmAlg, bound::RngIntElt) -> SeqEnum, BoolElt
+// Decomposition(M::ModFrmAlg) -> SeqEnum, BoolElt
+
 function Decompose(T, t)
     // The characteristic polynomial of this matrix.
     chi := CharacteristicPolynomial(T);

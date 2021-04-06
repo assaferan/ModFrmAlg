@@ -32,6 +32,12 @@ freeze;
  
  ***************************************************************************/
 
+// Here are the intrinsics this file defines
+// FileExists(filename::MonStgElt) -> BoolElt
+// Save(M::ModFrmAlg)
+// Save(M::ModFrmAlg, filename::MonStgElt)
+// AlgebraicModularForms(filename::MonStgElt) -> ModFrmAlg
+
 // imports
 
 

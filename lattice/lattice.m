@@ -47,6 +47,81 @@ freeze;
  
  ***************************************************************************/
 
+// Here we list the intrinsics that this file defines
+// Parent(lat::ModDedLat)
+// Print(lat::ModDedLat, level::MonStgElt)
+// 'eq'(lat1::ModDedLat, lat2::ModDedLat) -> BoolElt
+// ReflexiveSpace(L::ModDedLat) -> RfxSpace
+// AmbientSpace(L::ModDedLat) -> RfxSpace
+// Module(L::ModDedLat) -> ModDed
+// PseudoBasis(L::ModDedLat) -> SeqEnum
+// BaseRing(L::ModDedLat) -> RngOrd
+// StandardLattice(rfxSpace::RfxSpace) -> ModDedLat
+// LatticeWithBasis(rfxSpace::RfxSpace, basis::Mtrx) -> ModDedLat
+// LatticeFromLat(L::Lat) -> ModDedLat
+// Dimension(L::ModDedLat) -> RngIntElt
+// LatticeWithBasis(rfxSpace::RfxSpace, basis::AlgMatElt, idls::SeqEnum) -> ModDedLat
+// LatticeWithPseudobasis(rfxSpace::RfxSpace, pmat::PMat) -> ModDedLat
+// ZLattice(lat::ModDedLat) -> Lat
+// AuxForms(lat::ModDedLat) -> SeqEnum
+// Discriminant(lat::Lat) -> RngInt
+// Level(lat::ModDedLat) -> RngOrdFracIdl
+// Divisor(lat::ModDedLat) -> RngOrdFracIdl
+// Trace(p::RngOrdFracIdl, a::FldAut) -> RngOrdFracIdl
+// Norm(p::RngOrdFracIdl, a::FldAut) -> RngOrdFracIdl
+// Norm(lat::ModDedLat) -> RngOrdFracIdl
+// GramMatrix(lat::ModDedLat, vecs::SeqEnum) -> AlgMatElt
+// Scale(lat::ModDedLat) -> RngOrdFracIdl
+// ElementaryDivisors(lambda::ModDedLat, pi::ModDedLat) -> SeqEnum
+// Discriminant(lambda::ModDedLat, pi::ModDedLat) -> RngOrdFracIdl
+// Discriminant(lat::ModDedLat) -> RngOrdFracIdl
+// IntersectionLattice(lat1::ModDedLat, lat2::ModDedLat) -> ModDedLat
+// Index(lat1::ModDedLat, lat2::ModDedLat) -> RngOrdFracIdl
+// IsIsometric(lat1::ModDedLat, lat2::ModDedLat) -> BoolElt, Mtrx
+// AutomorphismGroup(lat::ModDedLat) -> SeqEnum
+// IsFree(L::ModDedLat) -> BoolElt
+// FreeBasis(L::ModDedLat) -> SeqEnum
+// PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat) -> AlgMatElt
+// DualLattice(L::ModDedLat) -> ModDedLat
+// '*'(a::RngOrdFracIdl, L::ModDedLat) -> ModDedLat
+// 'subset'(lambda::ModDedLat, pi::ModDedLat) -> BoolElt
+// DualLattice(L::ModDedLat, a::RngOrdFracIdl) -> ModDedLat
+// Rank(L::ModDedLat) -> RngIntElt
+// IsZero(L::ModDedLat) -> BoolElt
+// Degree(L::ModDedLat) -> RngIntElt
+// IsFull(L::ModDedLat) -> BoolElt
+// InnerProductMatrix(L::ModDedLat) -> Mtrx
+// MyEvenHilbertSymbol(a::FldElt,b::FldElt,p::RngOrdIdl) -> RngIntElt
+// MyHilbertSymbol(a::FldAlgElt, b::FldAlgElt, p::RngOrdIdl) -> RngIntElt
+// WittInvariant(L::ModDedLat, p::RngOrdIdl) -> RngIntElt
+// Lattice(V::RfxSpace, L::ModDed) -> ModDedLat
+// LocalBasis(M::ModDed, p::RngOrdIdl) -> []
+// IsIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt
+// IsIntegral(L::ModDedLat) -> BoolElt
+// IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
+// BadPrimes(L::ModDedLat) -> []
+// IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
+// MaximalIntegralLattice(L::ModDedLat, p::RngOrdIdl) -> ModDedLat
+// MaximalIntegralLattice(L::ModDedLat) -> ModDedLat
+// MaximalIntegralLattice(V::RfxSpace) -> ModDedLat
+// QuadraticFormInvariants(M::AlgMatElt) -> FldAlgElt, SetEnum, SeqEnum
+// JordanDecomposition(L::ModDedLat, p::RngOrdIdl) -> []
+// Ideal(R::RngPad, t::.) -> RngPadIdl
+// Generators(I::RngPadIdl) -> SeqEnum
+// Print(I::RngPadIdl)
+// '#'(I::RngPadIdl) -> RngIntElt
+// Module(R::RngPad, n::RngIntElt) -> ModPad
+// pAdicModule(S::SeqEnum[ModTupFldElt]) -> ModPad
+// Print(L::ModPad)
+// '.'(L::ModPad, n::RngIntElt) -> ModTupFldElt
+// 'in'(v::ModTupFldElt, L::ModPad) -> BoolElt
+// ChangeRing(L::ModPad, R::RngPad) -> ModPad
+// DirectSum(Ls::SeqEnum[ModPad]) -> ModPad
+// 'subset'(L1::ModPad, L2::ModPad) -> BoolElt
+// 'eq'(L1::ModPad, L2::ModPad) -> BoolElt
+// Complete(L::ModDed, p::RngOrdIdl) -> ModPad
+// Complete(L::ModDedLat, p::RngOrdIdl) -> ModPad
+
 ///////////////////////////////////////////////////////////////////
 //                                                               //
 //    ModDedLat: The lattice in a Dedekind module object.        //

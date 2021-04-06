@@ -250,7 +250,7 @@ intrinsic Module(L::ModDedLat) -> ModDed
 	return L`Module;
 end intrinsic;
 
-intrinsic PseudoBasis(L::ModDedLat) -> SeqEnum
+intrinsic PseudoBasis(L::ModDedLat) -> SeqEnum[Tup]
 { Returns the pseudobasis for the underlying module structure. }
 	return L`psBasis;
 end intrinsic;

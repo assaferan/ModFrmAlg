@@ -20,7 +20,6 @@
   neighbors/neighbor-CN1.m
   neighbors/orbits.m
 
-  orthogonal/linalg.m
   orthogonal/stdbasis.m
 
   representation/combfreemod.m
@@ -32,6 +31,7 @@
   unitary/stdbasis.m
 
   utils/helper.m
+  utils/linalg.m
   utils/struct.m
 
   verbose/verbose.m

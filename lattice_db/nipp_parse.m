@@ -14,10 +14,14 @@
  ***************************************************************************/
 
 // Here are the intrinsics this file defines
-// ParseNippFile(fname::MonStgElt) -> SeqEnum[Rec]
+// ParseNippFile(fname::MonStgElt) -> SeqEnum
+// ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum
 // NippToForm(nipp_entry::Rec) -> AlgMatElt
+// NippToForms(nipp_entry::Rec) -> AlgMatElt
+// TernaryQuadraticForms(d::RngIntElt) -> SeqEnum
+// QuinaryQuadraticLattices(d::RngIntElt) -> SeqEnum
+// QuinaryQuadraticLattices(table_idx::RngIntElt, idx::RngIntElt) -> SeqEnum, RngIntElt, RngIntElt
 
-// TODO : Change the main export methods to intrinsics
 freeze;
 
 lattice_RF := recformat< form : SeqEnum,
@@ -102,7 +106,7 @@ function initDescDict()
 end function;
 
 intrinsic ParseNippFile(fname::MonStgElt) -> SeqEnum[Rec]
-{.}
+{Parse an entire file from the Nipp database of quinary lattices.}
   r := Read(fname);
   start := Index(r, "D=");
   r := r[start..#r];
@@ -117,6 +121,28 @@ intrinsic ParseNippFile(fname::MonStgElt) -> SeqEnum[Rec]
   return genera;
 end intrinsic;
 
+intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
+{Extract the records of a certain discrminant from a file in the Nipp database of quinary lattices.}
+  r := Read(fname);
+  start := Index(r, Sprintf("D=  %o;",d));
+  if start eq 0 then
+    start := Index(r, Sprintf("D=   %o;",d));
+  end if;
+  require start ne 0 : "No entry with discriminant %o found", d;
+    
+  r := r[start..#r];
+  r_entries := Split(r,";\n");
+  idx := 0;
+  desc_to_field := initDescDict();
+  genera := [];
+  latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
+  while (latGen`D eq d) do
+    Append(~genera, latGen);
+    latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
+  end while;
+  return genera;
+end intrinsic;
+
 intrinsic NippToForm(nipp_entry::Rec) -> AlgMatElt
 {.}
   // We take the first lattice, but it doesn't matter to us
@@ -127,4 +153,142 @@ intrinsic NippToForm(nipp_entry::Rec) -> AlgMatElt
   columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..4]];
   a_magma := &cat[columns[i] cat [a[i]] : i in [1..5]];
   return SymmetricMatrix(a_magma);
+end intrinsic;
+
+intrinsic NippToForms(nipp_entry::Rec) -> AlgMatElt
+{Convert a record in the Nipp database of quinary lattices to a sequence of matrices represting the forms in the genus.}
+  forms := [];
+  as := [lat`form : lat in nipp_entry`lattices];
+  triangular := [j*(j-1) div 2 : j in [1..5]];
+  for a in as do
+    off_diag := [x / 2 : x in a[6..#a]];
+    columns := [[]];
+    columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..4]];
+    a_magma := &cat[columns[i] cat [a[i]] : i in [1..5]];
+    Append(~forms, SymmetricMatrix(a_magma));
+  end for;
+  return forms; 
+end intrinsic;
+
+// In what follows we have some code to construct positive definite
+// ternary quadratic forms of arbitrary discriminant
+// This follows the article "Levels of Positive Definite Ternary Quadratic Forms"
+// by J. Larry Lehman https://doi.org/10.2307/2153043
+
+// Checking conditions in Lehman Proposition 3
+function IsFormReduced(a,b,c,r,s,t)
+  // Condition (1)
+  if a gt b then return false; end if;
+  if b gt c then return false; end if;
+  // Condition (2)
+  if not (((r gt 0) and (s gt 0) and (t gt 0)) or
+	  ((r le 0) and (s le 0) and (t le 0))) then
+    return false;
+  end if;
+  // Condition (3)
+  if a lt Abs(t) then return false; end if;
+  if a lt Abs(s) then return false; end if;
+  if b lt Abs(r) then return false; end if;
+  // Condition (4)
+  if a+b+r+s+t lt 0 then return false; end if;
+  // Condition (5)
+  if a eq t and s gt 2*r then return false; end if;
+  if a eq s and t gt 2*r then return false; end if;
+  if b eq r and t gt 2*s then return false; end if;
+  // Condition (6) 
+  if a eq -t and s ne 0 then return false; end if;
+  if a eq -s and t ne 0 then return false; end if;
+  if b eq -r and t ne 0 then return false; end if;
+  // Condition (7) 
+  if a+b+r+s+t eq 0 and 2*a+2*s+t gt 0 then return false; end if;
+  // Condition (8)
+  if a eq b and Abs(r) gt Abs(s) then return false; end if;
+  if b eq c and Abs(s) gt Abs(t) then return false; end if;
+  return true;
+end function;
+
+function TernaryFormMatrix(a,b,c,r,s,t)
+  return SymmetricMatrix([2*a,t,2*b,s,r,2*c]);
+end function;
+
+intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
+{Return representatives for all positive definite ternary quadratic forms of discriminant d, up to isometry.}
+  forms := [];
+  max_a := Floor(Root(d/2, 3)); 
+  for a in [1..max_a] do
+    max_b := Floor(Sqrt(d/(2*a)));
+    for b in [a..max_b] do
+      min_c := Ceiling(Maximum(b, d/(4*a*b)));
+      max_c := Floor(d/(2*a*b));
+      for c in [min_c..max_c] do
+        for r in [-b..0] do
+	  for s in [-a..0] do
+	    for t in [-a..0] do
+	      A := TernaryFormMatrix(a,b,c,r,s,t);
+	      disc := Determinant(A)/2;
+	      if disc eq d and IsFormReduced(a,b,c,r,s,t) then
+		Append(~forms, A);
+              end if;
+	    end for;
+          end for;
+	end for;
+        for r in [1..b] do
+	  for s in [1..a] do
+	    for t in [1..a] do
+	      A := TernaryFormMatrix(a,b,c,r,s,t);
+	      disc := Determinant(A)/2;
+	      if disc eq d and IsFormReduced(a,b,c,r,s,t) then
+		Append(~forms, A);
+              end if;
+	    end for;
+          end for;
+	end for;
+      end for;
+    end for;
+   end for;
+   return forms;
+end intrinsic;
+
+// Should change this, right now only works for small discs (up to 256)
+// and slowly
+function get_nipp_idx(disc, nipp)
+  return [idx : idx in [1..#nipp] | nipp[idx]`D eq disc][1];
+end function;
+
+function get_last_nipp_idx(disc, nipp)
+  idxs := [idx : idx in [1..#nipp] | nipp[idx]`D eq disc];
+  if IsEmpty(idxs) then return 0; end if;
+  return idxs[#idxs];
+end function;
+
+function get_nipp_table_idx(disc, nipp_maxs)
+  table_idx := 1;
+  while nipp_maxs[table_idx+1] lt disc do
+      table_idx +:= 1;
+      if table_idx ge #nipp_maxs then
+	 error "This size of lattices is not yet supported!";
+      end if;
+  end while;
+  return table_idx;
+end function;
+
+intrinsic QuinaryQuadraticLattices(d::RngIntElt) -> SeqEnum[SeqEnum[AlgMatElt]]
+{Return representatives for all genera of positive definite quinary quadratic forms of discriminant d. Currently uses Nipp database and only works for d up to 513.}
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  assert exists(table_idx){i : i in [1..#nipp_maxs-1] | nipp_maxs[i+1] ge d};
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipps := ParseNippDisc(nipp_fname, d);
+  return [NippToForms(nipp) : nipp in nipps];
+end intrinsic;
+
+intrinsic QuinaryQuadraticLattices(table_idx::RngIntElt,
+				   idx::RngIntElt) -> SeqEnum[AlgMatElt],
+                                                      RngIntElt, RngIntElt
+{Return representatives for all genera of positive definite quinary quadratic forms of discriminant d. Currently uses Nipp database and only works for d up to 513.}
+  nipp_maxs := [0,256,270,300,322,345,400,440,480,500,513];
+  nipp_fname := Sprintf("lattice_db/nipp%o-%o.txt",
+			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
+  nipps := ParseNippFile(nipp_fname);
+  return NippToForms(nipps[idx]), nipps[idx]`D, nipps[idx]`genus;
 end intrinsic;

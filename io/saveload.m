@@ -201,7 +201,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			Append(~all_ps, list);
 		    end for;
 		    eigenvalues := < dims, all_ps, all_evs >;
-		    Append(~eigenforms, < Eltseq(f`vec) , true, eigenvalues >);
+                    Append(~eigenforms, < Eltseq(f`vec) , true, eigenvalues,
+                           f`IsEisenstein>);
 		else
 		    Append(~eigenforms, < Eltseq(f`vec) , false>);
 		end if;
@@ -476,6 +477,24 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 		if #list ne 0 then
 			M`Hecke`Eigenforms := [* *];
 		end if;
+                // This is for backwar compatibility,
+                // erase when we don't need it anymore
+                // to see if they are cusp forms
+	        reps := Representatives(Genus(M));
+	        // !!! TODO :
+	        // Replace this by an actual bilinear
+                // form compatible with the group
+	        // Add handling the case when the narrow class group of the field
+	        // is nontrivial.
+	        wts := &cat[[#AutomorphismGroup(reps[i])
+				: j in [1..Dimension(M`H[i])]]:
+		    i in [1..#reps]];
+     
+	        // instead of dividing by wts[i],
+                // we multiply for the case of positive
+         	// characteristic
+                wt_prod := IsEmpty(wts) select 1 else &*wts;
+	        mult_wts := [wt_prod div wt : wt in wts];
 
 		for data in list do
                         // Construct an element of the modular space.
@@ -491,9 +510,20 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 			    mform`vec := ChangeRing(mform`vec, QQ);
 			end if;
 
-                        // Flag as cuspidal?
-                        mform`IsCuspidal :=
-				&+[ x : x in Eltseq(mform`vec) ] eq 0;
+                        // for backward compatiblity
+                        if #data eq 3 then 
+                          // Flag as cuspidal?
+			  if not IsTrivial(Weight(M)) then
+			    mform`IsCuspidal := true;
+			  else
+			    mform`IsCuspidal := &+[ Eltseq(mform`vec)[i]
+							  * mult_wts[i]
+						      : i in [1..#wts]] eq 0;
+                          end if;
+                        else
+			  assert #data eq 4;
+                          mform`IsCuspidal := data[4];
+                        end if;
 
                         // Cusp forms are not Eistenstein.
                         mform`IsEisenstein := not mform`IsCuspidal;

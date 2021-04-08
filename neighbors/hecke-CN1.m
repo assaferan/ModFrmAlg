@@ -148,8 +148,29 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
     iota := H[idx]`embedding;
     
     W := Codomain(iota);
-    
-    for j in [1..#array] do
+
+    // If the weight is trivial, we don't need the isometry
+    // If moreover, there is only one lattice with the invariant,
+    // we can assume this is the neighbor it is isometric to.
+    if IsTrivial(W) and #array eq 1 then
+      space_idx := array[1][2];
+	    
+      if GetVerbose("AlgebraicModularForms") ge 2 then
+         printf "Neighbor is isometric to genus %o.\n", space_idx;
+      end if;
+
+      if GetVerbose("AlgebraicModularForms") ge 2 then
+         print "Updating the Hecke operator...";
+      end if;
+	    
+      found := true;
+      iota := H[space_idx]`embedding;
+      for vec_idx in [1..Dimension(H[space_idx])] do
+	vec := iota(H[space_idx].vec_idx);
+	hecke[space_idx][vec_idx][idx] +:= Weight * vec;
+      end for;
+    else
+      for j in [1..#array] do
 	// Check for isometry.
 	iso, g := IsIsometric(nLat, array[j][1] :
 			      Special := Special, BeCareful := BeCareful);
@@ -177,8 +198,8 @@ procedure processNeighborWeight(~nProc, invs, ~hecke,
 	    end for;
 	    break;
 	end if;
-    end for;
-
+      end for;
+    end if;
     // Verify that the neighbor was indeed isometric
     //  to something in our list.
     assert found;
@@ -442,6 +463,8 @@ function HeckeOperatorCN1(M, pR, k
     return ret;
 end function;
 
+// old irrelevant code, we comment it out
+/*
 // For efficiency, we implement computation of the Hecke operator on a single
 // (sparse) vector
 
@@ -488,6 +511,7 @@ procedure processNeighborWeightSparse(~nProc, inv, ~hecke,
     hecke[idx] +:= w * vec;
 
 end procedure;
+*/
 
 forward HeckeOrbitLowMemorySingleIndex;
 

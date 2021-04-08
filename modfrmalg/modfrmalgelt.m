@@ -375,8 +375,7 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 	    // If the weight is non-trivial all forms are cuspidal
             // !!! TODO - do the general case, we might have some
             // multiplicity of the trivial representation
-            if (Rank(Weight(M)) gt 1) or
-	       ((assigned Weight(M)`weight) and (Weight(M)`weight[1] ne 1)) then
+            if not IsTrivial(Weight(M)) then
               mform`IsCuspidal := true;
 	    else
 	      mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :

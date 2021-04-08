@@ -168,9 +168,8 @@ declare attributes GrpRep :
 	// for which we have computed the action matrix, but we (=magma) don't know
 	// how to solve the word problem for matrix groups of infinite order.
 	known_grps,
-	// This is assigned only if our representation is a tensor product, since
-	// in this case we can compute the action matrix easily by computing the
-        // !!!! TODO - uniformize this treatment to "base representation data"
+        // trivial representation
+        trivial,
 	// dual representation
 	dual,
 	// standard representation
@@ -235,6 +234,10 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
       fromFile := IsDefined(param_array, "FROM_FILE"); 
       V`embedding := Homomorphism(V, W, iota : FromFile := fromFile);
       V`ambient := Codomain(V`embedding);
+  end if;
+
+  if IsDefined(param_array, "TRIVIAL") then
+      V`trivial := param_array["TRIVIAL"];
   end if;
 
   if IsDefined(param_array, "DUAL") then
@@ -329,7 +332,6 @@ intrinsic Subrepresentation(V::GrpRep, t::.) -> GrpRep, GrpRepHom
   if Type(t) eq SeqEnum then t := Flat(t); else t := [t]; end if;
   t := [V!x : x in t];
   N, i := SubCFModule(V`M, [v`m : v in t]);
-  //  N_idx := [1..Dimension(N)];
   action_desc := Sprintf("           
   	      function action(g, m, V)
 	      	       i := V`embedding;
@@ -337,15 +339,15 @@ intrinsic Subrepresentation(V::GrpRep, t::.) -> GrpRep, GrpRepHom
   	      end function;
   	      return action;
 	      ");
-/*  action := map< CartesianProduct(V`G, N_idx) -> N |
-	       x :-> ((x[1] * V!(i(N.(x[2]))))`m)@@i>;*/
-//  U`ambient := V;
-//  U`embedding := iota;
   U_params := [* <"AMBIENT", V>, <"EMBEDDING", i> *];
   U := GroupRepresentation(V`G, N, action_desc :
 			   params := U_params);
-  // iota := Homomorphism(U, V, i);
-  return U, /* iota*/ U`embedding;
+  if IsTrivial(V) then
+     U`trivial := true;
+  else
+     U`trivial := false;
+  end if;
+  return U, U`embedding;
 end intrinsic;
 
 /* constructors of some special cases of representations */
@@ -360,7 +362,9 @@ intrinsic TrivialRepresentation(G::Grp, R::Rng : name := "v") -> GrpRep
   end function; 
   return action;
   ");
-  return GroupRepresentation(G, M, a);
+  V := GroupRepresentation(G, M, a);
+  V`trivial := true;
+  return V;
 end intrinsic;
 
 // Should change that to also support arbitrary reductive group
@@ -389,7 +393,13 @@ intrinsic DeterminantRepresentation(G::GrpMat : k := 1, name := "v") -> GrpRep
     end function;
     return action;
   ", k);
-  return GroupRepresentation(G, M, a);
+  V := GroupRepresentation(G, M, a);
+  if k eq 0 then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
+  return V;
 end intrinsic;
 
 intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
@@ -412,7 +422,13 @@ intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
   end function;
   return action;
   ");
-  return GroupRepresentation(V`G, M, a : params := [* <"SYMMETRIC", V> *]);
+  Sym := GroupRepresentation(V`G, M, a : params := [* <"SYMMETRIC", V> *]);
+  if IsTrivial(V) or n eq 0 then
+    Sym`trivial := true;
+  else
+    Sym`trivial := false;
+  end if;
+  return Sym;
 end intrinsic;
 
 function make_wedge_str(names, seq)
@@ -440,7 +456,13 @@ intrinsic AlternatingRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
        end function;
   return action;
   ", n);
-  return GroupRepresentation(V`G, M, a : params := [* <"ALTERNATING", V> *]);
+  Alt := GroupRepresentation(V`G, M, a : params := [* <"ALTERNATING", V> *]);
+  if IsTrivial(V) or (n eq 0) then
+    Alt`trivial := true;
+  else
+    Alt`trivial := false;
+  end if;
+  return Alt;
 end intrinsic;
 
 intrinsic DualRepresentation(V::GrpRep) -> GrpRep
@@ -455,7 +477,13 @@ intrinsic DualRepresentation(V::GrpRep) -> GrpRep
   end function;
   return action;
   ");
-  return GroupRepresentation(V`G, M, a : params := [* <"DUAL", V> *]);
+  V_d := GroupRepresentation(V`G, M, a : params := [* <"DUAL", V> *]);
+  if IsTrivial(V) then
+    V_d`trivial := true;
+  else
+    V_d`trivial := false;
+  end if;
+  return V_d;
 end intrinsic;
 
 intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
@@ -478,6 +506,13 @@ intrinsic TensorProduct(V::GrpRep, W::GrpRep) -> GrpRep
   if assigned V`weight and assigned W`weight then
     ret`weight := <V`weight[1] * W`weight[1], V`weight[2] + W`weight[2],
                   V`weight[3] + W`weight[3]>;
+  end if;
+  // There are more cases where the tensor product might be trivial,
+  // but we can't know for sure.
+  if IsTrivial(V) and IsTrivial(W) then
+    ret`trivial := true;
+  else
+    ret`trivial := false;
   end if;
   return ret;
 end intrinsic;
@@ -504,8 +539,6 @@ group homomorphism f. Does not verify that f is a group homomorphism}
   M := V`M;
   f := (eval f_desc)(H);
   G := Domain(f);
-/*  action := map< CartesianProduct(G, [1..Dimension(M)]) -> M |
-	       x :-> V`action(f(x[1]), x[2]) >;*/
   action := Sprintf("
   f := eval %m;
   V_action := eval %m;
@@ -516,7 +549,11 @@ group homomorphism f. Does not verify that f is a group homomorphism}
   ", f_desc, V`action_desc);
   ret := GroupRepresentation(G, M, action :
 			     params := [* <"PULLBACK", <V, f_desc, H> > *]);
-//  ret`pullback := < V, f >;
+  if IsTrivial(V) then
+    ret`trivial := true;
+  else
+    ret`trivial := false;
+  end if;
   return ret;
 end intrinsic;
 
@@ -580,6 +617,9 @@ function build_rep_params(V)
     if assigned V`tensor_product then
 	Append(~params, < "TENSOR_PRODUCT", V`tensor_product >);
     end if;
+    if assigned V`trivial then
+	Append(~params, < "TRIVIAL", V`trivial >);
+    end if;
     if assigned V`dual then
 	Append(~params, < "DUAL", V`dual >);
     end if;
@@ -624,6 +664,15 @@ intrinsic ChangeRing(V::GrpRep, R::Rng) -> GrpRep
 {return the Group Representation with base ring changed to R.}
   return GroupRepresentation(V`G, ChangeRing(V`M,R), V`action_desc
 			   : params := build_rep_params(V));
+end intrinsic;
+
+/* booleans */
+intrinsic IsTrivial(V::GrpRep) -> BoolElt
+{Returns whether V is the trivial representation.}
+  if not assigned V`trivial then
+    V`trivial := false;
+  end if;
+  return V`trivial;
 end intrinsic;
 
 /* printing */
@@ -1176,6 +1225,11 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
   action := eval V`action_desc;
   V`action := map< CartesianProduct(V`G, [1..Dimension(V`M)]) -> V`M |
 		 x :-> action(x[1], x[2], V)>;
+  if &and[x eq 0 : x in hw] then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
   return V;
 end intrinsic;	  
 
@@ -1313,6 +1367,11 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
   return action;
   ", d, A);
   V :=  GroupRepresentation(GL(n,K), M, a);
+  if d eq 1 then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
   V`weight := <d, 0, 0>;
   return V;
 end intrinsic;
@@ -1393,6 +1452,11 @@ function getTableauRepresentation(t : R := Rationals())
   ");
 
   V := GroupRepresentation(S, M, a);
+  if &and[x eq 0 : x in d] then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
   return V;
 end function;
 
@@ -1536,6 +1600,11 @@ function getGLnHighestWeightRepresentationPolys(n, lambda : F := Rationals())
   	      return action;
 	      ", n);
   V := GroupRepresentation(GL(n, F), M, action_desc);
+  if &and[x eq 0 : x in lambda] then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
   return V;
 end function;
 
@@ -1697,6 +1766,11 @@ function get_hw_rep_poly(lambda, B, n)
   
   V := GroupRepresentation(GL(n, F), M, action_desc :
 			   params := [* <"HW_VDW", <hw_vdw_data, lambda> > *]);
+  if &and[x eq 0 : x in lambda] then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
   return V;
 end function;
 

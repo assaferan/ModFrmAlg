@@ -46,7 +46,7 @@ freeze;
 // BuildReflexiveSpace(M::AlgMatElt, alpha::FldAut) ->  ModTupFld
 // FirstIsotropicSubspace(V::ModTupFld, k::RngIntElt) -> SeqEnum
 // NextIsotropicSubspace(V::ModTupFld, k::RngIntElt) -> SeqEnum
-// IsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
+// CountIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> RngIntElt
 // AllIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
 // NumberOfIsotropicSubspaces(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> RngIntElt
 // NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> RngIntElt
@@ -613,7 +613,7 @@ intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	return list;
 end intrinsic;
 
-intrinsic IsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
+intrinsic CountIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> RngIntElt
 { Counts all isotropic subspace. }
 	// The first isotropic subspace.
 	space := FirstIsotropicSubspace(V, k);
@@ -663,7 +663,7 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 
 	// Verify that the ideal is prime.
 	require IsPrime(pR): "Specified ideal must be prime.";
-
+/*
 	// These general formulae don't exactly work when we have
 	// a non-trivial radical. Check later how to fix that.
 	// Meanwhile, we just count them.
@@ -685,7 +685,7 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
         // This requires a lot of memory for no reason.
         // l := AllIsotropicSubspaces(V, k);
 	return l;
-     
+*/
 	// Compute the residue class field.
 	F := ResidueClassField(pR);
 
@@ -720,7 +720,12 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 		
 	    // Compute the number of isotropic subspaces.
 	    if n mod 2 eq 1 then
-		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
+ 	        r := V`WittIndex;
+                a := V`AnisoDim;
+                f := V`RadDim;
+//		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
+                count := q^f * &*[q^(r-i+1)-1 : i in [1..k]] *
+		         &*[q^(r+a-i)+1 : i in [1..k]] /
 			 &*[ q^i-1 : i in [1..k] ];
 	    // This should be according to the Witt Index - check that it coincides
 	    elif IsSquare(F!-1) then

@@ -517,19 +517,18 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
     start := Realtime();
 
     if Orbits and LowMemory then
-      HeckeOrbitLowMemorySingleIndex(~nProc, invs, ~hecke, idx, M`H, M`W, k,
-			      start, ~count, ~elapsed, fullCount :
-			      BeCareful := false,
-			      UseLLL := true,
-			      Special := false,
+      HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
+				     start, ~count, ~elapsed, fullCount :
+				     BeCareful := false,
+				     UseLLL := true,
 				     Estimate := true);
     else
       HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
-				 start, ~count, ~elapsed, fullCount :
-				 BeCareful := BeCareful,
-				 Orbits := Orbits,
-				 UseLLL := UseLLL,
-				 Estimate := Estimate);
+			     start, ~count, ~elapsed, fullCount :
+			     BeCareful := BeCareful,
+			     Orbits := Orbits,
+			     UseLLL := UseLLL,
+			     Estimate := Estimate);
     end if;
     
     iota := M`H[idx]`embedding;
@@ -852,18 +851,29 @@ end procedure;
 
 
 
-procedure HeckeOrbitLowMemorySingleIndex(~nProc, invs,  ~hecke, idx, H, W, k,
-			      start, ~count, ~elapsed, fullCount :
-			      BeCareful := false,
-			      UseLLL := true,
-			      Special := false,
-			      Estimate := true)
-  L := nProc`L;
+procedure HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
+					 start, ~count, ~elapsed, fullCount :
+					 BeCareful := false,
+					 UseLLL := true,
+					 Estimate := true)
+  // The current isometry class under consideration.
+  L := reps[idx];
+
+  // Build neighboring procedure for this lattice.
+  nProc := BuildNeighborProc(L, pR, k : BeCareful := BeCareful);
+
+  if GetVerbose("AlgebraicModularForms") ge 1 then
+    printf "Computing %o%o-neighbors for isometry class "
+           cat "representative #%o...\n", pR,
+           k eq 1 select "" else "^" cat IntegerToString(k),
+				   idx;
+  end if;
+  // L := nProc`L;
   Q := ReflexiveSpace(L);
   n := Dimension(Q);
-  pR := nProc`pR;
+//  pR := nProc`pR;
   V := L`Vpp[pR]`V;
-  G := AutomorphismGroup(L : Special := Special);
+  G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
   gens := [PullUp(Matrix(g), L, L : BeCareful := BeCareful)
 	      : g in Generators(G)];
   pMaximalBasis := ChangeRing(L`pMaximal[pR][2], BaseRing(Q));
@@ -897,17 +907,17 @@ procedure HeckeOrbitLowMemorySingleIndex(~nProc, invs,  ~hecke, idx, H, W, k,
       coset_reps := [pMaximalBasis^(-1)*ChangeRing(g, BaseRing(Q))*pMaximalBasis
 			: g in coset_reps_conj];
       // Append(~g_reps, coset_reps);
-      w := &+[Matrix(getMatrixAction(W, Transpose(W`G!g))) : g in coset_reps];
+      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) : g in coset_reps];
       // Skip to the neighbor associated to this orbit.
       SkipToNeighbor(~nProc, y, skew0);
       // Changing the skew matrix, but not the isotropic
       // subspace mod p
       repeat
-         processNeighborWeight(~nProc, invs, ~hecke, idx, H:
+         processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
 					  BeCareful := BeCareful,
 					  UseLLL := UseLLL,
 					  Weight := w,
-					  Special := Special);
+			                  Special := IsSpecialOrthogonal(M));
          // Update nProc in preparation for the next neighbor
          //  lattice.
 	 GetNextNeighbor(~nProc : BeCareful := BeCareful);
@@ -949,23 +959,8 @@ function HeckeOperatorCN1OrbitLowMemory(M, pR, k
     start := Realtime();
 	
     for idx in [1..#M`H] do
-	// The current isometry class under consideration.
-	L := reps[idx];
-
-	// Build neighboring procedure for this lattice.
-	nProc := BuildNeighborProc(L, pR, k
-				   : BeCareful := BeCareful);
-
-	if GetVerbose("AlgebraicModularForms") ge 1 then
-	    printf "Computing %o%o-neighbors for isometry class "
-		   cat "representative #%o...\n", pR,
-		   k eq 1 select "" else "^" cat IntegerToString(k),
-					   idx;
-	end if;
-	
-        HeckeOrbitLowMemorySingleIndex(~nProc, invs, ~hecke, idx, M`H, M`W, k,
+        HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
 				       start, ~count, ~elapsed, fullCount :
-				       Special := IsSpecialOrthogonal(M),
 				       Estimate := Estimate,
 				       UseLLL := UseLLL,
 				       BeCareful := BeCareful);

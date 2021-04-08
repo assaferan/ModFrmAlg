@@ -402,7 +402,7 @@ intrinsic Decomposition(M::ModFrmAlg, bound::RngIntElt :
 			UseLLL := true,
 			Orbits := true,
 			Estimate := true,
-			LowMemory := LowMemory,
+			LowMemory := false,
 			Proof := true,
 		        Force := false) -> SeqEnum, BoolElt
 {Decomposition of M with respect to the Hecke operators T_p with

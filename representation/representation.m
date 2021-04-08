@@ -523,8 +523,9 @@ end intrinsic;
 // since magma doesn't support localization in arbitrary number fields
 // we make a small patch for that
 function projLocalization(g, proj)
-    denom := Parent(g)!ScalarMatrix(Degree(g),Denominator(g));
-    numerator := denom*g;
+// denom := Parent(g)!ScalarMatrix(Degree(g),Denominator(g));
+    denom := GL(Degree(g), BaseRing(g))!ScalarMatrix(Degree(g),Denominator(g));
+    numerator := GL(Degree(g), Domain(proj)) !(denom*g);
     f := hom< MatrixAlgebra(Domain(proj),Degree(g)) ->
 			  MatrixAlgebra(Codomain(proj),Degree(g)) | proj >;
     f_gl := hom< GL(Degree(g), Domain(proj)) ->

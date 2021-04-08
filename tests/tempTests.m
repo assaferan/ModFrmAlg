@@ -74,8 +74,17 @@ for dim in [3,5] do
 end for;
 */
 
-M, timing := AlgebraicModularFormsTests(:num_primes := 3,
-					 decomposition := true);
+print "Testing examples from John and Matt's paper...";
+print "Testing low memory version...";
+M, timing := AlgebraicModularFormsTests(: NumPrimes := 5, LowMemory);
+print "memory used: ", GetMemoryUsage();
+print "Testing standard version...";
+M2, timing2 := AlgebraicModularFormsTests(: NumPrimes := 5);
+print "memory used: ", GetMemoryUsage();
+ratios := [[[timing[i][j][k]/timing2[i][j][k] : k in [1..#timing[i][j]]
+		     | timing2[i][j][k] ne 0] : j in [1..#timing[i]]]
+	      : i in [1..#timing]];
+print "ratios are: ", ratios;
 print "testing L series cmoputation for O(5)...";
 print "testing level 61, weights (3,0), (3,2) and (4,0)...";
 // This is quite long, so we reduce the precision
@@ -96,7 +105,7 @@ evs, lpolys := inspect(M : prec := 10);
 
 // testing an inert prime
 example := AlgebraicModularFormsExamples[3];
-M, timing := testExample(example : num_primes := 3);
+M, timing := testExample(example : NumPrimes := 3);
 T2 := HeckeOperator(M,2);
 T3 := HeckeOperator(M,3);
 assert T2*T3 eq T3*T2;

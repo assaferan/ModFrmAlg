@@ -248,7 +248,8 @@ function SimpleIrreducibleTest(W,a)
 end function;
 
 function W_is_irreducible(M,W,a,random_operator_bound :
-			  Estimate := true, Orbits := true, UseLLL := true)
+			  Estimate := true, Orbits := true,
+			  UseLLL := true, LowMemory := false)
    /*
    W = subspace of the dual
    a = exponent of factor of the characteristic polynomial.
@@ -267,7 +268,8 @@ function W_is_irreducible(M,W,a,random_operator_bound :
       T := &+[Random([-3,-2,-1,1,2,3])*Restrict(HeckeOperator(M,ell :
 						Estimate := Estimate,
 						Orbits := Orbits,
-						UseLLL := UseLLL), W) : 
+						UseLLL := UseLLL,
+						LowMemory := LowMemory), W) : 
                 ell in PrimesUpTo(random_operator_bound, BaseRing(M))];
       f := CharacteristicPolynomial(T);
       if IsVerbose("AlgebraicModularForms") then 
@@ -284,7 +286,8 @@ end function;
 
 function Decomposition_recurse(M, V, primes, prime_idx, 
                                proof, random_op :
-			       UseLLL := true, Estimate := true, Orbits := true)
+			       UseLLL := true, Estimate := true,
+			       Orbits := true, LowMemory := false)
 
    assert Type(M) eq ModFrmAlg;
    assert Type(primes) eq SeqEnum;
@@ -311,7 +314,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
 				    random_op : UseLLL := UseLLL,
 						Estimate := Estimate,
-						Orbits := Orbits);
+						Orbits := Orbits,
+						LowMemory := LowMemory);
    end if;
 
    pR := fac[1][1];
@@ -321,7 +325,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 				      Norm(primes[#primes]);
 
    T := Restrict(HeckeOperator(M, pR : Estimate := Estimate,
-				      Orbits := Orbits, UseLLL := UseLLL), V);
+			       Orbits := Orbits, UseLLL := UseLLL,
+			       LowMemory := LowMemory), V);
    D := [* *];
 
    
@@ -361,7 +366,7 @@ function Decomposition_recurse(M, V, primes, prime_idx,
       if Characteristic(BaseRing(M)) eq 0 and
 	 W_is_irreducible(M,W,a,random_op select Norm(pR) else 0 :
 			  Estimate := Estimate, Orbits := Orbits,
-			  UseLLL := UseLLL) then
+			  UseLLL := UseLLL, LowMemory := LowMemory) then
          Append(~D,W);
          is_complete_W := true;
       else
@@ -372,7 +377,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
                                             proof, random_op :
 					    UseLLL := UseLLL,
 					    Orbits := Orbits,
-					    Estimate := Estimate); 
+					    Estimate := Estimate,
+					    LowMemory := LowMemory); 
               for WW in Sub do 
                   Append(~D, WW);
               end for;
@@ -396,6 +402,7 @@ intrinsic Decomposition(M::ModFrmAlg, bound::RngIntElt :
 			UseLLL := true,
 			Orbits := true,
 			Estimate := true,
+			LowMemory := false,
 			Proof := true,
 		        Force := false) -> SeqEnum, BoolElt
 {Decomposition of M with respect to the Hecke operators T_p with
@@ -445,18 +452,12 @@ p coprime to the level of M and p<= bound. }
 						   Proof, false :
 						   UseLLL := use_LLL,
 						   Orbits := Orbits,
-						   Estimate := Estimate);
+						   Estimate := Estimate,
+						   LowMemory := LowMemory);
        refined_decomp cat:= DD;
        is_complete and:= is_complete_MM;
    end for;
-/*
-   refined_decomp := &cat[Decomposition_recurse(M,MM, primes, prime_idx,
-						Proof, false :
-						useLLL := use_LLL,
-						orbits := orbits,
-						estimate := estimate) :
-                          MM in decomp];
-*/
+
    (M`Hecke`decomposition)`bound := bound;
    (M`Hecke`decomposition)`decomp := refined_decomp;
    (M`Hecke`decomposition)`is_complete := is_complete;
@@ -469,6 +470,7 @@ intrinsic Decomposition(M::ModFrmAlg :
 			UseLLL := true,
 			Orbits := true,
 			Estimate := true,
+			LowMemory := false,
 			Proof := true,
 		        Force := false) -> SeqEnum, BoolElt
 {Decomposition of M with respect to the Hecke operators T_p with
@@ -479,6 +481,7 @@ p coprime to the level of M and p<= bound. }
      D, is_complete := Decomposition(M, bound : UseLLL := UseLLL,
 				     Orbits := Orbits,
 				     Estimate := Estimate,
+				     LowMemory := LowMemory,
 				     Proof := Proof,
 				     Force := Force);
      bound *:= 2;

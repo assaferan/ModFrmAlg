@@ -17,6 +17,9 @@ freeze;
 // Here are the intrinsics this file defines
 // IsotropicOrbits(V::ModTupFld, G::GrpMat, k::RngIntElt) -> SeqEnum
 
+//imports
+// import "../representation/representation.m" : projLocalization;
+
 declare attributes ModTupFld: parent, rank, isom;
 
 intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
@@ -124,3 +127,106 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	return array;
 end intrinsic;
 
+// Here we attempt to implemnt better orbit-stabilizer approaches
+build_polycyclic_data := function(G, V, proj)
+  // This should work, but I am not sure - double check !!!
+  // We use the original group to avoid FPGroup
+  F := Codomain(proj);
+  R := Domain(proj);
+  n := Dimension(V);
+  gen_imgs := [[proj(x) : x in Eltseq(g)] : g in GeneratorsSequence(G)];
+  red := hom<G -> GL(n,F) | gen_imgs>;
+  red_G := red(G);
+  is_solvable := IsSolvable(red_G);
+  if is_solvable then
+    G_pc, pi := PCGroup(red_G);
+  else
+    G_pc := red_G;
+    pi := IdentityHomomorphism(red_G);
+  end if;
+  function g_action(tup)
+    x := tup[1];
+    g := tup[2];
+    // This is because the code below assumes right action
+    gens := [ b * (g@@pi) : b in Basis(x)];
+    return sub< V | gens>;
+  end function;
+  return is_solvable, G_pc, g_action, red*pi;
+end function;
+
+orb_stab_pc := function(G, f, x)
+    relative_orders := PCPrimes(G);
+    orbit := {@ Parent(x) | x @};
+    stab_gens := [ G | ];
+    orbit_nos := [];
+    for i := NPCgens(G) to 1 by -1 do
+        g := G.i;
+        pos := Position(orbit, f(<x, g>));
+        orbit_len := #orbit;
+        if pos eq 0 then
+            for k := 1 to relative_orders[i]-1 do
+                for j := 1 to orbit_len do
+                    Include(~orbit, f(<orbit[j], g>));
+                end for;
+                g *:= G.i;
+            end for;
+            assert #orbit eq orbit_len * relative_orders[i];
+            Append(~orbit_nos, i);
+        else
+            /* move to 0-index arrays for modulo arithmetic */
+            pos -:= 1;
+            for j := #orbit_nos to 1 by -1 do
+                if pos eq 0 then break; end if;
+                t := orbit_nos[j];
+                orbit_len div:= relative_orders[t];
+                pow := pos div orbit_len;
+                g *:= G.t^-pow;
+                pos -:= pow * orbit_len;
+            end for;
+            assert f(<x ,g>) eq x;
+            Append(~stab_gens, g);
+        end if;
+    end for;
+    stab := sub< G | stab_gens >;
+    return orbit, stab, orbit_nos;
+end function;
+
+// !! TODO - improve this, we can do better.
+// e.g. if an element g has order r, then only divisors of r
+// should be considered for the stabilizer
+// i.e. if p is the minimal prime dividing r and xg ne x, we can
+// add xg^i for all i up to p-1.
+// (or rather we can check if each of p^d stabilizes x
+
+// can also save instead of an element of g, only a pointer to
+// the previous index and the index of the last generator,
+// and in the end unravel these.
+orb_stab_general := function(G, f, x)
+    gens := Generators(G);
+    orbit := {@ Parent(x) | x @};
+    stab_gens := [ G | ];
+    orbit_nos := [ G | 1 ];
+    next_idx := 1;
+    while next_idx le #orbit do
+      orbit_len := #orbit;
+      for gen in gens do
+	g := gen;
+	next := f(<orbit[next_idx], g>);
+	pos := Position(orbit, next);
+        // This is the element leading from x to next
+        g := orbit_nos[next_idx]*g;
+        if pos eq 0 then
+	  Include(~orbit, next);
+          Append(~orbit_nos, g);
+	else
+	  // we have found an element of the stabilizer  
+	  g *:= orbit_nos[pos]^(-1);
+          assert f(<x ,g>) eq x;
+          Append(~stab_gens, g);
+	end if;
+      end for;
+      next_idx +:= 1;
+    end while;
+    stab := sub< G | stab_gens >;
+    return orbit, stab, orbit_nos;
+end function;

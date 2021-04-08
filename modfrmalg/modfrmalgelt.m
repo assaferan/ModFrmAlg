@@ -227,7 +227,7 @@ end procedure;
 intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 			   Precision := 0, BeCareful := false,
 			   Estimate := true, Orbits := true,
-			   UseLLL := true) -> List, SeqEnum
+			   UseLLL := true, LowMemory := false) -> List, SeqEnum
 { Computes the eigenvalues at various primes associated to this eigenform, for primes up to norm Precision. If Precision = 0, computes the eigenvalues only for precomputed hecke operators }
 	// Check whether this element is an eigenform.
 	if not f`IsEigenform then return []; end if;
@@ -258,7 +258,8 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 				    BeCareful := BeCareful,
 				    Estimate := Estimate,
 				    Orbits := Orbits,
-				    UseLLL := use_lll);
+				    UseLLL := use_lll,
+				    LowMemory := LowMemory);
 	if Type(Precision) eq SeqEnum then
 	    Ps := Precision;
 	else
@@ -293,7 +294,8 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 	return [ f`Eigenvalues[k][P] : P in Ps ], [ P : P in Ps ];
 end intrinsic;
 
-intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true) -> List
+intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
+			  Orbits := true, LowMemory := false) -> List
 { Returns a list of cusp forms associated to this space. }
 	// Initialize space of modular forms if needed.
 	ModFrmAlgInit(M);	
@@ -316,7 +318,8 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true) -> List
 	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
 */
         // Decompose the spaceto eigenspaces
-        D := Decomposition(M : Estimate := Estimate);
+        D := Decomposition(M : Estimate := Estimate,
+			       Orbits := Orbits, LowMemory := LowMemory);
 
         // This actually repeats the previous to get the also the eigenvectors.
         // Since main computation is Hecke operators, we let it go for now
@@ -592,16 +595,19 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
 end intrinsic;
 
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
-		      Estimate := true, Orbits := true) -> RngUPolElt
+		      Estimate := true, Orbits := true,
+		      LowMemory := false) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
     return LPolynomial(f, BaseRing(Module(f`M))!!p, d
-		       : Estimate := Estimate, Orbits := Orbits);
+		       : Estimate := Estimate, Orbits := Orbits,
+		       LowMemory := LowMemory);
 end intrinsic;
 
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
-		      Estimate := true, Orbits := true) -> RngUPolElt
+		      Estimate := true, Orbits := true,
+		      LowMemory := false) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
   L := Module(f`M);
@@ -613,7 +619,8 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
 
   evs, _ := [HeckeEigensystem(f, k : Precision := [BaseRing(Module(f`M))!!p],
 			      Estimate := Estimate,
-			      Orbits := Orbits)[1] : k in [1..n_evs]];
+			      Orbits := Orbits,
+			      LowMemory := LowMemory)[1] : k in [1..n_evs]];
   if n_evs lt n div 2 then
     evs cat:= [0 : i in [n_evs+1..n div 2]];
   end if;
@@ -705,7 +712,8 @@ end intrinsic;
 
 intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
 					 Estimate := true,
-					 Orbits := true) -> SeqEnum[RngUPolElt]
+		                         Orbits := true,
+		                         LowMemory := false)-> SeqEnum[RngUPolElt]
 {Compute the L-polynomials of f at primes up to norm precision.}
   require IsOrthogonal(f`M) : "Currently implemented only for orthogonal group";
 
@@ -730,15 +738,18 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
       p := Norm(P);
       L_polys[p] := LPolynomial(f, p, n :
 				Estimate := Estimate,
-				Orbits := Orbits);
+				Orbits := Orbits,
+				LowMemory := LowMemory);
   end for;
   return L_polys;
 end intrinsic;
 
-intrinsic LSeries(f::ModFrmAlgElt : Precision := 0, Estimate := true) -> LSer
+intrinsic LSeries(f::ModFrmAlgElt : Precision := 0,
+		  Estimate := true, Orbits := true, LowMemory := false) -> LSer
 {Build the L-series corresponding to f.}
   function local_factor(p,d)
-    poly := LPolynomial(f, p, d : Estimate := Estimate);
+    poly := LPolynomial(f, p, d : Estimate := Estimate,
+			Orbits := Orbits, LowMemory := LowMemory);
     CC := ComplexField();
     CC_x := PowerSeriesRing(CC);
     K := BaseRing(Parent(poly));

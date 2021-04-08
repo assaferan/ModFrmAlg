@@ -39,13 +39,14 @@ forward testExample;
 forward testUnitaryMassFormula;
 forward testRamaTornaria9;
 
-intrinsic AlgebraicModularFormsTests(: num_primes := 0,
-				       use_existing := false,
-				       orbits := true,
-				       useLLL := true,
-				       decomposition := true) ->
+intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
+				       UseExisting := false,
+				       Orbits := true,
+				       UseLLL := true,
+				       Decomposition := true,
+				       LowMemory := false ) ->
 	  SeqEnum[ModFrmAlg], SeqEnum
-{Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting num_primes.}
+{Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting Num_primes.}
 
   // Testing the unitary mass formula
   testUnitaryMassFormula();
@@ -55,11 +56,12 @@ intrinsic AlgebraicModularFormsTests(: num_primes := 0,
   all_timings := [];
   for example in AlgebraicModularFormsExamples do
       // testing that we obtain the correct results
-      M, timings := testExample(example : num_primes := num_primes,
-					  use_existing := use_existing,
-					  orbits := orbits,
-					  useLLL := useLLL,
-					  decomposition := decomposition);
+      M, timings := testExample(example : NumPrimes := NumPrimes,
+					  UseExisting := UseExisting,
+					  Orbits := Orbits,
+					  UseLLL := UseLLL,
+				          Decomposition := Decomposition,
+				          LowMemory := LowMemory);
       // saving to a file
       fname := Sprintf("Example_%o.dat", example`name);
       Save(M, fname : Overwrite := true);
@@ -73,7 +75,8 @@ intrinsic AlgebraicModularFormsTests(: num_primes := 0,
   return all_spaces, all_timings;
 end intrinsic;
 
-function testHeckeOperators(M, example, ps, N, useLLL, orbits)
+function testHeckeOperators(M, example, ps, N :
+			    UseLLL := true, Orbits := true, LowMemory := false)
     timings := [];
     for k in [1..#example`evs[1]] do
 	Ts_k := [];
@@ -86,9 +89,10 @@ function testHeckeOperators(M, example, ps, N, useLLL, orbits)
 	    // maybe should restrict Orbits to k eq 1 - ? check why !?
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
 						  Estimate := true,
-						  UseLLL := useLLL,
-						  Orbits := orbits
-				       ));
+						  UseLLL := UseLLL,
+					          Orbits := Orbits,
+					          LowMemory := LowMemory
+				                  ));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;
 	    Append(~timings_k, timing);
@@ -158,42 +162,41 @@ procedure test_evs(example, evs, keys, N)
     end for;
 end procedure;
 
-function testDecomposition(M, example, ps, N, useLLL, orbits)
+function testDecomposition(M, example, ps, N : UseLLL := true,  Orbits := true)
     
     D := Decomposition(M : Estimate := true,
-		           UseLLL := useLLL,
-		           Orbits := orbits);
+		           UseLLL := UseLLL,
+		           Orbits := Orbits);
     eigenforms := HeckeEigenforms(M);
     evs := [* *];
     RR := RealField();
-    timings := [RR | 0 : i in [1..#example`evs[1]]];
+    timings := [[RR | 0 : j in [1..N]]
+		   : i in [1..#example`evs[1]]];
     for f in eigenforms do
 	if f`IsEigenform then
 	    evs_f := [];
 	    for dim in [1..#example`evs[1]] do
-		t := Cputime();
-		Append(~evs_f, HeckeEigensystem(f, dim : Precision := ps[1..N],
+                for j in [1..N] do
+		  t := Cputime();
+		  evs_j := HeckeEigensystem(f, dim : Precision := ps[1..j],
 							 Estimate := true,
-							 UseLLL := useLLL,
-							 Orbits := orbits));
-		timings[dim] +:= Cputime() - t;
+							 UseLLL := UseLLL,
+					                 Orbits := Orbits);
+		  timings[dim][j] +:= Cputime() - t;
+                end for;
+		Append(~evs_f, evs_j);
 	    end for;
 	    Append(~evs, evs_f);
 	end if;
     end for;
-/*
-  evs := [* [HeckeEigensystem(f, dim : prec := ps[N]) :
-  dim in [1..#example`evs[1]] :
-  f in eigenforms | f`IsEigenform *];
-*/
     return eigenforms, evs, timings;
 end function;
 
-function testExample(example : num_primes := 0, use_existing := false,
-			       orbits := true, useLLL := true,
-			       decomposition := true)
+function testExample(example : NumPrimes := 0, UseExisting := false,
+			       Orbits := true, UseLLL := true,
+		               Decomposition := true, LowMemory := false)
     fname := Sprintf("Example_%o.dat", example`name);
-    if use_existing and FileExists(path() cat fname : ShowErrors := false) then
+    if UseExisting and FileExists(path() cat fname : ShowErrors := false) then
 	M := AlgebraicModularForms(fname);
     else
 	if example`group eq "Unitary" then
@@ -215,10 +218,10 @@ function testExample(example : num_primes := 0, use_existing := false,
 
     assert #Representatives(Genus(M)) eq example`genus;
 
-    if num_primes eq 0 then
+    if NumPrimes eq 0 then
 	N := #example`norm_p;
     else
-	N := num_primes;
+	N := NumPrimes;
     end if;
     
     print "Computing T(p) Hecke operators...";
@@ -226,19 +229,24 @@ function testExample(example : num_primes := 0, use_existing := false,
     ps := [Factorization(ideal<Integers(BaseRing(M))|n>)[1][1] :
 	   n in example`norm_p];
     
-    if decomposition then
-	eigenforms, evs, timings := testDecomposition(M, example, ps, N,
-						      useLLL, orbits);
+    if Decomposition then
+        eigenforms, evs, timings := testDecomposition(M, example, ps, N : 
+						      UseLLL := UseLLL,
+						      Orbits := Orbits);
 	keys := [1..#example`evs[1]];
     else
-	timings := testHeckeOperators(M, example, ps, N, useLLL, orbits);
+        timings := testHeckeOperators(M, example, ps, N : 
+				      UseLLL := UseLLL,
+				      Orbits := Orbits,
+				      LowMemory := LowMemory);
 	keys := Keys(M`Hecke`Ts);
 	keys := Sort([ x : x in keys ]);
 	// Compute eigenforms associated to this space of modular forms.
 	eigenforms := HeckeEigenforms(M);
 	
-	evs := [* [HeckeEigensystem(f, dim) : dim in keys] :
-	    f in eigenforms | f`IsEigenform *];  
+        evs := [* [HeckeEigensystem(f, dim
+				    : Precision := ps[1..N]) : dim in keys]
+		   : f in eigenforms | f`IsEigenform *];  
     end if;
 
     print "Displaying all Hecke eigensystems...";
@@ -271,7 +279,7 @@ procedure testRamaTornaria9()
     W := TrivialRepresentation(GL(5,Rationals()), Rationals());
     level := IdentityMatrix(Rationals(),5);
     M := AlgebraicModularForms(G, W, level);
-    D := Decomposition(M, 100);
+    D := Decomposition(M);
     eigenforms := HeckeEigenforms(M);
     reps := Representatives(Genus(M));
     weights := [#AutomorphismGroup(rep)^(-1) : rep in reps];
@@ -295,7 +303,7 @@ end procedure;
 // The number of lpolynomials checked is prec.
 // The odds that even one of them is reducible by chance are slim
 // But we're doing 2 to make sure.
-function get_nonlifts(fs, disc : prec := 2, Estimate := false)
+function get_nonlifts(fs, disc : prec := 2, Estimate := false, LowMemory := false)
   // This is just for checking irreducibility
   primes := [];
   p := 2;
@@ -307,7 +315,8 @@ function get_nonlifts(fs, disc : prec := 2, Estimate := false)
     p := NextPrime(p);
   end for;
   lpolys := [LPolynomials(f : Estimate := Estimate,
-			  Precision := primes) : f in fs];
+			  Precision := primes,
+			  LowMemory := LowMemory) : f in fs];
   nonlift_idxs := [];
   for idx in [1..#lpolys] do
     lpolys_f := lpolys[idx];
@@ -335,14 +344,16 @@ end function;
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
-procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false)
+procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false,
+		     LowMemory := false)
   A, disc, g := QuinaryQuadraticLattices(table_idx, nipp_idx)[1];
   k,j := Explode(wt);
   G := OrthogonalGroup(A);
   W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
   M := AlgebraicModularForms(G, W);
   fs := HeckeEigenforms(M : Estimate := Estimate);
-  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
+  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate,
+			     LowMemory := LowMemory);
   id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
@@ -375,7 +386,7 @@ function get_nonlift_dimension(disc, wts)
   return res;
 end function;
 
-procedure testLSeries(disc, wts, prec)
+procedure testLSeries(disc, wts, prec : LowMemory := false)
   A := QuinaryQuadraticLattices(disc)[1][1];
   G := OrthogonalGroup(A);
   for wt in wts do
@@ -385,12 +396,12 @@ procedure testLSeries(disc, wts, prec)
         spin := SpinorNormRepresentation(G, d);
         W_spin := TensorProduct(W, spin);
         M := AlgebraicModularForms(G, W_spin);
-        fs := HeckeEigenforms(M);
-        nonlifts := get_nonlifts(fs, disc);
+        fs := HeckeEigenforms(M : LowMemory := LowMemory);
+        nonlifts := get_nonlifts(fs, disc : LowMemory := LowMemory);
         printf "For wt = %o, d = %o there are %o nonlifts. The dimensions of their Galois orbits are %o.\n", wt, d, #nonlifts, [Degree(BaseRing(fs[idx]`vec)) : idx in nonlifts]; 
         for idx in nonlifts do
 	  f := fs[idx];
-          lser := LSeries(f : Precision := prec);
+          lser := LSeries(f : Precision := prec, LowMemory := LowMemory);
           assert CFENew(lser) eq 0;
 	end for;
     end for;

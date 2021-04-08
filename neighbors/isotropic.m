@@ -46,7 +46,7 @@ freeze;
 // BuildReflexiveSpace(M::AlgMatElt, alpha::FldAut) ->  ModTupFld
 // FirstIsotropicSubspace(V::ModTupFld, k::RngIntElt) -> SeqEnum
 // NextIsotropicSubspace(V::ModTupFld, k::RngIntElt) -> SeqEnum
-// IsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
+// NumberOfIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> RngIntElt
 // AllIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
 // NumberOfIsotropicSubspaces(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> RngIntElt
 // NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> RngIntElt
@@ -613,8 +613,10 @@ intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	return list;
 end intrinsic;
 
-intrinsic IsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
-{ Counts all isotropic subspace. }
+intrinsic NumberOfIsotropicSubspaces(V::ModTupFld[FldFin],
+				     k::RngIntElt) -> RngIntElt
+{ Counts all isotropic subspaces of dimension k. }
+/*
 	// The first isotropic subspace.
 	space := FirstIsotropicSubspace(V, k);
 
@@ -631,6 +633,75 @@ intrinsic IsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 
 	// Return the count.
 	return count;
+*/
+        F := BaseRing(V);
+        q := #F;
+        n := Dimension(V);
+        r := V`WittIndex;
+        a := V`AnisoDim;
+        f := V`RadDim;
+        if IsUnitarySpace(V) then
+	  // V is a Hermitian space
+	  _, q := IsSquare(q);
+	  // formula from J.B.Derr
+          // "Stabilizers of isotropic subspaces in classical groups",
+	  // Corollary 2 with d = 0, a,b,c = 0,k,0
+          n := n-f;
+	  count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1))
+			 : i in [0..k-1] ] div
+			 &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
+          count *:= q^f;
+	else
+	  // in this case V is orthogonal
+	     
+	  // Compute the number of isotropic subspaces.
+	  // This is from Murphy's thesis (also accounting for the radical)
+	  
+	  count := q^f * &*[q^(r-i+1)-1 : i in [1..k]] *
+		         &*[q^(r+a-i)+1 : i in [1..k]] /
+			 &*[ q^i-1 : i in [1..k] ];
+/*
+	    if n mod 2 eq 1 then
+ 	        
+//		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
+                count := q^f * &*[q^(r-i+1)-1 : i in [1..k]] *
+		         &*[q^(r+a-i)+1 : i in [1..k]] /
+			 &*[ q^i-1 : i in [1..k] ];
+	    // This should be according to the Witt Index - check that it coincides
+	    elif IsSquare(F!-1) then
+		if m eq k then
+		    if k eq 1 then
+			count := 2 * (q-1);
+		    else
+			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] /
+				 &*[ q^i-1 : i in [1..k-1] ];
+		    end if;
+		else
+		    count := (q^m-1) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
+			     (q^(m-k)-1) / &*[ q^i-1 : i in [1..k] ];
+		end if;
+	    else
+		e := IsEven(m+1) select 1 else -1;
+		if m eq k then
+		    // to handle the empty product
+		    if k eq 1 then
+			count := 0;
+		    else
+			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] *
+				 (q^k+e) / (q^k-1) / &*[ q^i-1 : i in [1..k-1] ];
+		    end if;
+		else
+		    count := (q^m+e) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
+			     (q^(m-k)+e) / &*[ q^i-1 : i in [1..k] ];
+		end if;
+	    end if;
+*/
+	end if;
+
+	// Verify that this count is an integer.
+	assert Denominator(count) eq 1;
+
+	return Integers()!count;
 end intrinsic;
 
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)
@@ -663,99 +734,18 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 
 	// Verify that the ideal is prime.
 	require IsPrime(pR): "Specified ideal must be prime.";
-
-	// These general formulae don't exactly work when we have
-	// a non-trivial radical. Check later how to fix that.
-	// Meanwhile, we just count them.
-	L := Module(M);
+        L := Module(M);
 	nProc := BuildNeighborProc(L, pR, k);
-	V := nProc`L`Vpp[pR]`V;
-        // The first isotropic subspace.
-	space := FirstIsotropicSubspace(V, k);
+        qAff := nProc`L`Vpp[pR];
+	V := qAff`V;
 
-        l := 0;
-
-	while space ne [] do
-	    // Retrieve the isotropic subspace in the original coordinates.
-	    vecs := [Vector(Matrix(x) * Transpose(V`Basis)) : x in space];
-	    l +:= 1;
-	    // Next subspace.
-	    space := NextIsotropicSubspace(V, k);
-	end while;
-        // This requires a lot of memory for no reason.
-        // l := AllIsotropicSubspaces(V, k);
-	return l;
-     
-	// Compute the residue class field.
-	F := ResidueClassField(pR);
-
-	// The cardinality of the residue class field.
-	q := #F;
-
-	// The underlying reflexive space.
-	Q := ReflexiveSpace(Module(M));
-
-	// The dimension of the reflexive space.
-	n := Dimension(Q);
-
-	// An auxiliary integer used in our formulas.
-	m := Integers()!( n mod 2 eq 1 select (n-1)/2 else n/2 );
-
-	if (SpaceType(Q) eq "Hermitian") and (RamificationIndex(pR) eq 1) then
-	    alpha := Involution(Q);
-	    if alpha(pR) ne pR then
-		// pR splits
-		count := (q^n - 1) div (q - 1);
-	    else
-		// pR is inert
-		_, q := IsSquare(q);
-		// formula from J.B.Derr "Stabilizers of isotropic subspaces in classical groups",
-		// Corollary 2 with d = 0, a,b,c = 0,k,0
-		count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1)) : i in [0..k-1] ] div
-			 &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
-	    end if;
-	else
-
-	    // if unitary and ramified, the residual space is orthogonal
-		
-	    // Compute the number of isotropic subspaces.
-	    if n mod 2 eq 1 then
-		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
-			 &*[ q^i-1 : i in [1..k] ];
-	    // This should be according to the Witt Index - check that it coincides
-	    elif IsSquare(F!-1) then
-		if m eq k then
-		    if k eq 1 then
-			count := 2 * (q-1);
-		    else
-			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] /
-				 &*[ q^i-1 : i in [1..k-1] ];
-		    end if;
-		else
-		    count := (q^m-1) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
-			     (q^(m-k)-1) / &*[ q^i-1 : i in [1..k] ];
-		end if;
-	    else
-		e := IsEven(m+1) select 1 else -1;
-		if m eq k then
-		    // to handle the empty product
-		    if k eq 1 then
-			count := 0;
-		    else
-			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] *
-				 (q^k+e) / (q^k-1) / &*[ q^i-1 : i in [1..k-1] ];
-		    end if;
-		else
-		    count := (q^m+e) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
-			     (q^(m-k)+e) / &*[ q^i-1 : i in [1..k] ];
-		end if;
-	    end if;
-	end if;
-
-	// Verify that this count is an integer.
-	assert Denominator(count) eq 1;
-
-	return Integers()!count;
+        if qAff`splitting_type eq "split" then
+  	  q := #qAff`F;
+          n := Dimension(V);
+          return (q^n - 1) div (q-1);
+        else
+          return NumberOfIsotropicSubspaces(V, k);
+        end if;
 end intrinsic;
 
 intrinsic NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)

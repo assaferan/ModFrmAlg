@@ -431,7 +431,7 @@ intrinsic InnerForm(M::ModFrmAlg) -> AlgMatElt
      return InnerForm(ReflexiveSpace(Module(M)));
 end intrinsic;
 
-intrinsic Genus(M::ModFrmAlg : BeCareful := false, Orbits := false) -> GenusSym
+intrinsic Genus(M::ModFrmAlg : BeCareful := false, Orbits := true) -> GenusSym
 { Returns the genus associated to the underlying module used to construct
   this space. }
 	// If already computed, return it.
@@ -486,22 +486,23 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   end for;
 end intrinsic;
 
-procedure ModFrmAlgInit(M : BeCareful := false,
-			    Force := false,
-			    Orbits := false)
+// !!! TODO - make Orbits and LowMemory meaningful here
+
+procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
+			LowMemory := false)
     
     // If the representation space has already been computed, then this
     //  object has already been initialized, and we can simply return
     //  without any further computations.
 
     if not assigned M`H then
-	// computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force);
 
 	if GetVerbose("AlgebraicModularForms") ge 2 then
 	    print "Computing genus representatives...";
 	end if;
 
-	reps := Representatives(Genus(M));
+        reps := Representatives(Genus(M : BeCareful := BeCareful,
+				      Orbits := Orbits));
 
 	if GetVerbose("AlgebraicModularForms") ge 2 then
 	    printf "Found %o genus representatives.\n", #reps;

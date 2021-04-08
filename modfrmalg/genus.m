@@ -63,7 +63,7 @@ end intrinsic;
 // access
 
 intrinsic GenusReps(M::ModFrmAlg
-	: BeCareful := false, Force := false, Orbits := false) -> SeqEnum
+	: BeCareful := false, Force := false, Orbits := true) -> SeqEnum
 { Computes the genus representatives of the inner form associated to the
 	   space of algebraic modular forms provided. }
 

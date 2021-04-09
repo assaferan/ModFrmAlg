@@ -70,11 +70,14 @@ intrinsic CombinatorialFreeModule(R::Rng, S::SetIndx : params := [* *]) -> CombF
 
   // Store meta data.
   for entry in params do param_array[entry[1]] := entry[2]; end for;
-  CFM`names := S;
-  U := Universe(CFM`names);
+  //CFM`names := S;
+  U := Universe(S);
+  // If these are polynomials, this is algebraic and we want the fields
+  // to match
   if Type(U) eq RngMPol then
     U := ChangeRing(U, R);
   end if;
+  CFM`names := {U | s : s in S};
   if IsDefined(param_array, "NAMES") then
       AssignNames(~U, param_array["NAMES"]);
   end if;

@@ -136,7 +136,9 @@ declare attributes RfxSpaceAff:
 
 intrinsic ChangeRing(V::RfxSpace, R::Rng) -> RfxSpace
 {.}
-  return AmbientReflexiveSpace(ChangeRing(InnerForm(V), R));
+  alpha := ChangeRing(Involution(V), R);
+  innerForm := ChangeRing(InnerForm(V), R);
+  return AmbientReflexiveSpace(innerForm, alpha);
 end intrinsic;
 
 // printing

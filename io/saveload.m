@@ -351,13 +351,15 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// Assign the inner form.
 	innerForm := ChangeRing(array["INNER"], K);
 
+        L := ChangeRing(L, K);
         if IsDefined(array, "LEVEL") then
            M := AlgebraicModularForms(G, W, L);
         else
            M := AlgebraicModularForms(G, W);
         end if;
-        M`H := H;
-
+        if IsDefined(array, "FIXED_SUBSPACES") then
+          M`H := H;
+        end if;
 	// Assign genus representatives.
 	if IsDefined(array, "GENUS") and #array["GENUS"] ne 0 then
 	    // Retrive the list of genus representatives.

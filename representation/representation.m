@@ -669,10 +669,13 @@ intrinsic ChangeRing(V::GrpRep, R::Rng) -> GrpRep
 {return the Group Representation with base ring changed to R.}
   // If this is an algebraic representation of a reductive group
   // then we want to change rings also for the group
+  // !! TODO - have a better way to mark that a representation is algebraic
+  // and have base change use that
   if Type(V`G) eq GrpRed then
     G := ChangeRing(V`G, R);
   // If we use GL(n,R) then magma doesn't know to base change
-  elif Type(V`G) eq GrpMat then
+  elif (Type(V`G) eq GrpMat) and (Type(BaseRing(V`G)) eq Type(BaseRing(V)))
+       and BaseRing(V`G) eq BaseRing(V)then
     G := GL(Degree(V`G), R);
   else
     G := V`G;

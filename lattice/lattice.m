@@ -231,7 +231,7 @@ intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
    end if;
    
    printf "lattice whose %o has norm %o", disc,
-     Norm(Discriminant(lat : GramFactor := 2, Half := half));
+     Norm(Discriminant(lat : GramFactor := factor, Half := half));
    if level eq "Maximal" then
      printf "%o", Module(lat);
    end if;
@@ -382,6 +382,17 @@ coefficient ideals. }
   lat`Jordan := AssociativeArray();
 
   return lat;
+end intrinsic;
+
+intrinsic ChangeRing(lat::ModDedLat, R::Rng) -> ModDedLat
+{.}
+   pb := PseudoBasis(lat);
+   // Is there a bettter way to handle this? 
+   F := FieldOfFractions(Integers(R));
+   idls := [F!!x[1] : x in pb];
+   basis := ChangeRing(Matrix([x[2] : x in pb]), R);
+   V := ChangeRing(ReflexiveSpace(lat), R);
+   return LatticeWithBasis(V, basis, idls);
 end intrinsic;
 
 intrinsic LatticeWithPseudobasis(rfxSpace::RfxSpace, pmat::PMat) -> ModDedLat

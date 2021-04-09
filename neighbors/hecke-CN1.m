@@ -51,11 +51,14 @@ freeze;
 
 // imports
 
+import "../utils/helper.m" : printEstimate;
+
 import "inv-CN1.m" : Invariant;
 import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor,
 	GetNextNeighbor, SkipToNeighbor;
 import "orbits.m" : build_polycyclic_data, orb_stab_pc, orb_stab_general;
 
+/*
 procedure printEstimate(start, ~count, ~elapsed,
 			fullCount, pR, k :
 			increment := 1,
@@ -113,6 +116,7 @@ procedure printEstimate(start, ~count, ~elapsed,
 	  "Current memory usage:%o\n", GetMemoryUsage();
     end if;
 end procedure;
+*/
 
 // idx is i from the paper
 
@@ -255,7 +259,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	fp_aut, psi := FPGroup(Aut);
 
 	// The isotropic orbit data.
-	isoOrbits := IsotropicOrbits(V, Aut, k);
+        isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
 	    
 	for orbit in isoOrbits do
 	    skew0 := Zero(MatrixRing(F, k));
@@ -288,7 +292,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 				: BeCareful := BeCareful);
 		if Estimate then
 		    printEstimate(start, ~count, ~elapsed,
-				  fullCount, pR, k :
+				  fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
 				  increment := #orbit[2]);
 		end if;
 	    until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
@@ -305,7 +309,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 			    : BeCareful := BeCareful);
 	    if Estimate then
 		printEstimate(start, ~count, ~elapsed,
-			      fullCount, pR, k);
+			      fullCount, Sprintf("T_%o^%o", Norm(pR), k));
 	    end if;
 	end while;
     end if;
@@ -380,7 +384,7 @@ function HeckeOperatorCN1(M, pR, k
 	    fp_aut, psi := FPGroup(Aut);
 
 	    // The isotropic orbit data.
-	    isoOrbits := IsotropicOrbits(V, Aut, k);
+            isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
 	    
 	    for orbit in isoOrbits do
 		skew0 := Zero(MatrixRing(F, k));
@@ -413,7 +417,7 @@ function HeckeOperatorCN1(M, pR, k
 				    : BeCareful := BeCareful);
 		    if Estimate then
 			printEstimate(start, ~count, ~elapsed,
-				      fullCount, pR, k :
+				      fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
 				      increment := #orbit[2]);
 		    end if;
 		until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
@@ -430,7 +434,7 @@ function HeckeOperatorCN1(M, pR, k
 				: BeCareful := BeCareful);
 		if Estimate then
 		    printEstimate(start, ~count, ~elapsed,
-				  fullCount, pR, k);
+				  fullCount, Sprintf("T_%o^%o", Norm(pR), k));
 		end if;
 	    end while;
 	end if;
@@ -780,7 +784,7 @@ procedure HeckeOperatorAndGenusCN1(~M, pR, k, ~result
 	    fp_aut, psi := FPGroup(Aut);
 
 	    // The isotropic orbit data.
-	    isoOrbits := IsotropicOrbits(V, Aut, k);
+            isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
 	    
 	    for orbit in isoOrbits do
 		skew0 := Zero(MatrixRing(F, k));
@@ -815,7 +819,7 @@ procedure HeckeOperatorAndGenusCN1(~M, pR, k, ~result
 				    : BeCareful := BeCareful);
 		    if Estimate then
 			printEstimate(start, ~count, ~elapsed,
-				      fullCount, pR, k :
+				      fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
 				      increment := #orbit[2]);
 		    end if;
 		until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
@@ -834,7 +838,7 @@ procedure HeckeOperatorAndGenusCN1(~M, pR, k, ~result
 				: BeCareful := BeCareful);
 		if Estimate then
 		    printEstimate(start, ~count, ~elapsed,
-				  fullCount, pR, k);
+				  fullCount, Sprintf("T_%o^%o", Norm(pR), k));
 		end if;
 	    end while;
 	end if;
@@ -947,7 +951,8 @@ procedure HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
 	 GetNextNeighbor(~nProc : BeCareful := BeCareful);
          if Estimate then
 	    printEstimate(start, ~count, ~elapsed,
-			  fullCount, pR, k : increment := #orb);
+			  fullCount, Sprintf("T_%o^%o", Norm(pR), k)
+			  : increment := #orb);
 	 end if;
       until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
     else

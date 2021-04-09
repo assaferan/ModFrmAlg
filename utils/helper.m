@@ -34,6 +34,70 @@ freeze;
 
 // helper functions
 
+// this is a function useful for time estimate
+function get_human_time(t)
+  // Minutes.
+  mins := Floor(t / 60);
+
+  // Seconds (modulo minutes) remaining.
+  secs := Floor(t - mins*60);
+
+  // Hours remaining.
+  hours := Floor(mins / 60);
+    
+  // Minutes (modulo hours).
+  mins -:= hours * 60;
+    
+  // Days.
+  days := Floor(hours / 24);
+	
+  // Hours (modulo days).
+  hours -:= days * 24;
+
+  return Sprintf("%od %oh %om %os", days, hours, mins, secs);
+end function;
+
+procedure printEstimate(start, ~count, ~elapsed,
+			fullCount, comp_str :
+			increment := 1,
+			printSkip := 1000,
+			printOffset := 500,
+			timeSkip := 5)
+
+    // Increment counter.
+    count +:= increment;
+
+    last_elapsed := elapsed;
+
+    // Elapsed real time.
+    new_elapsed := Realtime() - start;
+    
+    if (count mod printSkip eq printOffset) or
+       (new_elapsed gt last_elapsed + timeSkip) then
+
+	// updating last time we printed an estimate
+	elapsed := new_elapsed;
+
+	// Seconds per computation.
+	t := RealField()!(elapsed / count);
+
+	// Number of computations left to compute.
+	remaining := fullCount - count;
+
+	// Estimate time remaining (in seconds).
+	estimate := t * remaining;
+
+        est_str := get_human_time(estimate);
+
+        // Display estimate.
+	printf "Estimated time remaining for %o: %o\n",
+	       comp_str, est_str;
+
+        vprintf AlgebraicModularForms, 1 :
+	  "Current memory usage:%o\n", GetMemoryUsage();
+    end if;
+end procedure;
+
 // This one is because magma doesn't sum an empty set
 function my_sum(seq)
   if IsEmpty(seq) then return 0; end if;

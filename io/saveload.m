@@ -346,6 +346,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
         if IsDefined(array, "FIXED_SUBSPACES") then 
 	  for i in [1..#H] do
 	    H[i] := ChangeRing(H[i], K);
+            iota := H[i]`embedding;
             // We have to make sure these embed into W
             basis_images := [W!iota(H[i].j) : j in [1..Ngens(H[i])]];
             H[i]`embedding := Homomorphism(H[i], W, basis_images);

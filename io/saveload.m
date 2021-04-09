@@ -534,7 +534,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 			end if;
 
                         // for backward compatiblity
-                        if #data eq 3 then 
+                        if #data lt 4 then 
                           // Flag as cuspidal?
 			  if not IsTrivial(Weight(M)) then
 			    mform`IsCuspidal := true;

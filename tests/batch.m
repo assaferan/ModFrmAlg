@@ -19,6 +19,8 @@ freeze;
 import "../io/path.m" : path;
 import "../lattice_db/nipp_parse.m" : get_nipp_table_idx, get_last_nipp_idx;
 
+import "tests.m" : get_nonlifts;
+
 function analyticConductor(k, j)
 //  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
   // These differ from the theory, but seem to work in practice

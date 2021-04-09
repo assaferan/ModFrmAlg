@@ -351,8 +351,8 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// Assign the inner form.
 	innerForm := ChangeRing(array["INNER"], K);
 
-        L := ChangeRing(L, K);
         if IsDefined(array, "LEVEL") then
+	   L := ChangeRing(L, K);
            M := AlgebraicModularForms(G, W, L);
         else
            M := AlgebraicModularForms(G, W);

@@ -217,6 +217,8 @@ intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
 
    if (SpaceType(ReflexiveSpace(lat)) eq "Hermitian") then
      factor := 1;
+     disc := "discriminant";
+     half := false;
    else
      factor := 2;
      if IsEven(Rank(lat)) then

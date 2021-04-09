@@ -647,14 +647,14 @@ intrinsic NumberOfIsotropicSubspaces(V::ModTupFld[FldFin],
 	  count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1))
 			 : i in [0..k-1] ] div
 			 &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
-          count *:= q^f;
+          count *:= q^(k*f);
         elif IsQuadraticSpace(V) then
 	  // in this case V is orthogonal
 	     
 	  // Compute the number of isotropic subspaces.
 	  // This is from Murphy's thesis (also accounting for the radical)
 	  
-	  count := q^f * &*[q^(r-i+1)-1 : i in [1..k]] *
+	  count := q^(k*f) * &*[q^(r-i+1)-1 : i in [1..k]] *
 		         &*[q^(r+a-i)+1 : i in [1..k]] /
 			 &*[ q^i-1 : i in [1..k] ];
         else

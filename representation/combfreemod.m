@@ -77,7 +77,7 @@ intrinsic CombinatorialFreeModule(R::Rng, S::SetIndx : params := [* *]) -> CombF
   if Type(U) eq RngMPol then
     U := ChangeRing(U, R);
   end if;
-  CFM`names := {U | s : s in S};
+  CFM`names := {@ U | s : s in S @};
   if IsDefined(param_array, "NAMES") then
       AssignNames(~U, param_array["NAMES"]);
   end if;

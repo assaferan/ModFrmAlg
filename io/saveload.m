@@ -47,6 +47,7 @@ freeze;
 import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 import "path.m" : path;
 import "../neighbors/genus-CN1.m" : sortGenusCN1;
+import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
 
 intrinsic FileExists(filename::MonStgElt : ShowErrors := true) -> BoolElt
 { Checks whether a specified file exists on disk. }
@@ -243,6 +244,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	data := [*
 		< "GROUP", /* group_data */ M`G >,
 		< "WEIGHT", M`W >,
+		< "LEVEL", M`L >,
+		< "FIXED_SUBSPACES", M`H >,
 		< "POLY", f >,
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
@@ -306,14 +309,27 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// Build the number field we're working over.
 	K := SplittingField(G);
 	W := array["WEIGHT"];
+        if IsDefined(array, "LEVEL") then 
+           L := array["LEVEL"];
+        end if;
+
+        if IsDefined(array, "FIXED_SUBSPACES") then
+          H := array["FIXED_SUBSPACES"];
+        end if;
 	
 	if Degree(K) eq 1 then
 	    K := RationalsAsNumberField();
 	    // !!! TODO : Change also the inner forms
-	    G`G0 := ChangeRing(G`G0, K);
-            // TODO : take out everything to a function
-            // that changes the base ring of W
-	    W`G := GL(Degree(W`G),K);
+	    G := ChangeRing(G, K);
+            W := ChangeRing(W, K);
+            // W`G := GL(Degree(W`G),K);
+            if IsDefined(array, "FIXED_SUBSPACES") then 
+              for i in [1..#H] do
+		H[i] := ChangeRing(H[i], K);
+// H[i]`G := W`G;
+	      end for;
+            end if;
+/*
             if assigned W`standard or assigned W`hw_vdw then
 	      R_names := ChangeRing(Universe(Names(W`M)), K);
               W`M := CombinatorialFreeModule(K,
@@ -324,6 +340,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 		 x :-> action(x[1], x[2], W)>;
             W`known_grps := [sub<W`G|1>];
             W`act_mats[W`G!1] := IdentityMatrix(BaseRing(W`M), Dimension(W`M));
+*/
 	end if;
 
 	if Type(BaseRing(W)) eq FldRat then
@@ -333,8 +350,13 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 
 	// Assign the inner form.
 	innerForm := ChangeRing(array["INNER"], K);
-	
-	M := AlgebraicModularForms(G, W);
+
+        if IsDefined(array, "LEVEL") then
+           M := AlgebraicModularForms(G, W, L);
+        else
+           M := AlgebraicModularForms(G, W);
+        end if;
+        M`H := H;
 
 	// Assign genus representatives.
 	if IsDefined(array, "GENUS") and #array["GENUS"] ne 0 then
@@ -486,6 +508,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
                 // form compatible with the group
 	        // Add handling the case when the narrow class group of the field
 	        // is nontrivial.
+                if not assigned M`H then ModFrmAlgInit(M); end if;
 	        wts := &cat[[#AutomorphismGroup(reps[i])
 				: j in [1..Dimension(M`H[i])]]:
 		    i in [1..#reps]];

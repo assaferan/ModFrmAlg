@@ -151,7 +151,7 @@ end intrinsic;
 intrinsic ChangeRing(CFM::CombFreeMod, R::Rng) -> CombFreeMod
 {return the CFM with base ring changed to R.}
   params := [* *];
-  if Type(Universe(CFM`names)) eq RngMPol then
+  if (not IsEmpty(CFM`names)) and (Type(Universe(CFM`names)) eq RngMPol) then
       Append(~params, <"NAMES", Names(Universe(CFM`names))>);
   end if;
   return CombinatorialFreeModule(R, CFM`names : params := params);
@@ -251,7 +251,10 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
       U2 := Universe(M2`names);
       if Type(BaseRing(U1)) eq FldRat then
         is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
-        if is_isom then psi := hom<Rationals() -> Rationals()|>; end if;
+        if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)|>; end if;
+      elif Type(BaseRing(U2)) eq FldRat then
+	is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
+        if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)| 1 >; end if;
       else
 	is_isom, psi := IsIsomorphic(BaseRing(U1), BaseRing(U2));
       end if;
@@ -296,7 +299,7 @@ intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 {.}
     if (level eq "Magma") then
 	params := [* *];
-	if Type(Universe(CFM`names)) eq RngMPol then
+    if (not IsEmpty(CFM`names)) and (Type(Universe(CFM`names)) eq RngMPol) then
 	  S := CFM`names;
 	  R_X := Universe(S);
 	  prefix_str := Sprintf("{@ %m |\n", R_X);

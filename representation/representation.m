@@ -612,28 +612,30 @@ intrinsic CFM(V::GrpRep) -> CombFreeMod
   return V`M;
 end intrinsic;
 
-function build_rep_params(V)
+function build_rep_params(V, R)
     params := [* *];
     if assigned V`tensor_product then
-	Append(~params, < "TENSOR_PRODUCT", V`tensor_product >);
+	Append(~params, < "TENSOR_PRODUCT",
+	       [ChangeRing(U, R) : U in V`tensor_product] >);
     end if;
     if assigned V`trivial then
 	Append(~params, < "TRIVIAL", V`trivial >);
     end if;
     if assigned V`dual then
-	Append(~params, < "DUAL", V`dual >);
+        Append(~params, < "DUAL", ChangeRing(V`dual, R) >);
     end if;
     if assigned V`standard then
-	Append(~params, < "STANDARD", V`standard >);
+        Append(~params, < "STANDARD", ChangeRing(V`standard, R) >);
     end if;
     if assigned V`symmetric then
-	Append(~params, < "SYMMETRIC", V`symmetric >);
+        Append(~params, < "SYMMETRIC", ChangeRing(V`symmetric, R) >);
     end if;
     if assigned V`alternating then
-	Append(~params, < "ALTERNATING", V`alternating >);
+        Append(~params, < "ALTERNATING", ChangeRing(V`alternating, R) >);
     end if;
     if assigned V`pullback then
-	Append(~params, < "PULLBACK", V`pullback >);
+        pb := <ChangeRing(V`pullback[1], R), V`pullback[2], V`pullback[3]>;
+        Append(~params, < "PULLBACK", pb >);
     end if;
     if assigned V`hw_vdw then
         Append(~params, < "HW_VDW", <V`hw_vdw, V`lambda> >);
@@ -646,24 +648,37 @@ function build_rep_params(V)
 			   HighestWeights(V`weight)[1] > >);
     end if;
     if assigned V`ambient then
-	images := [V`embedding(V.i)`m : i in [1..Dimension(V)]];
-	iota := Homomorphism(V`M, V`ambient`M, images);
-	Append(~params, < "AMBIENT", V`ambient >);
-	Append(~params, < "EMBEDDING", iota >);
+        amb := ChangeRing(V`ambient, R);
+        images := [amb`M |
+		   ChangeRing(V`embedding(V.i)`m, R) : i in [1..Dimension(V)]];
+        iota := Homomorphism(ChangeRing(V`M, R),
+			     amb`M, images);
+        Append(~params, < "AMBIENT", amb >);
+        Append(~params, < "EMBEDDING", iota >);
     end if;
     if assigned V`is_irreducible then
         Append(~params, < "IS_IRREDUCIBLE", V`is_irreducible >);
     end if;
     if assigned V`grp then
-       Append(~params, < "GRP", V`grp >);
+        Append(~params, < "GRP", V`grp >);
     end if;
     return params;
 end function;
 
 intrinsic ChangeRing(V::GrpRep, R::Rng) -> GrpRep
 {return the Group Representation with base ring changed to R.}
-  return GroupRepresentation(V`G, ChangeRing(V`M,R), V`action_desc
-			   : params := build_rep_params(V));
+  // If this is an algebraic representation of a reductive group
+  // then we want to change rings also for the group
+  if Type(V`G) eq GrpRed then
+    G := ChangeRing(V`G, R);
+  // If we use GL(n,R) then magma doesn't know to base change
+  elif Type(V`G) eq GrpMat then
+    G := GL(Degree(V`G), R);
+  else
+    G := V`G;
+  end if;
+  return GroupRepresentation(G, ChangeRing(V`M,R), V`action_desc
+			     : params := build_rep_params(V, R));
 end intrinsic;
 
 /* booleans */
@@ -680,7 +695,7 @@ end intrinsic;
 intrinsic Print(V::GrpRep, level::MonStgElt)
 {.}
   if level eq "Magma" then
-      params := build_rep_params(V);
+      params := build_rep_params(V, BaseRing(V));
       Append(~params, < "FROM_FILE", true>);
       printf "GroupRepresentation(%m, %m, %m : params := %m)",
 	     V`G, V`M, V`action_desc, params;

@@ -134,6 +134,11 @@ declare attributes RfxSpaceAff:
 	// Important for lifting modulo pR^2
 	splitting_type;
 
+intrinsic ChangeRing(V::RfxSpace, R::Rng) -> RfxSpace
+{.}
+  return AmbientReflexiveSpace(ChangeRing(InnerForm(V), R));
+end intrinsic;
+
 // printing
 
 intrinsic Print(R::RfxSpace, level::MonStgElt)

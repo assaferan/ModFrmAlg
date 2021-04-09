@@ -155,6 +155,21 @@ intrinsic AlgebraicModularForms(G::GrpRed,
     If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
     If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
+  K := SplittingField(G);
+  V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
+  return AlgebraicModularForms(G, weight,
+			       LatticeWithBasis(V, ChangeRing(level, K))
+			       : GramFactor := GramFactor);
+end intrinsic;
+
+intrinsic AlgebraicModularForms(G::GrpRed,
+			        weight::GrpRep,
+				level::ModDedLat :
+				GramFactor := 1) -> ModFrmAlg
+{Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
+    If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
+    If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
+
         require IsCompact(G) : "Group must be compact at infinity.";
         K := SplittingField(G);
         require IsField(K) : "Reductive group must be defined over a field.";
@@ -172,7 +187,8 @@ intrinsic AlgebraicModularForms(G::GrpRed,
         V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
 
 	// Build the lattice from the level
-	L := LatticeWithBasis(V, ChangeRing(level, K));
+//	L := LatticeWithBasis(V, ChangeRing(level, K));
+        L := level;
 
 	// Initialize the space of algebraic modular forms.
 	M := New(ModFrmAlg);
@@ -616,9 +632,12 @@ intrinsic 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
   if keys ne Keys(M2`Hecke`Ts) then return false; end if;
   for k in keys do
       primes1 := [p : p in Keys(M1`Hecke`Ts[k])];
-      primes2 := [ideal<Integers(K2)|[psi(K1!x) : x in Generators(p)]> :
+      // We have to convert to ideals in K2,
+      // otherwise magma doesn't like it
+      primes2 := [K2!!ideal<Integers(K2)|[psi(K1!x) : x in Generators(p)]> :
 		  p in primes1];
-      if Set(primes2) ne Keys(M2`Hecke`Ts[k]) then return false; end if;
+      hecke_keys := {K2!!p : p in Keys(M2`Hecke`Ts[k])};
+      if Set(primes2) ne hecke_keys then return false; end if;
       for idx in [1..#primes1] do
 	  p1 := primes1[idx];
 	  p2 := primes2[idx];

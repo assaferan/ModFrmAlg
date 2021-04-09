@@ -199,6 +199,18 @@ intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
   return elt;
 end intrinsic;
 
+intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
+			  v::ModTupFldElt[FldRat]) -> CombFreeModElt
+{Construct an element of CFM whose underlying vector is v.}
+  elt := New(CombFreeModElt);
+  elt`vec := v;
+  elt`parent := CFM;
+  dim := Dimension(CFM`M);
+  elt`name := createElementString(Eltseq(v), CFM`names);
+
+  return elt;
+end intrinsic;
+
 /* access */
 
 intrinsic Parent(elt::CombFreeModElt) -> CombFreeMod

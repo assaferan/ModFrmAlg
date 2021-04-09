@@ -16,6 +16,7 @@ freeze;
 // Here we list the intrinsics that this file defines
 
 // imports
+import "../io/path.m" : path;
 import "../lattice_db/nipp_parse.m" : get_nipp_table_idx, get_last_nipp_idx;
 
 function analyticConductor(k, j)

@@ -323,12 +323,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	    G := ChangeRing(G, K);
             W := ChangeRing(W, K);
             // W`G := GL(Degree(W`G),K);
-            if IsDefined(array, "FIXED_SUBSPACES") then 
-              for i in [1..#H] do
-		H[i] := ChangeRing(H[i], K);
-// H[i]`G := W`G;
-	      end for;
-            end if;
+            
 /*
             if assigned W`standard or assigned W`hw_vdw then
 	      R_names := ChangeRing(Universe(Names(W`M)), K);
@@ -347,6 +342,15 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	    QQ := RationalsAsNumberField();
 	    W := ChangeRing(W,QQ);
 	end if;
+
+        if IsDefined(array, "FIXED_SUBSPACES") then 
+	  for i in [1..#H] do
+	    H[i] := ChangeRing(H[i], K);
+            // We have to make sure these embed into W
+            basis_images := [W!iota(H[i].j) : j in [1..Ngens(h)]];
+            H[i]`embedding := Homomorphism(H[i], W, basis_images);
+          end for;
+        end if;
 
 	// Assign the inner form.
 	innerForm := ChangeRing(array["INNER"], K);

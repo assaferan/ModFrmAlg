@@ -717,8 +717,15 @@ end intrinsic;
 
 intrinsic IsCoercible(V::GrpRep, x::Any) -> BoolElt, .
 {.}
-  if Type(x) eq GrpRepElt and Parent(x) eq V then return true, x; end if;
-  is_coercible, v := IsCoercible(V`M, x);
+  if Type(x) eq GrpRepElt then
+    if Parent(x) eq V then
+      return true, x;
+    else
+      is_coercible, v := IsCoercible(V`M, x`m);
+    end if;
+  else
+    is_coercible, v := IsCoercible(V`M, x);
+  end if;  
   if is_coercible then
       return true, GroupRepresentationElement(V, v);
   else

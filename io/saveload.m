@@ -316,26 +316,12 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
         if IsDefined(array, "FIXED_SUBSPACES") then
           H := array["FIXED_SUBSPACES"];
         end if;
-	
+
+        // Do we really need that?
 	if Degree(K) eq 1 then
 	    K := RationalsAsNumberField();
-	    // !!! TODO : Change also the inner forms
-	    G := ChangeRing(G, K);
+            G := ChangeRing(G, K);
             W := ChangeRing(W, K);
-            // W`G := GL(Degree(W`G),K);
-            
-/*
-            if assigned W`standard or assigned W`hw_vdw then
-	      R_names := ChangeRing(Universe(Names(W`M)), K);
-              W`M := CombinatorialFreeModule(K,
-		     {@R_names!nm : nm in W`M`names@});
-            end if;
-            action := eval W`action_desc;
-            W`action := map< CartesianProduct(W`G, [1..Dimension(W`M)]) -> W`M |
-		 x :-> action(x[1], x[2], W)>;
-            W`known_grps := [sub<W`G|1>];
-            W`act_mats[W`G!1] := IdentityMatrix(BaseRing(W`M), Dimension(W`M));
-*/
 	end if;
 
 	if Type(BaseRing(W)) eq FldRat then
@@ -345,7 +331,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 
         if IsDefined(array, "FIXED_SUBSPACES") then 
 	  for i in [1..#H] do
-	    H[i] := ChangeRing(H[i], K);
+	    H[i] := ChangeRing(H[i], BaseRing(W));
             iota := H[i]`embedding;
             // We have to make sure these embed into W
             basis_images := [W!iota(H[i].j) : j in [1..Ngens(H[i])]];

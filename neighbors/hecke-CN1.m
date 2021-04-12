@@ -269,15 +269,19 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	    if IsEmpty(nProc`X) then
 		continue;
 	    end if;
-	    mat_gen_seq := [[gens[Index(gens_modp,
+            if IsTrivial(M`W) then
+	      w := #orbit[2];
+            else
+	      mat_gen_seq := [[gens[Index(gens_modp,
 					Eltseq(Aut.Abs(i)))]^Sign(i) :
 			     i in Eltseq(g@@psi)] :
 			    g in orbit[2]];
-	    mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
-			  &*seq : seq in mat_gen_seq];
+	      mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+			    &*seq : seq in mat_gen_seq];
 
-	    w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
-		    g in mat_lifts];
+	      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+		      g in mat_lifts];
+            end if;
 	    // Changing the skew matrix, but not the isotropic
 	    // subspace mod p
 	    repeat
@@ -394,15 +398,19 @@ function HeckeOperatorCN1(M, pR, k
 		if IsEmpty(nProc`X) then
 		    continue;
 		end if;
-		mat_gen_seq := [[gens[Index(gens_modp,
+		
+                if IsTrivial(M`W) then
+		  w := #orbit[2];
+                else
+		  mat_gen_seq := [[gens[Index(gens_modp,
 					    Eltseq(Aut.Abs(i)))]^Sign(i) :
 				 i in Eltseq(g@@psi)] :
 				g in orbit[2]];
-		mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+		  mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
 			      &*seq : seq in mat_gen_seq];
-
-		w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+		  w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
 			g in mat_lifts];
+                end if;
 		// Changing the skew matrix, but not the isotropic
 		// subspace mod p
 		repeat
@@ -794,15 +802,19 @@ procedure HeckeOperatorAndGenusCN1(~M, pR, k, ~result
 		if IsEmpty(nProc`X) then
 		    continue;
 		end if;
-		mat_gen_seq := [[gens[Index(gens_modp,
+                if IsTrivial(M`W) then
+		  w := #orbit[2];
+                else
+		  mat_gen_seq := [[gens[Index(gens_modp,
 					    Eltseq(Aut.Abs(i)))]^Sign(i) :
 				 i in Eltseq(g@@psi)] :
 				g in orbit[2]];
-		mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+		  mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
 			      &*seq : seq in mat_gen_seq];
 
-		w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
-			g in mat_lifts];
+		  w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+			  g in mat_lifts];
+                end if;
 		// Changing the skew matrix, but not the isotropic
 		// subspace mod p
 		repeat
@@ -930,12 +942,18 @@ procedure HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
     end for;
     if not found then
       Append(~orb_reps, y);
-      coset_reps_pc := Transversal(G_pc, stab);
-      coset_reps_conj := [g@@red : g in coset_reps_pc];
-      coset_reps := [pMaximalBasis^(-1)*ChangeRing(g, BaseRing(Q))*pMaximalBasis
-			: g in coset_reps_conj];
+      
       // Append(~g_reps, coset_reps);
-      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) : g in coset_reps];
+      if IsTrivial(M`W) then
+        w := #orb;
+      else
+	coset_reps_pc := Transversal(G_pc, stab);
+        coset_reps_conj := [g@@red : g in coset_reps_pc];
+        coset_reps := [pMaximalBasis^(-1)*ChangeRing(g, BaseRing(Q))*pMaximalBasis
+			: g in coset_reps_conj];
+        w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g)))
+		   : g in coset_reps];
+      end if;
       // Skip to the neighbor associated to this orbit.
       SkipToNeighbor(~nProc, y, skew0);
       // Changing the skew matrix, but not the isotropic

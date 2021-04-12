@@ -717,7 +717,7 @@ end intrinsic;
 intrinsic NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of p^k-neighbor lattices. }
-	return NumberOfNeighbors(M, ideal< Integers() | p >, k);
+  return NumberOfNeighbors(M, Integers(BaseRing(M))!!p, k);
 end intrinsic;
 
 intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngInt, k::RngIntElt)

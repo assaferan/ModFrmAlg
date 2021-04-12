@@ -334,3 +334,8 @@ intrinsic '@'(x::RngOrdElt, alpha::FldAut) -> RngOrdElt
     "element must be in the field the automorphism is acting on.";
   return Parent(x)!(alpha(L!x));
 end intrinsic;
+
+intrinsic ChangeRing(alpha::FldAut, R::Rng) -> FldAut
+{.}
+  return FieldAutomorphism(R, alpha`elt);
+end intrinsic;

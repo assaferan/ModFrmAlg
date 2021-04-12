@@ -76,10 +76,10 @@ end for;
 
 print "Testing examples from John and Matt's paper...";
 print "Testing low memory version...";
-M, timing := AlgebraicModularFormsTests(: NumPrimes := 5, LowMemory);
+M, timing := AlgebraicModularFormsTests(: NumPrimes := 3, LowMemory);
 print "memory used: ", GetMemoryUsage();
 print "Testing standard version...";
-M2, timing2 := AlgebraicModularFormsTests(: NumPrimes := 5);
+M2, timing2 := AlgebraicModularFormsTests(: NumPrimes := 3);
 print "memory used: ", GetMemoryUsage();
 ratios := [[[timing[i][j][k]/timing2[i][j][k] : k in [1..#timing[i][j]]
 		     | timing2[i][j][k] ne 0] : j in [1..#timing[i]]]

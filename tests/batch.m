@@ -16,7 +16,10 @@ freeze;
 // Here we list the intrinsics that this file defines
 
 // imports
+import "../io/path.m" : path;
 import "../lattice_db/nipp_parse.m" : get_nipp_table_idx, get_last_nipp_idx;
+
+import "tests.m" : get_nonlifts;
 
 function analyticConductor(k, j)
 //  return (j+7)*(j+9)*(2*k+j+3)*(2*k+j+5)/16;
@@ -245,7 +248,7 @@ function createLSerBatchFile(tid, idx, k, j)
   fname := Sprintf("batch_files/lser_single_%o_%o_%o_%o.m", tid, idx, k, j);
   f := Open(fname, "w");
   output_str := "AttachSpec(\"ModFrmAlg.spec\");\n";
-  output_str cat:= "import \"tests/tests.m\" : get_lsers;\n";
+  output_str cat:= "import \"tests/batch.m\" : get_lsers;\n";
   output_str cat:= "time0 := Cputime();\n";
   output_str cat:= Sprintf("get_lsers(%o, %o, [%o, %o]);\n", tid, idx, k, j);
   output_str cat:= "printf \"elapsed: %%o\\n\", Cputime()-time0;\n";

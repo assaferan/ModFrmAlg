@@ -70,8 +70,14 @@ intrinsic CombinatorialFreeModule(R::Rng, S::SetIndx : params := [* *]) -> CombF
 
   // Store meta data.
   for entry in params do param_array[entry[1]] := entry[2]; end for;
-  CFM`names := S;
-  U := Universe(CFM`names);
+  //CFM`names := S;
+  U := Universe(S);
+  // If these are polynomials, this is algebraic and we want the fields
+  // to match
+  if Type(U) eq RngMPol then
+    U := ChangeRing(U, R);
+  end if;
+  CFM`names := {@ U | s : s in S @};
   if IsDefined(param_array, "NAMES") then
       AssignNames(~U, param_array["NAMES"]);
   end if;
@@ -151,7 +157,7 @@ end intrinsic;
 intrinsic ChangeRing(CFM::CombFreeMod, R::Rng) -> CombFreeMod
 {return the CFM with base ring changed to R.}
   params := [* *];
-  if Type(Universe(CFM`names)) eq RngMPol then
+  if (not IsEmpty(CFM`names)) and (Type(Universe(CFM`names)) eq RngMPol) then
       Append(~params, <"NAMES", Names(Universe(CFM`names))>);
   end if;
   return CombinatorialFreeModule(R, CFM`names : params := params);
@@ -189,6 +195,18 @@ end intrinsic;
 
 intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
 			  v::ModTupFldElt[FldNum[FldRat]]) -> CombFreeModElt
+{Construct an element of CFM whose underlying vector is v.}
+  elt := New(CombFreeModElt);
+  elt`vec := v;
+  elt`parent := CFM;
+  dim := Dimension(CFM`M);
+  elt`name := createElementString(Eltseq(v), CFM`names);
+
+  return elt;
+end intrinsic;
+
+intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
+			  v::ModTupFldElt[FldRat]) -> CombFreeModElt
 {Construct an element of CFM whose underlying vector is v.}
   elt := New(CombFreeModElt);
   elt`vec := v;
@@ -251,7 +269,10 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
       U2 := Universe(M2`names);
       if Type(BaseRing(U1)) eq FldRat then
         is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
-        if is_isom then psi := hom<Rationals() -> Rationals()|>; end if;
+        if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)|>; end if;
+      elif Type(BaseRing(U2)) eq FldRat then
+	is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
+        if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)| 1 >; end if;
       else
 	is_isom, psi := IsIsomorphic(BaseRing(U1), BaseRing(U2));
       end if;
@@ -296,7 +317,7 @@ intrinsic Print(CFM::CombFreeMod, level::MonStgElt)
 {.}
     if (level eq "Magma") then
 	params := [* *];
-	if Type(Universe(CFM`names)) eq RngMPol then
+    if (not IsEmpty(CFM`names)) and (Type(Universe(CFM`names)) eq RngMPol) then
 	  S := CFM`names;
 	  R_X := Universe(S);
 	  prefix_str := Sprintf("{@ %m |\n", R_X);

@@ -103,7 +103,7 @@ import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 //                                                               //
 ///////////////////////////////////////////////////////////////////
 
-declare type GrpRed[GrpRedElt];
+declare type GrpRed[GrpRedElt] : Grp;
 declare attributes GrpRed:
 	// the connected component - GrpLie
 	G0,
@@ -546,6 +546,12 @@ intrinsic IsCoercible(G::GrpRed, g::.) -> Bool, GrpRedElt
   else
     return false, "element does not lie in group";
   end if;
+end intrinsic;
+
+intrinsic ChangeRing(G::GrpRed, R::Rng) -> GrpRed
+{.}
+  return ReductiveGroup(ChangeRing(G`G0, R), G`Comp :
+			InnerForms := [ChangeRing(Q, R) : Q in InnerForms(G)]);
 end intrinsic;
 
 intrinsic Print(g::GrpRedElt, level::MonStgElt)

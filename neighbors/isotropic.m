@@ -75,6 +75,9 @@ declare attributes IsoParam:
 	//  subspaces.
 	IsotropicParam;
 
+// imports
+
+import "../utils/helper.m" : printEstimate;
 
 import "neighbor-CN1.m" : BuildNeighborProc;
 
@@ -582,7 +585,8 @@ intrinsic NextIsotropicSubspace(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	return space;
 end intrinsic;
 
-intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
+intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt
+				: Estimate := true) -> SeqEnum
 { Returns an array consisting of all isotropic subspaces of dimension k. }
 	// TODO: Relax this condition to allow for higher dimensional spaces.
 	// require k eq 1: "Must be one dimensional subspaces currently.";
@@ -593,22 +597,32 @@ intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt) -> SeqEnum
 	// The list of isotropic subspaces.
 	list := [];
 
+        vprintf AlgebraicModularForms, 1 :
+	  "Computing orbits on isotropic subspaces. Building list of spaces.\n";
+
+        total := NumberOfIsotropicSubspaces(V,k);
+        count := 0;
+        elapsed := 0;
+        start := Realtime();
+
 	while space ne [] do
 	    // Retrieve the isotropic subspace in the original coordinates.
 	    vecs := [Vector(Matrix(x) * Transpose(V`Basis)) : x in space];
 	    
-	    // Normalize the isotropic vector.
-	    // pos := 0;
-	    // repeat pos +:= 1;
-	    // until vec[pos] ne 0;
-
 	    // Add to list.
-	    //Append(~list, vec / vec[pos]);
 	    Append(~list, sub< V | vecs >);
 
 	    // Next subspace.
 	    space := NextIsotropicSubspace(V, k);
+            if Estimate then
+              printEstimate(start, ~count, ~elapsed, total,
+			    "AllIsotropicSubspaces" :
+			    printSkip := 10^6, printOffset := 5*10^5);
+            end if;
 	end while;
+
+        // Maybe we don't want this assertion - it is just for testing the formula
+        assert #list eq total;
 
 	return list;
 end intrinsic;
@@ -616,24 +630,7 @@ end intrinsic;
 intrinsic NumberOfIsotropicSubspaces(V::ModTupFld[FldFin],
 				     k::RngIntElt) -> RngIntElt
 { Counts all isotropic subspaces of dimension k. }
-/*
-	// The first isotropic subspace.
-	space := FirstIsotropicSubspace(V, k);
 
-	// The isotropic subspace counter.
-	count := 0;
-
-	while space ne [] do
-	    // Increment counter.
-	    count +:= 1;
-	    
-	    // Move on to the next subspace.
-	    space := NextIsotropicSubspace(V, k);
-	end while;
-
-	// Return the count.
-	return count;
-*/
         F := BaseRing(V);
         q := #F;
         n := Dimension(V);
@@ -650,52 +647,21 @@ intrinsic NumberOfIsotropicSubspaces(V::ModTupFld[FldFin],
 	  count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1))
 			 : i in [0..k-1] ] div
 			 &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
-          count *:= q^f;
-	else
+          count *:= q^(k*f);
+        elif IsQuadraticSpace(V) then
 	  // in this case V is orthogonal
 	     
 	  // Compute the number of isotropic subspaces.
 	  // This is from Murphy's thesis (also accounting for the radical)
 	  
-	  count := q^f * &*[q^(r-i+1)-1 : i in [1..k]] *
+	  count := q^(k*f) * &*[q^(r-i+1)-1 : i in [1..k]] *
 		         &*[q^(r+a-i)+1 : i in [1..k]] /
 			 &*[ q^i-1 : i in [1..k] ];
-/*
-	    if n mod 2 eq 1 then
- 	        
-//		count := &*[ q^(2*(m-i+1))-1 : i in [1..k] ] /
-                count := q^f * &*[q^(r-i+1)-1 : i in [1..k]] *
-		         &*[q^(r+a-i)+1 : i in [1..k]] /
-			 &*[ q^i-1 : i in [1..k] ];
-	    // This should be according to the Witt Index - check that it coincides
-	    elif IsSquare(F!-1) then
-		if m eq k then
-		    if k eq 1 then
-			count := 2 * (q-1);
-		    else
-			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] /
-				 &*[ q^i-1 : i in [1..k-1] ];
-		    end if;
-		else
-		    count := (q^m-1) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
-			     (q^(m-k)-1) / &*[ q^i-1 : i in [1..k] ];
-		end if;
-	    else
-		e := IsEven(m+1) select 1 else -1;
-		if m eq k then
-		    // to handle the empty product
-		    if k eq 1 then
-			count := 0;
-		    else
-			count := 2 * &*[ q^(2*(k-i))-1 : i in [1..k-1] ] *
-				 (q^k+e) / (q^k-1) / &*[ q^i-1 : i in [1..k-1] ];
-		    end if;
-		else
-		    count := (q^m+e) * &*[ q^(2*(m-i))-1 : i in [1..k] ] /
-			     (q^(m-k)+e) / &*[ q^i-1 : i in [1..k] ];
-		end if;
-	    end if;
-*/
+        else
+	  // This is a trivial reflexive space
+	  // return number of all k-dimensional subspaces
+	  count :=  &*[ q^(n-i+1)-1 : i in [1..k] ] / 
+	            &*[ q^i-1 : i in [1..k] ];
 	end if;
 
 	// Verify that this count is an integer.

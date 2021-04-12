@@ -18,24 +18,33 @@ freeze;
 // IsotropicOrbits(V::ModTupFld, G::GrpMat, k::RngIntElt) -> SeqEnum
 
 //imports
-// import "../representation/representation.m" : projLocalization;
+import "../utils/helper.m" : printEstimate;
 
 declare attributes ModTupFld: parent, rank, isom;
 
 intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
-						   k::RngIntElt) -> SeqEnum
+			  k::RngIntElt : Estimate := true) -> SeqEnum
 { Computes orbits of isotropic lines. }
 	// Verify that the base rings agree.
 	require BaseRing(V) eq BaseRing(G): "Base fields must agree.";
 
 	// Retrieve all isotropic subspaces and store them in memory.
-	list := AllIsotropicSubspaces(V, k);
+        list := AllIsotropicSubspaces(V, k : Estimate := Estimate);
 
+        total := #list;
+        count := 0;
+        elapsed := 0;
+        start := Realtime();
 	// Set up the appropriate data structure so we can apply union-find.
 	for i in [1..#list] do
-		list[i]`rank := 0;
-		list[i]`parent := list[i];
-		list[i]`isom := G!1;
+	   list[i]`rank := 0;
+	   list[i]`parent := list[i];
+	   list[i]`isom := G!1;
+           if Estimate then
+              printEstimate(start, ~count, ~elapsed, total,
+			    "union-find initialization" :
+			    printSkip := 10^6, printOffset := 5*10^5);
+            end if;
 	end for;
 
 	// Retrieve the generators of the automorphism group.
@@ -76,25 +85,45 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	    end if;
 	end procedure;
 
+        count := 0;
+        elapsed := 0;
+        start := Realtime();
         rev_lookup := AssociativeArray();
         for i in [1..#list] do
 	  rev_lookup[list[i]] := i;
+          if Estimate then
+              printEstimate(start, ~count, ~elapsed, total,
+			    "building reverse lookup" :
+			    printSkip := 10^6, printOffset := 5*10^5);
+          end if;
         end for;
+
+        count := 0;
+        elapsed := 0;
+        start := Realtime();
 	// Apply the generators of the automorphism group to each subspace.
 	for x in list do
-	    for g in gs do
+	  for g in gs do
 		gens := [ b * g : b in Basis(x)];
 		// S := sub< V | x.1 * g >;
 		S := sub< V | gens >;
 // idx := Index(list, S);
                 idx := rev_lookup[S];
 		union(x, list[idx], g);
-	    end for;
+	  end for;
+          if Estimate then
+              printEstimate(start, ~count, ~elapsed, total,
+			    "performing unions" :
+			    printSkip := 10^6, printOffset := 5*10^5);
+          end if;
 	end for;
 
 	// Generate an empty associative array.
 	O := AssociativeArray();
 
+        count := 0;
+        elapsed := 0;
+        start := Realtime();
 	// Populate the associative array, keeping track of how many orbits are
 	//  in each partition.
 	for x in list do
@@ -105,6 +134,11 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 		//O[x`parent] +:= 1;
 		O[x`parent] := O[x`parent] cat [x`isom];
 	    end if;
+            if Estimate then
+              printEstimate(start, ~count, ~elapsed, total,
+			    "constructing orbits" :
+			    printSkip := 10^6, printOffset := 5*10^5);
+            end if;
 	end for;
 
 	// Prepare the data to be returned to the user.
@@ -117,6 +151,9 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 //			< sub< V | x.1 * Transpose(V`Basis^-1) >, O[x] >);
 		   < sub< V | gens >, O[x] >);
 	end for;
+
+        vprintf AlgebraicModularForms, 2 :
+	  "The orbit lengths are: %o.\n", Sort([#a[2] : a in array]);
 
         delete keys;
         delete O;

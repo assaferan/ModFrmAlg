@@ -206,18 +206,30 @@ end intrinsic;
 // print
 
 intrinsic Print(lat::ModDedLat, level::MonStgElt) {}
+   if level eq "Magma" then
+     pb := PseudoBasis(lat);
+     idls := [x[1] : x in pb];
+     basis := Matrix([x[2] : x in pb]);
+     V := ReflexiveSpace(lat);
+     printf "LatticeWithBasis(%m, %m, %m)", V, basis, idls;
+     return;
+   end if;
+
    if (SpaceType(ReflexiveSpace(lat)) eq "Hermitian") then
      factor := 1;
+     disc := "discriminant";
+     half := false;
    else
      factor := 2;
+     if IsEven(Rank(lat)) then
+       disc := "discriminant";
+       half := false;
+     else
+       disc := "half-discriminant";
+       half := true;
+     end if;
    end if;
-   if IsEven(Rank(lat)) then
-      disc := "discriminant";
-      half := false;
-   else
-      disc := "half-discriminant";
-      half := true;
-   end if;
+   
    printf "lattice whose %o has norm %o", disc,
      Norm(Discriminant(lat : GramFactor := factor, Half := half));
    if level eq "Maximal" then
@@ -286,7 +298,10 @@ intrinsic LatticeWithBasis(rfxSpace::RfxSpace, basis::Mtrx) -> ModDedLat
 matrix provided. }
   // Make sure that the base ring of the reflexive space and the base
   //  ring of the supplied basis agree.
-  require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
+  // require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
+  iso, phi := IsIsomorphic(BaseRing(rfxSpace), BaseRing(basis));
+  require iso : "The base rings do not match.";
+  basis := ChangeRing(basis, BaseRing(rfxSpace));
 
   // Initialize the internal lattice structure.
   lat := New(ModDedLat);
@@ -351,6 +366,9 @@ coefficient ideals. }
   lat`F := BaseRing(rfxSpace);
   lat`R := Integers(lat`F);
 
+  basis := ChangeRing(basis, lat`F);
+  idls := [lat`F!!I : I in idls];
+
   // Build the lattice.
   lat`Module := Module(PseudoMatrix(idls, basis));
 
@@ -364,6 +382,17 @@ coefficient ideals. }
   lat`Jordan := AssociativeArray();
 
   return lat;
+end intrinsic;
+
+intrinsic ChangeRing(lat::ModDedLat, R::Rng) -> ModDedLat
+{.}
+   pb := PseudoBasis(lat);
+   // Is there a bettter way to handle this? 
+   F := FieldOfFractions(Integers(R));
+   idls := [F!!x[1] : x in pb];
+   basis := ChangeRing(Matrix([x[2] : x in pb]), R);
+   V := ChangeRing(ReflexiveSpace(lat), R);
+   return LatticeWithBasis(V, basis, idls);
 end intrinsic;
 
 intrinsic LatticeWithPseudobasis(rfxSpace::RfxSpace, pmat::PMat) -> ModDedLat

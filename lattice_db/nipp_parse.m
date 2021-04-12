@@ -124,11 +124,17 @@ end intrinsic;
 intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
 {Extract the records of a certain discrminant from a file in the Nipp database of quinary lattices.}
   r := Read(fname);
+  num_str := Sprintf("%o", d);
+  blank := &cat[" " : i in [1..5-#num_str]];
+  find_str := "D=" cat blank cat num_str;
+/*
   start := Index(r, Sprintf("D=  %o;",d));
   if start eq 0 then
     start := Index(r, Sprintf("D=   %o;",d));
   end if;
-  require start ne 0 : "No entry with discriminant %o found", d;
+*/
+  start := Index(r, find_str);
+  require start ne 0 : Sprintf("No entry with discriminant %o found", d);
     
   r := r[start..#r];
   r_entries := Split(r,";\n");

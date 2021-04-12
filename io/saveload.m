@@ -47,6 +47,7 @@ freeze;
 import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 import "path.m" : path;
 import "../neighbors/genus-CN1.m" : sortGenusCN1;
+import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
 
 intrinsic FileExists(filename::MonStgElt : ShowErrors := true) -> BoolElt
 { Checks whether a specified file exists on disk. }
@@ -201,7 +202,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			Append(~all_ps, list);
 		    end for;
 		    eigenvalues := < dims, all_ps, all_evs >;
-		    Append(~eigenforms, < Eltseq(f`vec) , true, eigenvalues >);
+                    Append(~eigenforms, < Eltseq(f`vec) , true, eigenvalues,
+                           f`IsEisenstein>);
 		else
 		    Append(~eigenforms, < Eltseq(f`vec) , false>);
 		end if;
@@ -242,6 +244,8 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	data := [*
 		< "GROUP", /* group_data */ M`G >,
 		< "WEIGHT", M`W >,
+		< "LEVEL", M`L >,
+		< "FIXED_SUBSPACES", M`H >,
 		< "POLY", f >,
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
@@ -305,24 +309,19 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// Build the number field we're working over.
 	K := SplittingField(G);
 	W := array["WEIGHT"];
-	
+        if IsDefined(array, "LEVEL") then 
+           L := array["LEVEL"];
+        end if;
+
+        if IsDefined(array, "FIXED_SUBSPACES") then
+          H := array["FIXED_SUBSPACES"];
+        end if;
+
+        // Do we really need that?
 	if Degree(K) eq 1 then
 	    K := RationalsAsNumberField();
-	    // !!! TODO : Change also the inner forms
-	    G`G0 := ChangeRing(G`G0, K);
-            // TODO : take out everything to a function
-            // that changes the base ring of W
-	    W`G := GL(Degree(W`G),K);
-            if assigned W`standard or assigned W`hw_vdw then
-	      R_names := ChangeRing(Universe(Names(W`M)), K);
-              W`M := CombinatorialFreeModule(K,
-		     {@R_names!nm : nm in W`M`names@});
-            end if;
-            action := eval W`action_desc;
-            W`action := map< CartesianProduct(W`G, [1..Dimension(W`M)]) -> W`M |
-		 x :-> action(x[1], x[2], W)>;
-            W`known_grps := [sub<W`G|1>];
-            W`act_mats[W`G!1] := IdentityMatrix(BaseRing(W`M), Dimension(W`M));
+            G := ChangeRing(G, K);
+            W := ChangeRing(W, K);
 	end if;
 
 	if Type(BaseRing(W)) eq FldRat then
@@ -330,11 +329,28 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	    W := ChangeRing(W,QQ);
 	end if;
 
+        if IsDefined(array, "FIXED_SUBSPACES") then 
+	  for i in [1..#H] do
+	    H[i] := ChangeRing(H[i], BaseRing(W));
+            iota := H[i]`embedding;
+            // We have to make sure these embed into W
+            basis_images := [W!iota(H[i].j) : j in [1..Ngens(H[i])]];
+            H[i]`embedding := Homomorphism(H[i], W, basis_images);
+          end for;
+        end if;
+
 	// Assign the inner form.
 	innerForm := ChangeRing(array["INNER"], K);
-	
-	M := AlgebraicModularForms(G, W);
 
+        if IsDefined(array, "LEVEL") then
+	   L := ChangeRing(L, K);
+           M := AlgebraicModularForms(G, W, L);
+        else
+           M := AlgebraicModularForms(G, W);
+        end if;
+        if IsDefined(array, "FIXED_SUBSPACES") then
+          M`H := H;
+        end if;
 	// Assign genus representatives.
 	if IsDefined(array, "GENUS") and #array["GENUS"] ne 0 then
 	    // Retrive the list of genus representatives.
@@ -476,6 +492,25 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 		if #list ne 0 then
 			M`Hecke`Eigenforms := [* *];
 		end if;
+                // This is for backwar compatibility,
+                // erase when we don't need it anymore
+                // to see if they are cusp forms
+	        reps := Representatives(Genus(M));
+	        // !!! TODO :
+	        // Replace this by an actual bilinear
+                // form compatible with the group
+	        // Add handling the case when the narrow class group of the field
+	        // is nontrivial.
+                if not assigned M`H then ModFrmAlgInit(M); end if;
+	        wts := &cat[[#AutomorphismGroup(reps[i])
+				: j in [1..Dimension(M`H[i])]]:
+		    i in [1..#reps]];
+     
+	        // instead of dividing by wts[i],
+                // we multiply for the case of positive
+         	// characteristic
+                wt_prod := IsEmpty(wts) select 1 else &*wts;
+	        mult_wts := [wt_prod div wt : wt in wts];
 
 		for data in list do
                         // Construct an element of the modular space.
@@ -491,9 +526,20 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 			    mform`vec := ChangeRing(mform`vec, QQ);
 			end if;
 
-                        // Flag as cuspidal?
-                        mform`IsCuspidal :=
-				&+[ x : x in Eltseq(mform`vec) ] eq 0;
+                        // for backward compatiblity
+                        if #data lt 4 then 
+                          // Flag as cuspidal?
+			  if not IsTrivial(Weight(M)) then
+			    mform`IsCuspidal := true;
+			  else
+			    mform`IsCuspidal := &+[ Eltseq(mform`vec)[i]
+							  * mult_wts[i]
+						      : i in [1..#wts]] eq 0;
+                          end if;
+                        else
+			  assert #data eq 4;
+                          mform`IsCuspidal := data[4];
+                        end if;
 
                         // Cusp forms are not Eistenstein.
                         mform`IsEisenstein := not mform`IsCuspidal;

@@ -316,14 +316,15 @@ function possible_diagonals(M, k, n)
 end function;
 
 // Right now only supports n le 6 !!!
-intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
-{Return a positive-definite quadratic form of dimension n and determinant D using Minkowski's description of the space of reduced forms.}
+// intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
+// {Return a positive-definite quadratic form of dimension n and determinant D using Minkowski's description of the space of reduced forms.}
+function QuadraticLattice(n, D)
   // These are Hermite's constants gamma^n for n in [1..8]
   hermite_pow := [1, 4/3, 2, 4, 8, 64/3, 64, 256];
   // here gamma is a lower bound for Hermite's constant
   // i.e. the constant such that gamma*a_{n,n}^n le D
   if n le 8 then
-    gamma := Root(hermite_pow, n);
+    gamma := Root(hermite_pow[n], n);
   else
     // !!! TODO - there are known lower bounds for
     // Hermite's constant for general n, implement them !!!
@@ -352,6 +353,7 @@ intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
   X := GSet(S_n);
   act := Action(X);
   idxs := [<i,j> : i,j in [1..n] | i le j];
+  constraints := [];
   for sigma in S_n do
     for ll in l do
       l_sigma := [ll[act(i,sigma^(-1))] : i in [1..n]];
@@ -359,29 +361,46 @@ intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
       for idx in idxs do
         i := idx[1];
         j := idx[2];
-        c := (i ne j) select 2 else 1;
+// c := (i ne j) select 2 else 1;
+        c := 1;
         vec[Position(idxs, <i,j>)] := c*l_sigma[i]*l_sigma[j];
       end for;
       k := act(1, sigma);
       vec[Position(idxs, <k,k>)] -:= 1;
       Append(~constraints, vec);
     end for;
-    for i in [1..n-1] do
-      vec := [0 : i in [1..n*(n+1) div 2]];
-      vec[Position(idxs, <i+1,i+1>)] := 1;
-      vec[Position(idxs, <i,i>)] := -1;
-      Append(~constraints, vec);
-    end for;
+  end for;
+  for i in [1..n-1] do
+    vec := [0 : i in [1..n*(n+1) div 2]];
+    vec[Position(idxs, <i+1,i+1>)] := 1;
+    vec[Position(idxs, <i,i>)] := -1;
+    Append(~constraints, vec);
   end for;
   // !! TODO - go over possible values of the diagonal and for each
   // create the proper ineqs and bds
-  ineqs := [LatticeVector(v) : v in constraints];
-  bds := [0 : i in [1..#ineqs]];
-  P := PolyhedronWithInequalities(ineqs, bds);
-  for p in Points(P) do
-    Q := SymmetricMatrix(p);
-    if IsPositiveDefinite(Q) and Determinant(Q) eq D then
-      return Q;
-    end if;
-  end for;	
-end intrinsic;
+  ineq_idxs := [idx : idx in idxs | idx[1] ne idx[2]];
+  for diag in diags do
+    ineqs := [];
+    bds := [];
+    for v in constraints do
+      bd := -&+[v[Position(idxs, <i,i>)]*diag[i] : i in [1..n]];
+      ineq := [v[idx] : idx in [1..n*(n+1) div 2] | idxs[idx][1] ne idxs[idx][2]];
+      Append(~ineqs, ineq);
+      Append(~bds, bd);
+    end for;
+    ineqs := [LatticeVector(v) : v in ineqs];
+    P := PolyhedronWithInequalities(ineqs, bds);
+    for p in Points(P) do
+      ordered := [[Eltseq(p)[Position(ineq_idxs, <i,j>)]
+		      : i in [1..j-1]] cat [2*diag[j]] : j in [1..n]];
+      Q := SymmetricMatrix(&cat ordered);
+      exp := IsEven(n) select n else n-1;
+      if IsPositiveDefinite(Q) and 2^exp*Determinant(Q) eq D then
+        return Q;
+      end if;
+    end for;
+  end for;
+  // something went wrong
+  assert false;
+end function;
+// end intrinsic;

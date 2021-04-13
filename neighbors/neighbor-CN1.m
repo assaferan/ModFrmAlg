@@ -673,13 +673,16 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
     else
       // Special treatment of the rationals to speed things up
       if (deg eq 1) then
-	// The spacess we'll perform HNF on; they need to be scaled by 4*p so
+	// The spacess we'll perform HNF on; they need to be scaled by D*p so
 	//  that HNF will be happy. We'll undo this once we perform HNF.
+	// Here D is the common denominator, which is a power of 2
 	p := Norm(nProc`pR);
-        XX := [4*v : v in XX];
-        ZZ := [ 4*p^2 * v : v in ZZ ];
-	UU := [ 4*p * v : v in UU ];
-        BB := [ 4*p^3 * v : v in Basis(ZLattice(L))];
+        denom := GCD([Denominator(v) : v in XX cat ZZ cat UU])[1];
+        denom := GCD(Denominator(Matrix(Basis(ZLattice(L)))), denom);
+        XX := [ denom*v : v in XX];
+        ZZ := [ denom*p^2 * v : v in ZZ ];
+	UU := [ denom*p * v : v in UU ];
+        BB := [ denom*p^3 * v : v in Basis(ZLattice(L))];
         xzub := [ChangeRing(v, Integers()) : v in XX cat ZZ cat UU];
         xzub cat:= [Universe(xzub)!v : v in BB];
 //      H := HermiteForm(ChangeRing(Matrix(XX cat ZZ cat UU cat BB), Integers()));
@@ -687,7 +690,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	H := Rows(H);
 
         // Get new basis for the neighbor lattice.
-        nLatBasis := Matrix([ ChangeRing(H[i], Rationals()) / (4*p)
+        nLatBasis := Matrix([ ChangeRing(H[i], Rationals()) / (denom*p)
 				: i in [1..dim] ]);
 
 	// The new basis for the neighbor lattice with respect to the standard

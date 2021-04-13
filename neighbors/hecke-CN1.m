@@ -231,7 +231,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	       k eq 1 select "" else "^" cat IntegerToString(k),
 	       idx;
     end if;
-	
+    nbr_tm := 0;
     if Orbits then
 	// The affine vector space.
 	V := nProc`L`Vpp[pR]`V;
@@ -259,12 +259,20 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	fp_aut, psi := FPGroup(Aut);
 
 	// The isotropic orbit data.
+        tm := Realtime();
         isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
-	    
+        // The constant per neighbor is really small, so we need more precision
+        tm := ChangePrecision(Realtime() - tm, 10);
+        vprintf AlgebraicModularForms, 1 :
+	  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / fullCount;
+
+        orb_start := Realtime();
 	for orbit in isoOrbits do
 	    skew0 := Zero(MatrixRing(F, k));
 	    // Skip to the neighbor associated to this orbit.
+            tm := Realtime();
 	    SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
+            nbr_tm +:= Realtime() - tm;
 	    // In case it doesn't lift
 	    if IsEmpty(nProc`X) then
 		continue;
@@ -285,6 +293,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	    // Changing the skew matrix, but not the isotropic
 	    // subspace mod p
 	    repeat
+	        tm := Realtime();
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
@@ -294,10 +303,16 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 		//  lattice.
 		GetNextNeighbor(~nProc
 				: BeCareful := BeCareful);
+                nbr_tm +:= Realtime() - tm;
 		if Estimate then
-		    printEstimate(start, ~count, ~elapsed,
+		  if IsTrivial(M`W) then
+		    printEstimate(orb_start, ~count, ~elapsed, #isoOrbits,
+				  Sprintf("T_%o^%o", Norm(pR), k));
+		  else
+		    printEstimate(orb_start, ~count, ~elapsed,
 				  fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
 				  increment := #orbit[2]);
+                  end if;
 		end if;
 	    until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
 	end for;
@@ -316,6 +331,16 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 			      fullCount, Sprintf("T_%o^%o", Norm(pR), k));
 	    end if;
 	end while;
+    end if;
+    nbr_tm := ChangePrecision(nbr_tm, 10);
+    vprintf AlgebraicModularForms, 1 :
+      "time spent on neighbors is %o sec.\n", nbr_tm;
+    if Orbits then
+      vprintf AlgebraicModularForms, 1 :
+       "time spent per orbit is %o sec.\n", nbr_tm / #isoOrbits;
+    else
+      vprintf AlgebraicModularForms, 1 :
+       "time spent per neighbor is %o sec.\n", nbr_tm / fullCount;
     end if;
 end procedure;
 

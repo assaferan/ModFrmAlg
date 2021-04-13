@@ -231,7 +231,8 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	       k eq 1 select "" else "^" cat IntegerToString(k),
 	       idx;
     end if;
-    nbr_tm := 0;
+    RR := RealField(10);
+    nbr_tm := RR!0;
     if Orbits then
 	// The affine vector space.
 	V := nProc`L`Vpp[pR]`V;
@@ -332,7 +333,7 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	    end if;
 	end while;
     end if;
-    nbr_tm := ChangePrecision(nbr_tm, 10);
+   
     vprintf AlgebraicModularForms, 1 :
       "time spent on neighbors is %o sec.\n", nbr_tm;
     if Orbits then

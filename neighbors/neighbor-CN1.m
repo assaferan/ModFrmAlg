@@ -228,10 +228,13 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     function __gram(B : quot := true)
 	// In odd characteristic, things are exactly as we expect
 	alpha_pR2 := Vpp`inv_pR2;
-
-        alpha_B := Parent(B)![[alpha_pR2(B[i,j]) :
+        if IsIdentity(alpha) then
+          alpha_B := B;
+        else
+          alpha_B := Parent(B)![[alpha_pR2(B[i,j]) :
 			       j in [1..Ncols(B)]]
 			      : i in [1..Nrows(B)]];
+        end if;
 
 	if Vpp`ch ne 2 then
 	    return B * Vpp`quotGram * Transpose(alpha_B);

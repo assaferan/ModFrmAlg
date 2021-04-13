@@ -677,7 +677,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	//  that HNF will be happy. We'll undo this once we perform HNF.
 	// Here D is the common denominator, which is a power of 2
 	p := Norm(nProc`pR);
-        denom := GCD([Denominator(v) : v in XX cat ZZ cat UU])[1];
+        denom := Integers()!GCD([Denominator(v) : v in XX cat ZZ cat UU])[1];
         denom := GCD(Denominator(Matrix(Basis(ZLattice(L)))), denom);
         XX := [ denom*v : v in XX];
         ZZ := [ denom*p^2 * v : v in ZZ ];

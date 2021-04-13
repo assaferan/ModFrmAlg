@@ -228,10 +228,13 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     function __gram(B : quot := true)
 	// In odd characteristic, things are exactly as we expect
 	alpha_pR2 := Vpp`inv_pR2;
-
-        alpha_B := Parent(B)![[alpha_pR2(B[i,j]) :
+        if IsIdentity(alpha) then
+          alpha_B := B;
+        else
+          alpha_B := Parent(B)![[alpha_pR2(B[i,j]) :
 			       j in [1..Ncols(B)]]
 			      : i in [1..Nrows(B)]];
+        end if;
 
 	if Vpp`ch ne 2 then
 	    return B * Vpp`quotGram * Transpose(alpha_B);
@@ -539,10 +542,13 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 		qAff`V := BuildReflexiveSpace(mat, alpha_aff);
 		qAff`inv_pR := alpha_aff;
 	    end if;
-	    
-            qAff`inv_pR2 := map< qAff`quot -> qAff`quot |
-			       x :-> qAff`proj_pR2(nProc`inv_R(x@@qAff`proj_pR2))>;
-	    
+
+            if IsIdentity(alpha) then
+              qAff`inv_pR2 := map< qAff`quot -> qAff`quot | x :-> x >;
+            else
+              qAff`inv_pR2 := map< qAff`quot -> qAff`quot |
+			      x :-> qAff`proj_pR2(nProc`inv_R(x@@qAff`proj_pR2))>;
+            end if;
 	    // Add this space to our associative array.
 	    L`Vpp[pR] := qAff;
 	end if;
@@ -668,7 +674,39 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	basis := [ x[2] : x in psb];
 	nLat := LatticeWithBasis(Q, Matrix(basis), idls);
     else
-	
+      // Special treatment of the rationals to speed things up
+      if (deg eq 1) then
+	// The spacess we'll perform HNF on; they need to be scaled by D*p so
+	//  that HNF will be happy. We'll undo this once we perform HNF.
+	// Here D is the common denominator, which is a power of 2
+	p := Norm(nProc`pR);
+        denom := Integers()!LCM([Denominator(v) : v in XX cat ZZ cat UU])[1];
+        denom := LCM(Denominator(Matrix(Basis(ZLattice(L)))), denom);
+        XX := [ denom*v : v in XX];
+        ZZ := [ denom*p^2 * v : v in ZZ ];
+	UU := [ denom*p * v : v in UU ];
+        BB := [ denom*p^3 * v : v in Basis(ZLattice(L))];
+        xzub := [ChangeRing(v, Integers()) : v in XX cat ZZ cat UU];
+        xzub cat:= [Universe(xzub)!v : v in BB];
+//      H := HermiteForm(ChangeRing(Matrix(XX cat ZZ cat UU cat BB), Integers()));
+        H := HermiteForm(Matrix(xzub));
+	H := Rows(H);
+
+        // Get new basis for the neighbor lattice.
+        nLatBasis := Matrix([ ChangeRing(H[i], Rationals()) / (denom*p)
+				: i in [1..dim] ]);
+
+	// The new basis for the neighbor lattice with respect to the standard
+	//  coordinates.
+        newBasis := nLatBasis * Matrix(Basis(ZLattice(L)));
+
+	// The inner form.
+	// innerForm := ChangeRing(InnerProductMatrix(L), Rationals());
+
+	// Rebuild the neighbor lattice in standard coordinates.
+        //nLat := LatticeWithBasis(Q, ChangeRing(newBasis, BaseRing(Q)));
+        nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
+      else
 	//  order to construct the neighbor lattice.
 	idls := [ nProc`pR^-1 : i in [1..#XX] ] cat
 	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
@@ -678,6 +716,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	
 	// Build the neighbor lattice.
 	nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
+      end if;
     end if;
     if BeCareful then
 	// Compute the intersection lattice.

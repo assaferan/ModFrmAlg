@@ -85,6 +85,7 @@ freeze;
 // IsDiagonalizable(G::GrpRed) -> BoolElt
 // IsTorus(G::GrpRed) -> BoolElt
 // IsSolvable(G::GrpRed) -> BoolElt
+// ChangeRing(G::GrpRed, R::Rng) -> GrpRed
 
 // imports
 
@@ -103,7 +104,7 @@ import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 //                                                               //
 ///////////////////////////////////////////////////////////////////
 
-declare type GrpRed[GrpRedElt] : Grp;
+declare type GrpRed[GrpRedElt];
 declare attributes GrpRed:
 	// the connected component - GrpLie
 	G0,

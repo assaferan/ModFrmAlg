@@ -487,8 +487,8 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   end if;
     
   M`H := [FixedSubspace(gamma, M`W) : gamma in gammas];
-  dims := Sort([<Dimension(M`H[idx]), idx> : idx in [1..#M`H]]);
-  perm := [tup[2] : tup in dims];
+  dims := Sort([<Dimension(M`H[idx]), -#gammas[idx], idx> : idx in [1..#M`H]]);
+  perm := [tup[3] : tup in dims];
   perm_inv := [Index(perm,i) : i in [1..#M`H]];
   // now these are in ascending order
   M`H := [M`H[i] : i in perm];

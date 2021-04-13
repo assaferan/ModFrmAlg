@@ -231,7 +231,8 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	       k eq 1 select "" else "^" cat IntegerToString(k),
 	       idx;
     end if;
-	
+    RR := RealField(10);
+    nbr_tm := RR!0;
     if Orbits then
 	// The affine vector space.
 	V := nProc`L`Vpp[pR]`V;
@@ -259,28 +260,41 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 	fp_aut, psi := FPGroup(Aut);
 
 	// The isotropic orbit data.
+        tm := Realtime();
         isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
-	    
+        // The constant per neighbor is really small, so we need more precision
+        tm := ChangePrecision(Realtime() - tm, 10);
+        vprintf AlgebraicModularForms, 1 :
+	  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / fullCount;
+
+        orb_start := Realtime();
 	for orbit in isoOrbits do
 	    skew0 := Zero(MatrixRing(F, k));
 	    // Skip to the neighbor associated to this orbit.
+            tm := Realtime();
 	    SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
+            nbr_tm +:= Realtime() - tm;
 	    // In case it doesn't lift
 	    if IsEmpty(nProc`X) then
 		continue;
 	    end if;
-	    mat_gen_seq := [[gens[Index(gens_modp,
+            if IsTrivial(M`W) then
+	      w := #orbit[2];
+            else
+	      mat_gen_seq := [[gens[Index(gens_modp,
 					Eltseq(Aut.Abs(i)))]^Sign(i) :
 			     i in Eltseq(g@@psi)] :
 			    g in orbit[2]];
-	    mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
-			  &*seq : seq in mat_gen_seq];
+	      mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+			    &*seq : seq in mat_gen_seq];
 
-	    w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
-		    g in mat_lifts];
+	      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+		      g in mat_lifts];
+            end if;
 	    // Changing the skew matrix, but not the isotropic
 	    // subspace mod p
 	    repeat
+	        tm := Realtime();
 		processNeighborWeight(~nProc, invs, ~hecke, idx, M`H:
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
@@ -290,10 +304,16 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 		//  lattice.
 		GetNextNeighbor(~nProc
 				: BeCareful := BeCareful);
+                nbr_tm +:= Realtime() - tm;
 		if Estimate then
-		    printEstimate(start, ~count, ~elapsed,
+		  if IsTrivial(M`W) then
+		    printEstimate(orb_start, ~count, ~elapsed, #isoOrbits,
+				  Sprintf("T_%o^%o", Norm(pR), k));
+		  else
+		    printEstimate(orb_start, ~count, ~elapsed,
 				  fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
 				  increment := #orbit[2]);
+                  end if;
 		end if;
 	    until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
 	end for;
@@ -312,6 +332,16 @@ procedure HeckeOperatorCN1Update(reps, idx, pR, k, M, ~hecke, invs,
 			      fullCount, Sprintf("T_%o^%o", Norm(pR), k));
 	    end if;
 	end while;
+    end if;
+   
+    vprintf AlgebraicModularForms, 1 :
+      "time spent on neighbors is %o sec.\n", nbr_tm;
+    if Orbits then
+      vprintf AlgebraicModularForms, 1 :
+       "time spent per orbit is %o sec.\n", nbr_tm / #isoOrbits;
+    else
+      vprintf AlgebraicModularForms, 1 :
+       "time spent per neighbor is %o sec.\n", nbr_tm / fullCount;
     end if;
 end procedure;
 
@@ -394,15 +424,19 @@ function HeckeOperatorCN1(M, pR, k
 		if IsEmpty(nProc`X) then
 		    continue;
 		end if;
-		mat_gen_seq := [[gens[Index(gens_modp,
+		
+                if IsTrivial(M`W) then
+		  w := #orbit[2];
+                else
+		  mat_gen_seq := [[gens[Index(gens_modp,
 					    Eltseq(Aut.Abs(i)))]^Sign(i) :
 				 i in Eltseq(g@@psi)] :
 				g in orbit[2]];
-		mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+		  mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
 			      &*seq : seq in mat_gen_seq];
-
-		w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+		  w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
 			g in mat_lifts];
+                end if;
 		// Changing the skew matrix, but not the isotropic
 		// subspace mod p
 		repeat
@@ -794,15 +828,19 @@ procedure HeckeOperatorAndGenusCN1(~M, pR, k, ~result
 		if IsEmpty(nProc`X) then
 		    continue;
 		end if;
-		mat_gen_seq := [[gens[Index(gens_modp,
+                if IsTrivial(M`W) then
+		  w := #orbit[2];
+                else
+		  mat_gen_seq := [[gens[Index(gens_modp,
 					    Eltseq(Aut.Abs(i)))]^Sign(i) :
 				 i in Eltseq(g@@psi)] :
 				g in orbit[2]];
-		mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
+		  mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
 			      &*seq : seq in mat_gen_seq];
 
-		w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
-			g in mat_lifts];
+		  w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
+			  g in mat_lifts];
+                end if;
 		// Changing the skew matrix, but not the isotropic
 		// subspace mod p
 		repeat
@@ -930,12 +968,18 @@ procedure HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
     end for;
     if not found then
       Append(~orb_reps, y);
-      coset_reps_pc := Transversal(G_pc, stab);
-      coset_reps_conj := [g@@red : g in coset_reps_pc];
-      coset_reps := [pMaximalBasis^(-1)*ChangeRing(g, BaseRing(Q))*pMaximalBasis
-			: g in coset_reps_conj];
+      
       // Append(~g_reps, coset_reps);
-      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) : g in coset_reps];
+      if IsTrivial(M`W) then
+        w := #orb;
+      else
+	coset_reps_pc := Transversal(G_pc, stab);
+        coset_reps_conj := [g@@red : g in coset_reps_pc];
+        coset_reps := [pMaximalBasis^(-1)*ChangeRing(g, BaseRing(Q))*pMaximalBasis
+			: g in coset_reps_conj];
+        w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g)))
+		   : g in coset_reps];
+      end if;
       // Skip to the neighbor associated to this orbit.
       SkipToNeighbor(~nProc, y, skew0);
       // Changing the skew matrix, but not the isotropic

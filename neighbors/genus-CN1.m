@@ -36,6 +36,7 @@ freeze;
 
 // imports
 
+import "../lattice/lattice.m" : GramMatrixOfBasis;
 import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
 import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor, GetNextNeighbor;
 import "inv-CN1.m" : Invariant;
@@ -169,10 +170,8 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
             end if;
             inner_stop_cond := UseMass select
 	      ((idx gt #ps)  or (acc_mass eq total_mass)) else true;
-//until /* (idx gt #ps)  or (acc_mass eq total_mass) */ true;
        until inner_stop_cond;
        stop_cond := UseMass select acc_mass eq total_mass else true;
-//until /* acc_mass eq total_mass*/ true;
      until stop_cond;
 
 
@@ -207,6 +206,8 @@ function sortGenusCN1(genus)
 
 	return genus;
 end function;
+
+// All the code down below is for computing mass formulas
 
 /* Evaluating Dedekind zeta functions at negative integers exactly */
 
@@ -475,18 +476,6 @@ function UnitaryMass(L, m)
     return mass;
     
 end function;
-
-import "../lattice/lattice.m" : GramMatrixOfBasis;
-
-/*
-function GramMatrixOfBasis(L)
-  P:= PseudoBasis(Module(L));
-  U:= Universe(P);
-  C:= [ U[1] | p[1]: p in P ];
-  B:= [ U[2] | p[2]: p in P ] ;
-  return GramMatrix( L, B ), C, B;
-end function;
-*/
 
 function WittToHasse(Dim, Det, Finite)
   K:= Parent(Det);

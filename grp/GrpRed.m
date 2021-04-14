@@ -230,6 +230,12 @@ intrinsic OrthogonalGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
   return OrthogonalGroup(AmbientReflexiveSpace(innerForm));
 end intrinsic;
 
+intrinsic OrthogonalGroup(innerForm::AlgMatElt[Rng]) -> GrpRed
+{Construct the orthogonal group preserving the specified symmetric form.}
+  return OrthogonalGroup(ChangeRing(innerForm,
+				    FieldOfFractions(BaseRing(innerForm))));
+end intrinsic;
+
 intrinsic OrthogonalGroup(n::RngIntElt, F::Fld) -> GrpRed
 {Construct the split orthogonal group of dimension n over F}
   cartan_type := (n mod 2 eq 1) select "B" else "D";	  

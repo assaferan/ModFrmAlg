@@ -274,7 +274,7 @@ procedure testUnitaryMassFormula()
 end procedure;
 
 procedure testRamaTornaria9()
-    A := SymmetricMatrix([1,1/2,1,0,0,1,0,0,0,2,-1/2,-1/2,0,-1/2,3]);
+    A := SymmetricMatrix([2,1,2,0,0,2,0,0,0,4,-1,-1,0,-1,6]);
     G := OrthogonalGroup(A);
     W := TrivialRepresentation(GL(5,Rationals()), Rationals());
     level := IdentityMatrix(Rationals(),5);

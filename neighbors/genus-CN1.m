@@ -476,6 +476,9 @@ function UnitaryMass(L, m)
     
 end function;
 
+import "../lattice/lattice.m" : GramMatrixOfBasis;
+
+/*
 function GramMatrixOfBasis(L)
   P:= PseudoBasis(Module(L));
   U:= Universe(P);
@@ -483,6 +486,7 @@ function GramMatrixOfBasis(L)
   B:= [ U[2] | p[2]: p in P ] ;
   return GramMatrix( L, B ), C, B;
 end function;
+*/
 
 function WittToHasse(Dim, Det, Finite)
   K:= Parent(Det);
@@ -500,7 +504,8 @@ function LocalFactor(g, p)
   f:= &* [ Rationals() | 1-q^(-i): i in [2..m-2 by 2] ];
   d:= Determinant(g) * (-1)^r;
   if IsEven(Valuation(d, p)) then
-    if IsLocalSquare(d, p) then
+    P := Type(p) eq RngInt select Norm(p) else p;
+    if IsLocalSquare(d, P) then
       f *:= 1-q^(-r);
     else 
       f *:= 1+q^(-r); 

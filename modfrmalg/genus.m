@@ -67,8 +67,11 @@ intrinsic GenusReps(M::ModFrmAlg
 { Computes the genus representatives of the inner form associated to the
 	   space of algebraic modular forms provided. }
 
-        gram := IsOrthogonal(M) select 2 else 1;
-        disc := Discriminant(Level(M) : Half, GramFactor := gram); 
+        disc := Discriminant(Level(M));
+        // Since we only work with integral lattices, there is no harm in that
+        if Type(disc) eq FldRatElt then
+          disc := Integers()!disc;
+        end if;
         fac := Factorization(disc);
         is_sqrfree := &and[fa[2] eq 1 : fa in fac];
         computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force,

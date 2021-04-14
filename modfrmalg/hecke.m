@@ -129,7 +129,25 @@ end intrinsic;
 intrinsic SetHeckeOperator(
 	M::ModFrmAlg, T::AlgMatElt, pR::RngInt, k::RngIntElt)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
-	SetHeckeOperator(M, T, ideal< BaseRing(Module(M)) | Norm(pR) >, k);
+	// If assocative array does not exist for this dimension, create one.
+	if not IsDefined(M`Hecke`Ts, k) then
+		M`Hecke`Ts[k] := AssociativeArray();
+	end if;
+
+	// Assign Hecke matrix.
+        M`Hecke`Ts[k][pR] := T;
+
+	// Assign Hecke images of standard basis vectors
+	if not assigned M`Hecke`standard_images then
+	    M`Hecke`standard_images :=
+		[AssociativeArray() : i in [1..Dimension(M)]];
+	end if;
+	for i in [1..Dimension(M)] do
+	    if not IsDefined(M`Hecke`standard_images[i], k) then
+		M`Hecke`standard_images[i][k] := AssociativeArray();
+	    end if;
+	    M`Hecke`standard_images[i][k][pR] := Transpose(T)[i];
+	end for;
 end intrinsic;
 
 intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt)
@@ -267,19 +285,79 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt
 			  Genus := false) -> AlgMatElt
 { Computes the requested Hecke operator, under the assumption that the base
 number field is the rationals. }
-	// Make sure that the base ring of the number field is the rationals.
-//	require Degree(BaseRing(M)) eq 1: "Base ring must be the rationals.";
+	// Initialize the space of algebraic modular forms, if needed.
+        if not Genus then
+	  ModFrmAlgInit(M : BeCareful := BeCareful,
+			Orbits := Orbits, LowMemory := LowMemory);
+        end if;
 
-        p := Factorization(ideal< BaseRing(Module(M)) | pR >)[1][1];
-	return HeckeOperator(M, p, k
-			     : BeCareful := BeCareful,
-			       Force := Force,
-			       Estimate := Estimate,
-			       UseLLL := UseLLL,
-			       Fast := Fast,
-			       Orbits := Orbits,
-			       LowMemory := LowMemory,
-			       Genus := Genus);
+	// Verify that the supplied ideal is prime.
+	require IsPrime(pR): "Provided ideal must be prime.";
+
+	// If the orders don't agree, check to see if their field of fractions
+	//  are isomorphic. If so, convert the ideal passed as an argument to
+	//  an ideal in terms of the number ring given by the appropriate ring.
+	if Order(pR) ne BaseRing(Module(M)) then
+	    
+	    // Assign fields of fractions.
+	    K1 := FieldOfFractions(Order(pR));
+	    K2 := FieldOfFractions(BaseRing(Module(M)));
+	    
+	    // Check for isomorphism.
+	    isom, map := IsIsomorphic(K1, K2);
+
+	    // If they are isomorphic, reassign the provided prime ideal.
+	    require isom: "Incompatible base rings.";
+
+	    // Assign the new prime ideal.
+	    pR := ideal< BaseRing(Module(M))
+		       | [ map(x) : x in Generators(pR) ] >;
+	end if;
+
+	// Look for the requested Hecke operator.
+	ok, Ts := IsDefined(M`Hecke`Ts, k);
+	if ok and not Force then
+		ok, T := IsDefined(Ts, pR);
+		if ok then return T; end if;
+	end if;
+
+	// Choose the appropriate routine for computing Hecke operators.
+	// Right now, in this version, we do not choose, but use always the same
+	// function.
+
+	// Currently LLL doesn't seem to work for SO
+	if UseLLL and not IsSpecialOrthogonal(M) then
+	    use_LLL := true;
+	else
+	    use_LLL := false;
+	end if;
+
+        if Genus then
+	  hecke := [];
+	  HeckeOperatorAndGenusCN1(~M, pR, k, ~hecke
+				  : BeCareful := BeCareful,
+				    UseLLL := use_LLL,
+				    Estimate := Estimate,
+				    Orbits := Orbits);
+        elif Orbits and LowMemory then
+	  hecke := HeckeOperatorCN1OrbitLowMemory(M, pR, k
+				    : BeCareful := BeCareful,
+				      UseLLL := use_LLL,
+				      Estimate := Estimate);
+	else
+	  hecke := HeckeOperatorCN1(M, pR, k
+				    : BeCareful := BeCareful,
+				      UseLLL := use_LLL,
+				      Estimate := Estimate,
+				      Orbits := Orbits);
+	end if;
+
+	// Sets the Hecke operator in the internal data structure for this
+	//  algebraic modular form.
+	SetHeckeOperator(M, hecke, pR, k);
+
+	// Returns the computed Hecke operator.
+	return hecke;
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
@@ -423,14 +501,15 @@ require computing the full Hecke operator.}
 	       Norm(p)) eq 1 and IsSplit(p)];
   */
    // bad_modulus := Numerator(Norm(Discriminant(Module(M))));
-   ps := [Factorization(Integers(BaseRing(M)) !! p)[1][1] :
-	  //	  p in PrimesUpTo(n, Rationals() : coprime_to := bad_modulus)];
-	  p in PrimesUpTo(n, Rationals())];
+   R := Integers(BaseRing(M));
+   if Type(R) eq RngInt then
+     ps :=  PrimesUpTo(n, Rationals());
+   else
+     ps := [Factorization(R!!p)[1][1] : p in PrimesUpTo(n, Rationals())];
+   end if;
    if SpaceType(AmbientSpace(Module(M))) eq "Hermitian" then
        alpha := Involution(ReflexiveSpace(Module(M)));
-       // F := FixedField(alpha);
-       // ZZ_F := Integers(F);
-       // ps := [p : p in ps | IsSplit(p)];
+       // taking only split primes (do we really need to?). 
        ps := [p : p in ps | alpha(p) ne p];
    end if;
    // generate more images..

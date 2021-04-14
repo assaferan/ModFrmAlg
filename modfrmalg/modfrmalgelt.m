@@ -219,7 +219,10 @@ procedure updatePrecision(f, k, ~Precision)
   else
     // This handles the case of integers  
     if Type(Precision) eq SeqEnum then
-       Precision := [Integers(BaseRing(f`M))!!I : I in Precision];
+       R := Integers(BaseRing(f`M));
+       if Type(R) ne RngInt then
+         Precision := [R!!I : I in Precision];
+       end if;
     end if;
   end if;
 end procedure;
@@ -548,7 +551,7 @@ intrinsic 'eq'(f1::ModFrmAlgElt, f2::ModFrmAlgElt) -> BoolElt
   if f2`vec notin f1_vecs then return false; end if;
   K1 := BaseRing(f1`M);
   K2 := BaseRing(f2`M);
-  isom, psi := IsIsomorphic(K1, K2);
+  isom := IsIsomorphic(K1, K2);
   if not isom then return false; end if;
 
   // This is actually an overkill, the vectors suffice,
@@ -598,7 +601,9 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 		      LowMemory := false) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
-    return LPolynomial(f, BaseRing(Module(f`M))!!p, d
+    R := BaseRing(Module(f`M));
+    pR := ideal<R | p>;
+    return LPolynomial(f, pR, d
 		       : Estimate := Estimate, Orbits := Orbits,
 		       LowMemory := LowMemory);
 end intrinsic;
@@ -625,8 +630,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
   end if;
   K := Universe(evs);
   K_x<x> := PowerSeriesRing(K);
-  D := Integers()!(Norm(Discriminant(Module(f`M) :
-				     GramFactor := 2, Half := IsOdd(n))));
+  D := Integers()!(Norm(Discriminant(Module(f`M))));
   if assigned Weight(f`M)`weight then
      dw := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];
@@ -709,6 +713,113 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
    return L_poly + O(x^(d+1));
 end intrinsic;
 
+// Currently only implemented for good L-factors
+intrinsic LPolynomial(f::ModFrmAlgElt, p::RngInt, d::RngIntElt :
+		      Estimate := true, Orbits := true,
+		      LowMemory := false) -> RngUPolElt
+{Compute the L-polynomial of f at the prime p up to precision x^d.
+    Currently only implemented for good primes. }
+  L := Module(f`M);
+  n := Dimension(ReflexiveSpace(L));
+
+  require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
+
+  n_evs := Minimum(d, n div 2);
+
+  evs, _ := [HeckeEigensystem(f, k : Precision := [p],
+			      Estimate := Estimate,
+			      Orbits := Orbits,
+			      LowMemory := LowMemory)[1] : k in [1..n_evs]];
+  if n_evs lt n div 2 then
+    evs cat:= [0 : i in [n_evs+1..n div 2]];
+  end if;
+  K := Universe(evs);
+  K_x<x> := PowerSeriesRing(K);
+  D := Integers()!(Norm(Discriminant(Module(f`M))));
+  if assigned Weight(f`M)`weight then
+     dw := Weight(f`M)`weight[1];
+     w := Weight(f`M)`weight[2];
+  else
+    // In this case, we don't really know the weight.
+    // We guess it is trivial. Could we infer it from W?
+     w := 0;
+     dw := 1;
+  end if;
+  if not IsDefined(L`Vpp, p) then
+    pR := Factorization(Integers(BaseRing(L))!!p)[1][1]; 
+    nProc := BuildNeighborProc(L, pR, 1);
+  end if;
+  is_split := (L`Vpp[p]`V`AnisoDim lt 2);
+  p := Norm(p);
+  // These explicit Satake polynomials are taken from Murphy's thesis 
+  case n:
+      when 3:
+	  L_poly := p*x^2 - evs[1]*x+1;
+      when 4:
+          if is_split then
+	    L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
+		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
+          else
+       	    L_poly := (p*x-1)*(p*x+1)*(p^2*x^2-evs[1]*p*x+1);
+	  end if;
+      when 5:
+          if D mod p ne 0 then
+	     L_poly := p^(6+4*w)*x^4 - (evs[1]*p^(3+3*w))*x^3 +
+	            ((evs[2] + p^2 + 1)*p^(1+2*w))*x^2 -
+		    evs[1]*p^w*x + 1;
+          else
+	     R := BaseRing(L);
+             pR := Type(R) eq RngInt select ideal<R|p> else R!!p;
+	     eps_p := (-1)^w*WittInvariant(L,pR);
+             nu_p := (dw mod p eq 0) select nu(D,p) else 1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p - nu(D,p)*(evs[1] + 1))*p^w*x+1;
+             L_poly *:= eps_p*p^(1+w)*x+1;
+	  end if;
+      when 6:
+          if is_split then
+	    L_poly := p^12*x^6 - (evs[1]*p^8)*x^5 +
+		      ((1+p+p^2+evs[2])*p^5)*x^4 -
+		      ((2*evs[1]+evs[3])*p^3)*x^3 +
+		      ((1+p+p^2+evs[2])*p)*x^2 - evs[1]*x + 1;
+	  else
+	    L_poly := (p^2*x-1)*(p^2*x+1)*(p^8*x^4 -
+		       p^4*evs[1]*x^3 +
+		       (1-p+p^2+p^3+evs[2])*p*x^2 -
+		       evs[1]*x+1);
+          end if;
+      when 7:
+	  L_poly := p^15*x^6 - (evs[1]*p^10)*x^5 +
+		    ((evs[2]+1+p^2+p^4)*p^6)*x^4 -
+		    (((p^2+1)*evs[1]+evs[3])*p^3)*x^3 +
+		    ((evs[2]+1+p^2+p^4)*p)*x^2 -
+		    evs[1]*x + 1;
+      when 8:
+          if is_split then
+      // This is the L-poly for a split SO_8
+	    L_poly := p^24*x^8 - (evs[1]*p^18)*x^7 +
+		    ((evs[2]+p^4 + 2*p^2 +1)*p^13)*x^6 -
+		    ((evs[3] + evs[1]*(p^2+p+1))*p^9)*x^5 +
+		    ((evs[4]+2*evs[2]+2+2*p^2+2*p^4)*p^6)*x^4-
+		    ((evs[3] + evs[1]*(p^2+p+1))*p^3)*x^3 +
+		    ((evs[2]+p^4 + 2*p^2 +1)*p)*x^2 -
+		    evs[1]*x + 1;
+          else
+      // This is the L-poly for a nonsplit SO_8
+            L_poly := (p^3*x-1)*(p^3*x+1)*(p^18*x^6 -
+		    (evs[1]*p^12)*x^5 +
+	            (evs[2]+p^5+p^4+1)*p^7*x^4 -
+	            (evs[3]+evs[1]*(p^3+p^2-p+1))*p^3*x^3 +
+		    (evs[2]+p^5+p^4+1)*p*x^2 -
+		    evs[1]*x + 1);
+          end if;
+   end case;
+   if d ge 2*(n div 2) then
+      K_x<x> := PolynomialRing(K);
+      return K_x!Eltseq(L_poly);
+   end if;
+   return L_poly + O(x^(d+1));
+end intrinsic;
+
 intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
 					 Estimate := true,
 		                         Orbits := true,
@@ -723,14 +834,24 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
   m := n div 2;
 
   if Type(Precision) eq SeqEnum then
-    Ps := [Factorization(Integers(BaseRing(f`M)) !! p)[1][1] :
+    R := Integers(BaseRing(f`M));
+    if Type(R) eq RngInt then
+      Ps := [ideal<R|p> : p in Precision];
+    else
+      Ps := [Factorization(R !! p)[1][1] :
 			p in Precision];
+    end if;
   elif (Precision eq 0) then
     Ps := [p : p in Keys(f`Eigenvalues[1])
 	   | &and[p in Keys(f`Eigenvalues[j]) : j in [1..m]]];
   else
-    Ps := [Factorization(Integers(BaseRing(f`M)) !! p)[1][1] :
+    R := Integers(BaseRing(f`M));
+    if Type(R) eq RngInt then
+      Ps := PrimesUpTo(Precision, Rationals());
+    else
+      Ps := [Factorization(R !! p)[1][1] :
 			p in PrimesUpTo(Precision, Rationals())];
+    end if;
   end if;
   L_polys := AssociativeArray();
   for P in Ps do
@@ -761,8 +882,7 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0,
     return CC_x![h(c) : c in Eltseq(poly)];
   end function;
   n := Dimension(ReflexiveSpace(Module(f`M)));
-  D := Integers()!(Norm(Discriminant(Module(f`M) : GramFactor := 2,
-				     Half := IsOdd(n))));
+  D := Integers()!(Norm(Discriminant(Module(f`M))));
   if assigned Weight(f`M)`weight then
      d := Weight(f`M)`weight[1];
      w := Weight(f`M)`weight[2];

@@ -679,16 +679,24 @@ end intrinsic;
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngInt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of isotropic subspaces. }
+// Make sure that the dimension is valid.
+	require k ge 1:
+		"Isotropic subspaces must have positive dimension.";
 
-        // Consider the rationals as a number field.
+	// Verify that the ideal is prime.
+	require IsPrime(pR): "Specified ideal must be prime.";
+        L := Module(M);
+	nProc := BuildNeighborProc(L, pR, k);
+        qAff := nProc`L`Vpp[pR];
+	V := qAff`V;
 
-	K := RationalsAsNumberField();
-
-	// The ring of integers as an order.
-	R := Integers(K);
-
-	// Compute via the master intrinsic.
-	return NumberOfIsotropicSubspaces(M, ideal< R | Norm(pR) >, k);
+        if qAff`splitting_type eq "split" then
+  	  q := #qAff`F;
+          n := Dimension(V);
+          return (q^n - 1) div (q-1);
+        else
+          return NumberOfIsotropicSubspaces(V, k);
+        end if;
 end intrinsic;
 
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
@@ -723,13 +731,20 @@ end intrinsic;
 intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngInt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of p^k-neighbor lattices. }
-	// Consider the rationals as a number field.
-	K := RationalsAsNumberField();
+	// Determine the number of isotropic subspaces.
+	n := NumberOfIsotropicSubspaces(M, pR, k);
 
-	// The ring of integers as an order.
-	R := Integers(K);
+	// The size of the residue class field.
+        q := #ResidueClassField(pR);
 
-	return NumberOfNeighbors(M, ideal< R | Norm(pR) >, k);
+	alpha := Involution(ReflexiveSpace(Module(M)));
+	// Compute the number of p^k-neighbors.
+	if IsOrthogonal(M) or (alpha(pR) ne pR) then
+	    // Either orthogonal or split unitary case
+	    return n * q^(Integers()!(k*(k-1)/2));
+	else
+	    return n * q^(k*(k+1) div 2);
+	end if;
 end intrinsic;
 
 intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)

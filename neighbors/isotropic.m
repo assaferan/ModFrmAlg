@@ -49,12 +49,11 @@ freeze;
 // NumberOfIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> RngIntElt
 // AllIsotropicSubspaces(V::ModTupFld, k::RngIntElt) -> SeqEnum
 // NumberOfIsotropicSubspaces(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> RngIntElt
+// NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngInt, k::RngIntElt) -> RngIntElt
 // NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> RngIntElt
 // NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt) -> RngIntElt
 // NumberOfNeighbors(M::ModFrmAlg, pR::RngInt, k::RngIntElt) -> RngIntElt
 // NumberOfNeighbors(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt) -> RngIntElt
-// BuildQuadraticSpace(M::ModMatFldElt) -> ModTupFld
-// BuildQuadraticSpace(M::AlgMatElt) -> ModTupFld
 
 declare type IsoParam;
 declare attributes IsoParam:
@@ -676,50 +675,47 @@ intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)
 	return NumberOfIsotropicSubspaces(M, ideal< Integers() | p >, k);
 end intrinsic;
 
+// This is an internal function, since the intrinsic interface requires
+// two different functions
+function internalNumIsoSubs(M, pR, k)
+  L := Module(M);
+  nProc := BuildNeighborProc(L, pR, k);
+  qAff := nProc`L`Vpp[pR];
+  V := qAff`V;
+
+  if qAff`splitting_type eq "split" then
+    q := #qAff`F;
+    n := Dimension(V);
+    return (q^n - 1) div (q-1);
+  else
+    return NumberOfIsotropicSubspaces(V, k);
+  end if;
+end function;
+
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngInt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of isotropic subspaces. }
-// Make sure that the dimension is valid.
-	require k ge 1:
-		"Isotropic subspaces must have positive dimension.";
+  // Make sure that the dimension is valid.
+  require k ge 1:
+    "Isotropic subspaces must have positive dimension.";
 
-	// Verify that the ideal is prime.
-	require IsPrime(pR): "Specified ideal must be prime.";
-        L := Module(M);
-	nProc := BuildNeighborProc(L, pR, k);
-        qAff := nProc`L`Vpp[pR];
-	V := qAff`V;
+  // Verify that the ideal is prime.
+  require IsPrime(pR): "Specified ideal must be prime.";
 
-        if qAff`splitting_type eq "split" then
-  	  q := #qAff`F;
-          n := Dimension(V);
-          return (q^n - 1) div (q-1);
-        else
-          return NumberOfIsotropicSubspaces(V, k);
-        end if;
+  return internalNumIsoSubs(M, pR, k);
 end intrinsic;
 
 intrinsic NumberOfIsotropicSubspaces(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of isotropic subspaces. }
-	// Make sure that the dimension is valid.
-	require k ge 1:
-		"Isotropic subspaces must have positive dimension.";
+  // Make sure that the dimension is valid.
+  require k ge 1:
+    "Isotropic subspaces must have positive dimension.";
 
-	// Verify that the ideal is prime.
-	require IsPrime(pR): "Specified ideal must be prime.";
-        L := Module(M);
-	nProc := BuildNeighborProc(L, pR, k);
-        qAff := nProc`L`Vpp[pR];
-	V := qAff`V;
+  // Verify that the ideal is prime.
+  require IsPrime(pR): "Specified ideal must be prime.";
 
-        if qAff`splitting_type eq "split" then
-  	  q := #qAff`F;
-          n := Dimension(V);
-          return (q^n - 1) div (q-1);
-        else
-          return NumberOfIsotropicSubspaces(V, k);
-        end if;
+  return internalNumIsoSubs(M, pR, k);
 end intrinsic;
 
 intrinsic NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)
@@ -728,111 +724,33 @@ intrinsic NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)
   return NumberOfNeighbors(M, Integers(BaseRing(M))!!p, k);
 end intrinsic;
 
+// This is an internal function, since the intrinsic interface requires
+// two different functions
+function internalNumNeighbors(M, pR, k)
+  // Determine the number of isotropic subspaces.
+  n := NumberOfIsotropicSubspaces(M, pR, k);
+
+  // The size of the residue class field.
+  q := #ResidueClassField(pR);
+
+  alpha := Involution(ReflexiveSpace(Module(M)));
+  // Compute the number of p^k-neighbors.
+  if IsOrthogonal(M) or (alpha(pR) ne pR) then
+    // Either orthogonal or split unitary case
+    return n * q^(Integers()!(k*(k-1)/2));
+  else
+    return n * q^(k*(k+1) div 2);
+  end if;
+end function;
+
 intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngInt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of p^k-neighbor lattices. }
-	// Determine the number of isotropic subspaces.
-	n := NumberOfIsotropicSubspaces(M, pR, k);
-
-	// The size of the residue class field.
-        q := #ResidueClassField(pR);
-
-	alpha := Involution(ReflexiveSpace(Module(M)));
-	// Compute the number of p^k-neighbors.
-	if IsOrthogonal(M) or (alpha(pR) ne pR) then
-	    // Either orthogonal or split unitary case
-	    return n * q^(Integers()!(k*(k-1)/2));
-	else
-	    return n * q^(k*(k+1) div 2);
-	end if;
+  return internalNumNeighbors(M, pR, k);
 end intrinsic;
 
 intrinsic NumberOfNeighbors(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of p^k-neighbor lattices. }
-	// Determine the number of isotropic subspaces.
-	n := NumberOfIsotropicSubspaces(M, pR, k);
-
-	// The size of the residue class field.
-        q := #ResidueClassField(pR);
-
-	alpha := Involution(ReflexiveSpace(Module(M)));
-	// Compute the number of p^k-neighbors.
-	if IsOrthogonal(M) or (alpha(pR) ne pR) then
-	    // Either orthogonal or split unitary case
-	    return n * q^(Integers()!(k*(k-1)/2));
-	else
-	    return n * q^(k*(k+1) div 2);
-	end if;
-end intrinsic;
-
-// for backward compatibility
-
-intrinsic BuildQuadraticSpace(M::ModMatFldElt : Symbolic := true)
-	-> ModTupFld[FldFin]
-{ Builds the quadratic space associated to the supplied Gram matrix. }
-	M := Matrix(BaseRing(M), Nrows(M), Ncols(M), Eltseq(M));
-	return BuildQuadraticSpace(M : Symbolic := Symbolic);
-end intrinsic;
-
-// Construct the quadratic space that we'll use to compute all isotropic lines.
-intrinsic BuildQuadraticSpace(M::AlgMatElt[FldFin] : Symbolic := true)
-	-> ModTupFld[FldFin]
-{ Builds the quadratic space associated to the supplied Gram matrix. }
-	// The quadratic space.
-	V := QuadraticSpace(M);
-
-	// Make sure we're in dimension 3 or higher.
-	require Dimension(V) ge 2: "Dimension must be 3 or greater.";
-
-	// Assign the Gram matrix.
-	V`GramMatrix := M;
-
-	// Decompose the form into a standard form (H + A + R).
-	V`GramMatrixStd, V`Basis := Decompose(M);
-
-	// Count the rows at the end of the matrix which are exactly zero.
-	idx := Dimension(V);
-	while idx ge 1 and V`GramMatrixStd[idx] eq Zero(V) do
-		idx -:= 1;
-	end while;
-
-	// The dimension of the radical.
-	V`RadDim := Dimension(V) - idx;
-
-	// Determine the dimension of the totally hyperbolic subspace.
-	idx := 1;
-	while idx le Dimension(V)-V`RadDim and V`GramMatrixStd[idx,idx] eq 0 do
-		idx +:= 1;
-	end while;
-
-	// Dimension of the anisotropic subspace.
-	V`AnisoDim := Dimension(V) - V`RadDim - idx + 1;
-
-	// The number of hyperbolic planes in the Witt decomposition.
-	//	V`WittIndex := Integers()!((idx-1)/2);
-	V`WittIndex := (idx - 1) div 2;
-
-	// Assign the multinomial of the quadratic form.
-	if Characteristic(BaseRing(M)) ne 2 then
-		V`Q := QuadraticForm(M / 2);
-		V`QStd := QuadraticForm(V`GramMatrixStd / 2);
-	else
-		V`Q := QF2(M);
-		V`QStd := QF2(V`GramMatrixStd);
-	end if;
-
-	// Assign an ordering to the elements of the finite field.
-	V`S := [ 0 ] cat [ x : x in BaseRing(M) | x ne 0 ];
-
-	// Create an empty parameterization array.
-	V`ParamArray := AssociativeArray();
-
-	// Set symbolic flag.
-	V`Symbolic := Symbolic;
-
-	// Assign the cyclic generator of the group of units of the field.
-	V`PrimitiveElement := PrimitiveElement(BaseRing(M));
-
-	return V;
+  return internalNumNeighbors(M, pR, k);
 end intrinsic;

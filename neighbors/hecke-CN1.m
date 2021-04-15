@@ -67,7 +67,8 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
 				 UseLLL := false,
 				 Weight := 1,
 				 Special := false,
-				 ComputeGenus := false)
+				 ComputeGenus := false,
+				 ThetaPrec := 25)
   // Build the neighbor lattice corresponding to the
   //  current state of nProc.
   nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
@@ -81,7 +82,7 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   end if;
 
   // Compute the invariant of the neighbor lattice.
-  inv := Invariant(nLat);
+  inv := Invariant(nLat : Precision := ThetaPrec);
 
   // Retrieve the array of isometry classes matching this invariant.
   if not IsDefined(invs, inv) then
@@ -178,6 +179,16 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   
 end procedure;
 
+function createInvsWithPrecision(M, ThetaPrec)
+  invs_orig := M`genus`RepresentativesAssoc;
+  _<x> := Universe(Keys(invs_orig));
+  invs := AssociativeArray();
+  for inv in Keys(invs_orig) do
+    invs[inv + O(x^(ThetaPrec+1))] := invs_orig[inv];
+  end for;
+  return invs;
+end function;
+
 // This procedure updates the matrix of the Hecke operator at
 // column idx.
 procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
@@ -187,8 +198,11 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 UseLLL := false,
 				 Estimate := true,
 				 ComputeGenus := false,
-				 LowMemory := false)
+				 LowMemory := false,
+				 ThetaPrec := 25)
     L := reps[idx];
+
+    invs := createInvsWithPrecision(M, ThetaPrec);
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
@@ -268,7 +282,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 					  BeCareful := BeCareful,
 					  UseLLL := UseLLL,
 					  Weight := w,
-			                  Special := IsSpecialOrthogonal(M));
+				          Special := IsSpecialOrthogonal(M),
+				          ThetaPrec := ThetaPrec);
                 // Update nProc in preparation for the next neighbor
                 //  lattice.
 	        GetNextNeighbor(~nProc : BeCareful := BeCareful);
@@ -329,7 +344,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
 				      Weight := w,
-				      Special := IsSpecialOrthogonal(M));
+				      Special := IsSpecialOrthogonal(M),
+				      ThetaPrec := ThetaPrec);
 		// Update nProc in preparation for the next neighbor
 		//  lattice.
 		GetNextNeighbor(~nProc
@@ -354,7 +370,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				  BeCareful := BeCareful,
 				  UseLLL := UseLLL,
 				  Special := IsSpecialOrthogonal(M),
-				  ComputeGenus := ComputeGenus);
+				  ComputeGenus := ComputeGenus,
+				  ThetaPrec := ThetaPrec);
 	    // Update nProc in preparation for the next neighbor
 	    //  lattice.
 	    GetNextNeighbor(~nProc
@@ -410,12 +427,14 @@ function HeckeOperatorCN1(M, pR, k
 			    UseLLL := false,
 			    Estimate := true,
 			    Orbits := true,
-			    ComputeGenus := false)
+			    ComputeGenus := false,
+			    LowMemory := false,
+			    ThetaPrec := 25)
     if ComputeGenus then
       L := Module(M);
       reps := [L];
       invs := AssociativeArray();
-      invs[Invariant(L)] := [<L, 1>];
+      invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
       gamma_rep := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
       gamma := sub<M`W`G|
 		[Transpose(PullUp(Matrix(g), L, L :
@@ -426,11 +445,12 @@ function HeckeOperatorCN1(M, pR, k
       // The genus representatives.
       reps := Representatives(Genus(M));
 
-      // An associative array indexed by a specified invariant of an isometry
+      //  An associative array indexed by a specified invariant of an isometry
       //  class. This data structure allows us to bypass a number of isometry
       //  tests by filtering out those isometry classes whose invariant
       //  differs from the one specified.
-      invs := M`genus`RepresentativesAssoc;
+      // invs := M`genus`RepresentativesAssoc;
+      invs := createInvsWithPrecision(M, ThetaPrec);
     end if;
 
     hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
@@ -452,7 +472,9 @@ function HeckeOperatorCN1(M, pR, k
 			     Orbits := Orbits,
 			     UseLLL := UseLLL,
 			     Estimate := Estimate,
-			     ComputeGenus := ComputeGenus);
+			     ComputeGenus := ComputeGenus,
+			     LowMemory := LowMemory,
+			     ThetaPrec := ThetaPrec);
       idx +:= 1;
     end while;
 
@@ -473,7 +495,8 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
 				       UseLLL := false,
 				       Estimate := true,
 				       Orbits := true,
-				       LowMemory := false)
+				       LowMemory := false,
+				       ThetaPrec := 25)
 
     assert 1 le idx and idx le #M`H;
     // The genus representatives.
@@ -482,7 +505,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
     hecke := [ [ [* M`W!0 : hh in M`H*] : vec_idx in [1..Dimension(h)]] :
 	       h in M`H];
 
-    invs := M`genus`RepresentativesAssoc;
+    
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
@@ -498,7 +521,8 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
 			     Orbits := Orbits,
 			     UseLLL := UseLLL,
 			     Estimate := Estimate,
-			     LowMemory := LowMemory);
+			     LowMemory := LowMemory,
+			     ThetaPrec := ThetaPrec);
    
     return finalizeHecke(M, hecke, [idx]);
 end function;
@@ -508,7 +532,8 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
 				  UseLLL := false,
 				  Estimate := true,
 				  Orbits := true,
-				  LowMemory := false)
+				  LowMemory := false,
+				  ThetaPrec := ThetaPrec)
     ret := [* KMatrixSpace(BaseRing(M`H[1]),Dimension(M),Dimension(h))!0 :
 	    h in M`H *];
     for tup in s do
@@ -521,159 +546,9 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
 					       UseLLL := UseLLL,
 					       Estimate := Estimate,
 					       Orbits := Orbits,
-					       LowMemory := LowMemory);
+					       LowMemory := LowMemory,
+					       ThetaPrec := ThetaPrec);
 	ret[space_idx] +:= hecke;
     end for;
     return ret;
 end function;
-
-/*
-procedure HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
-					 start, ~count, ~elapsed, fullCount :
-					 BeCareful := false,
-					 UseLLL := true,
-					 Estimate := true)
-  // The current isometry class under consideration.
-  L := reps[idx];
-
-  // Build neighboring procedure for this lattice.
-  nProc := BuildNeighborProc(L, pR, k : BeCareful := BeCareful);
-
-  if GetVerbose("AlgebraicModularForms") ge 1 then
-    printf "Computing %o%o-neighbors for isometry class "
-           cat "representative #%o...\n", pR,
-           k eq 1 select "" else "^" cat IntegerToString(k),
-				   idx;
-  end if;
-  // L := nProc`L;
-  Q := ReflexiveSpace(L);
-  n := Dimension(Q);
-//  pR := nProc`pR;
-  V := L`Vpp[pR]`V;
-  G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
-  gens := [PullUp(Matrix(g), L, L : BeCareful := BeCareful)
-	      : g in Generators(G)];
-  pMaximalBasis := ChangeRing(L`pMaximal[pR][2], BaseRing(Q));
-  conj_gens := [pMaximalBasis * g * pMaximalBasis^(-1) : g in gens];
-  proj := L`Vpp[pR]`proj_pR;
-  R := Domain(proj);
-  F := Codomain(proj);
-  G_conj := sub<GL(n,BaseRing(Q)) | conj_gens>;
-  is_solvable, G_pc, f_pc, red := build_polycyclic_data(G_conj, V, proj);
-  orb_stab := is_solvable select orb_stab_pc else orb_stab_general;
-  orb_reps := [];
-  y := nProc`isoSubspace;
-  skew0 := Zero(MatrixRing(F, k));
-  while y ne [] do
-    gens_y := [ b * Transpose(V`Basis) : b in y ];
-    W_y := sub<V | gens_y>;
-    orb, stab := orb_stab(G_pc, f_pc, W_y);
-    found := false;
-    for x in orb_reps do
-      gens_x := [ b * Transpose(V`Basis) : b in x ];
-      W_x := sub<V | gens_x>;
-      if W_x in orb then
-        found := true;
-        break;
-      end if;
-    end for;
-    if not found then
-      Append(~orb_reps, y);
-      
-      // Append(~g_reps, coset_reps);
-      if IsTrivial(M`W) then
-        w := #orb;
-      else
-	coset_reps_pc := Transversal(G_pc, stab);
-        coset_reps_conj := [g@@red : g in coset_reps_pc];
-        coset_reps := [pMaximalBasis^(-1)*ChangeRing(g, BaseRing(Q))*pMaximalBasis
-			: g in coset_reps_conj];
-        w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g)))
-		   : g in coset_reps];
-      end if;
-      // Skip to the neighbor associated to this orbit.
-      SkipToNeighbor(~nProc, y, skew0);
-      // Changing the skew matrix, but not the isotropic
-      // subspace mod p
-      repeat
-        processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H:
-					  BeCareful := BeCareful,
-					  UseLLL := UseLLL,
-					  Weight := w,
-			                  Special := IsSpecialOrthogonal(M));
-         // Update nProc in preparation for the next neighbor
-         //  lattice.
-	 GetNextNeighbor(~nProc : BeCareful := BeCareful);
-         if Estimate then
-	    printEstimate(start, ~count, ~elapsed,
-			  fullCount, Sprintf("T_%o^%o", Norm(pR), k)
-			  : increment := #orb);
-	 end if;
-      until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
-    else
-      GetNextNeighbor(~nProc : BeCareful := BeCareful);
-    end if;
-    y := nProc`isoSubspace;
-  end while;
-end procedure;
-
-function HeckeOperatorCN1OrbitLowMemory(M, pR, k
-			  : BeCareful := false,
-			    UseLLL := false,
-			    Estimate := true)
-    
-    // The genus representatives.
-    reps := Representatives(Genus(M));
-
-    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
-		 : h in M`H];
-
-    // An associative array indexed by a specified invariant of an isometry
-    //  class. This data structure allows us to bypass a number of isometry
-    //  tests by filtering out those isometry classes whose invariant
-    //  differs from the one specified.
-    invs := M`genus`RepresentativesAssoc;
-
-    Q := ReflexiveSpace(Module(M));
-    n := Dimension(Q);
-
-    fullCount := #M`H * NumberOfNeighbors(M, pR, k);
-    count := 0;
-    elapsed := 0;
-    start := Realtime();
-	
-    for idx in [1..#M`H] do
-        HeckeOrbitLowMemorySingleIndex(reps, idx, pR, k, M, ~hecke, invs,
-				       start, ~count, ~elapsed, fullCount :
-				       Estimate := Estimate,
-				       UseLLL := UseLLL,
-				       BeCareful := BeCareful);
-    end for;
-
-    iota := [h`embedding : h in M`H];
-
-    mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
-		      vec_idx in [1..Dimension(M`H[space_idx])]] :
-           space_idx in [1..#M`H]] : idx in [1..#M`H]];
-
-    vert_blocks := [&cat mat : mat in mats];
-
-    empty_operator := MatrixAlgebra(BaseRing(M),0)![];
-    
-    if IsEmpty(vert_blocks) then return empty_operator; end if;
-    if IsEmpty(vert_blocks[1]) then return empty_operator; end if;
-    
-    vert_mats := [* Matrix(blk) : blk in vert_blocks |
-		  not IsEmpty(blk[1]) *];
-
-    if IsEmpty(vert_mats) then return empty_operator; end if;
-
-    // would have done a one liner, but there are universe issues
-    ret := vert_mats[1];
-    for idx in [2..#vert_mats] do
-	ret := HorizontalJoin(ret, vert_mats[idx]);
-    end for;
-    
-    return ret;
-end function;
-*/

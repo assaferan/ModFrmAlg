@@ -303,7 +303,8 @@ end procedure;
 // The number of lpolynomials checked is prec.
 // The odds that even one of them is reducible by chance are slim
 // But we're doing 2 to make sure.
-function get_nonlifts(fs, disc : prec := 2, Estimate := false, LowMemory := false)
+function get_nonlifts(fs, disc : prec := 2, Estimate := false, Orbits := true,
+		      LowMemory := false, ThetaPrec := 25)
   // This is just for checking irreducibility
   primes := [];
   p := 2;
@@ -316,7 +317,9 @@ function get_nonlifts(fs, disc : prec := 2, Estimate := false, LowMemory := fals
   end for;
   lpolys := [LPolynomials(f : Estimate := Estimate,
 			  Precision := primes,
-			  LowMemory := LowMemory) : f in fs];
+			  Orbits := Orbits,
+			  LowMemory := LowMemory,
+			  ThetaPrec := ThetaPrec) : f in fs];
   nonlift_idxs := [];
   for idx in [1..#lpolys] do
     lpolys_f := lpolys[idx];
@@ -345,15 +348,16 @@ end function;
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}
 procedure get_lpolys(table_idx, nipp_idx, wt : prec := 10, Estimate := false,
-		     LowMemory := false)
+		     Orbits := true,
+		     LowMemory := false, ThetaPrec := 25)
   A, disc, g := QuinaryQuadraticLattices(table_idx, nipp_idx)[1];
   k,j := Explode(wt);
   G := OrthogonalGroup(A);
   W := HighestWeightRepresentation(G,[k+j-3, k-3]); 
   M := AlgebraicModularForms(G, W);
   fs := HeckeEigenforms(M : Estimate := Estimate);
-  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate,
-			     LowMemory := LowMemory);
+  nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate, Orbits := Orbits,
+			       LowMemory := LowMemory, ThetaPrec := ThetaPrec);
   id_str := Sprintf("lpolys_%o_disc_%o_genus_%o_wt_%o_idx_%o.amf",
 		  prec, disc, g, wt, nipp_idx);
   if not IsEmpty(nonlift_idxs) then
@@ -386,7 +390,8 @@ function get_nonlift_dimension(disc, wts)
   return res;
 end function;
 
-procedure testLSeries(disc, wts, prec : LowMemory := false)
+procedure testLSeries(disc, wts, prec : Orbits := true,
+		      LowMemory := false, ThetaPrec := 25)
   A := QuinaryQuadraticLattices(disc)[1][1];
   G := OrthogonalGroup(A);
   for wt in wts do
@@ -396,12 +401,17 @@ procedure testLSeries(disc, wts, prec : LowMemory := false)
         spin := SpinorNormRepresentation(G, d);
         W_spin := TensorProduct(W, spin);
         M := AlgebraicModularForms(G, W_spin);
-        fs := HeckeEigenforms(M : LowMemory := LowMemory);
-        nonlifts := get_nonlifts(fs, disc : LowMemory := LowMemory);
+        fs := HeckeEigenforms(M : Orbits := Orbits,
+			      LowMemory := LowMemory, ThetaPrec := ThetaPrec);
+        nonlifts := get_nonlifts(fs, disc : Orbits := Orbits,
+				 LowMemory := LowMemory,
+			 ThetaPrec := ThetaPrec);
         printf "For wt = %o, d = %o there are %o nonlifts. The dimensions of their Galois orbits are %o.\n", wt, d, #nonlifts, [Degree(BaseRing(fs[idx]`vec)) : idx in nonlifts]; 
         for idx in nonlifts do
 	  f := fs[idx];
-          lser := LSeries(f : Precision := prec, LowMemory := LowMemory);
+          lser := LSeries(f : Precision := prec,
+		Orbits := Orbits, LowMemory := LowMemory,
+		ThetaPrec := ThetaPrec);
           assert CFENew(lser) eq 0;
 	end for;
     end for;

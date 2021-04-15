@@ -340,16 +340,24 @@ end intrinsic;
 
 intrinsic MVM(M::AlgMatElt, v::ModMatFldElt, alpha::FldAut) -> ModTupFldElt
 {.}
+  // This branching is for efficiency reasons
+  if IsIdentity(alpha) then return MVM(M, v); end if;
   return Vector(Transpose(M * Transpose(alpha(v))));
 end intrinsic;
 
 intrinsic MVM(M::AlgMatElt, v::ModTupFldElt, alpha::FldAut) -> ModTupFldElt
 {.}
+  // This branching is for efficiency reasons
+  if IsIdentity(alpha) then return MVM(M, v); end if;
   return Vector(Transpose(M * Transpose(alpha(Matrix(v)))));
 end intrinsic;
 
 intrinsic MVM(M::ModMatFldElt, v::ModTupFldElt, alpha::FldAut) -> ModTupFldElt
 {.}
+  // This branching is for efficiency reasons
+  if IsIdentity(alpha) then
+    return Vector(Transpose(M * Transpose(Matrix(v))));
+  end if;
   return Vector(Transpose(M * Transpose(alpha(Matrix(v)))));
 end intrinsic;
 

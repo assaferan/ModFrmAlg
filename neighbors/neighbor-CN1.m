@@ -175,7 +175,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 
     alpha_pR := Vpp`inv_pR;
 
-    // Extract our target isotropic subspace modulo pR.
+    // Extract our target isotropic subspace modulo pR.   
     X := [ MVM(basis, V.i, alpha_pR) : i in pivots ];
 
     if Vpp`splitting_type eq "split" then
@@ -202,6 +202,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	num_non_paired +:= 1;
 	Append(~paired, remain[num_non_paired]);
     end for;
+ 
     Z := [ MVM(basis, V.i, alpha_pR) : i in Reverse(paired) ];
 
     // Extract the remaining basis vectors.

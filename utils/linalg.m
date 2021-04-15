@@ -249,7 +249,7 @@ end function;
 
 function W_is_irreducible(M,W,a,random_operator_bound :
 			  Estimate := true, Orbits := true,
-			  UseLLL := true, LowMemory := false)
+			  UseLLL := true, LowMemory := false, ThetaPrec := 25)
    /*
    W = subspace of the dual
    a = exponent of factor of the characteristic polynomial.
@@ -269,7 +269,8 @@ function W_is_irreducible(M,W,a,random_operator_bound :
 						Estimate := Estimate,
 						Orbits := Orbits,
 						UseLLL := UseLLL,
-						LowMemory := LowMemory), W) : 
+						LowMemory := LowMemory,
+						ThetaPrec := ThetaPrec), W) : 
                 ell in PrimesUpTo(random_operator_bound, BaseRing(M))];
       f := CharacteristicPolynomial(T);
       if IsVerbose("AlgebraicModularForms") then 
@@ -287,7 +288,8 @@ end function;
 function Decomposition_recurse(M, V, primes, prime_idx, 
                                proof, random_op :
 			       UseLLL := true, Estimate := true,
-			       Orbits := true, LowMemory := false)
+			       Orbits := true, LowMemory := false,
+			       ThetaPrec := 25)
 
    assert Type(M) eq ModFrmAlg;
    assert Type(primes) eq SeqEnum;
@@ -315,7 +317,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 				    random_op : UseLLL := UseLLL,
 						Estimate := Estimate,
 						Orbits := Orbits,
-						LowMemory := LowMemory);
+						 LowMemory := LowMemory,
+						 ThetaPrec := ThetaPrec);
    end if;
 
    pR := fac[1][1];
@@ -326,7 +329,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 
    T := Restrict(HeckeOperator(M, pR : Estimate := Estimate,
 			       Orbits := Orbits, UseLLL := UseLLL,
-			       LowMemory := LowMemory), V);
+			       LowMemory := LowMemory,
+			       ThetaPrec := ThetaPrec), V);
    D := [* *];
 
    
@@ -366,7 +370,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
       if Characteristic(BaseRing(M)) eq 0 and
 	 W_is_irreducible(M,W,a,random_op select Norm(pR) else 0 :
 			  Estimate := Estimate, Orbits := Orbits,
-			  UseLLL := UseLLL, LowMemory := LowMemory) then
+			  UseLLL := UseLLL, LowMemory := LowMemory,
+			  ThetaPrec := ThetaPrec) then
          Append(~D,W);
          is_complete_W := true;
       else
@@ -378,7 +383,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 					    UseLLL := UseLLL,
 					    Orbits := Orbits,
 					    Estimate := Estimate,
-					    LowMemory := LowMemory); 
+					    LowMemory := LowMemory,
+					    ThetaPrec := ThetaPrec); 
               for WW in Sub do 
                   Append(~D, WW);
               end for;
@@ -403,6 +409,7 @@ intrinsic Decomposition(M::ModFrmAlg, bound::RngIntElt :
 			Orbits := true,
 			Estimate := true,
 			LowMemory := false,
+			ThetaPrec := 25,
 			Proof := true,
 		        Force := false) -> SeqEnum, BoolElt
 {Decomposition of M with respect to the Hecke operators T_p with
@@ -453,7 +460,8 @@ p coprime to the level of M and p<= bound. }
 						   UseLLL := use_LLL,
 						   Orbits := Orbits,
 						   Estimate := Estimate,
-						   LowMemory := LowMemory);
+						   LowMemory := LowMemory,
+						   ThetaPrec := ThetaPrec);
        refined_decomp cat:= DD;
        is_complete and:= is_complete_MM;
    end for;
@@ -471,6 +479,7 @@ intrinsic Decomposition(M::ModFrmAlg :
 			Orbits := true,
 			Estimate := true,
 			LowMemory := false,
+			ThetaPrec := 25,
 			Proof := true,
 		        Force := false) -> SeqEnum, BoolElt
 {Decomposition of M with respect to the Hecke operators T_p with
@@ -482,6 +491,7 @@ p coprime to the level of M and p<= bound. }
 				     Orbits := Orbits,
 				     Estimate := Estimate,
 				     LowMemory := LowMemory,
+				     ThetaPrec := ThetaPrec,
 				     Proof := Proof,
 				     Force := Force);
      bound *:= 2;

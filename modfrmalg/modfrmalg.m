@@ -150,13 +150,13 @@ declare attributes ModFrmAlg:
 intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep,
 				level::AlgMatElt[Fld] :
-				GramFactor := 1) -> ModFrmAlg
+				GramFactor := 2) -> ModFrmAlg
 {Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
-    If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
-    If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
+    If GramFactor is 1, we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
+    If it is 2 (by default), we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
   K := SplittingField(G);
-  V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
+  V := AmbientReflexiveSpace((2/GramFactor) * InnerForm(InnerForm(G,1)));
   return AlgebraicModularForms(G, weight,
 			       LatticeWithBasis(V, ChangeRing(level, K))
 			       : GramFactor := GramFactor);
@@ -165,10 +165,10 @@ end intrinsic;
 intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep,
 				level::ModDedLat :
-				GramFactor := 1) -> ModFrmAlg
+				GramFactor := 2) -> ModFrmAlg
 {Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
-    If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
-    If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
+    If GramFactor is 1, we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
+    If it is 2 (by default), we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
         require IsCompact(G) : "Group must be compact at infinity.";
         K := SplittingField(G);
@@ -184,7 +184,7 @@ intrinsic AlgebraicModularForms(G::GrpRed,
 
         cartanType := CartanName(G)[1];
 
-        V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
+        V := AmbientReflexiveSpace((2/GramFactor) * InnerForm(InnerForm(G,1)));
 
 	// Build the lattice from the level
 //	L := LatticeWithBasis(V, ChangeRing(level, K));

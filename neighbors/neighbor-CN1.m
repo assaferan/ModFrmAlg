@@ -375,16 +375,16 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     end if;
 
     // Lift Z so that it is isotropic modulo pR*alpha(pR).
-    if IsInvertible(Codomain(alpha_pR2)!2) then
+    if Type(nProc`pR) ne RngInt or IsInvertible(Codomain(alpha_pR2)!2) then
       Z := [ Z[i] -
 	   &+[ alpha_pR2(gram[k+i,2*k+1-j])/
 	       (i+j-1 eq k select 2 else 1) * X[j]
 	       : j in [k+1-i..k] ] : i in [1..k] ];
     else
       Z := [ Z[i] -
-	   &+[ alpha_pR2(gram[k+i,2*k+1-j]) div
-	       (i+j-1 eq k select 2 else 1) * X[j]
-	       : j in [k+1-i..k] ] : i in [1..k] ];
+	      &+[ (alpha_pR2(gram[k+i,2*k+1-j]) div
+		   (i+j-1 eq k select 2 else 1)) * X[j]
+		    : j in [k+1-i..k] ] : i in [1..k] ];
     end if;
 
     // Verify that Z is isotropic modulo pR^2.

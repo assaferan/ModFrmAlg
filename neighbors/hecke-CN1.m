@@ -238,10 +238,12 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	
 	conj_gens := [pMaximalBasis * g * pMaximalBasis^(-1) :
 		      g in gens];
+        G_conj := sub<GL(n,BaseRing(Q)) | conj_gens>;
+
 	if LowMemory then
 	  proj := L`Vpp[pR]`proj_pR;
           R := Domain(proj);
-          G_conj := sub<GL(n,BaseRing(Q)) | conj_gens>;
+// G_conj := sub<GL(n,BaseRing(Q)) | conj_gens>;
           is_solvable, G_pc, f_pc, red := build_polycyclic_data(G_conj, V, proj);
           orb_stab := is_solvable select orb_stab_pc else orb_stab_general;
           orb_reps := [];
@@ -299,15 +301,20 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
             y := nProc`isoSubspace;
           end while;
 	else
-	  gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]
-		      : g in conj_gens];
+	//	  gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]
+	  //		      : g in conj_gens];
 	
-	  Aut := sub<GL(n, F) | gens_modp>;
-	  fp_aut, psi := FPGroup(Aut);
+//	  Aut := sub<GL(n, F) | gens_modp>;
+// fp_aut, psi := FPGroup(Aut);
 
 	  // The isotropic orbit data.
           tm := Realtime();
-          isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
+//          isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
+          proj := map< G_conj -> GL(n,F) |
+	    g :-> [L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]>;
+	  //		      
+          isoOrbits := IsotropicOrbits(V, G_conj, k,
+				       proj : Estimate := Estimate);
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
           vprintf AlgebraicModularForms, 1 :
@@ -326,12 +333,15 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
             if IsTrivial(M`W) then
 	      w := #orbit[2];
             else
+	      /*
 	      mat_gen_seq := [[gens[Index(gens_modp,
 					Eltseq(Aut.Abs(i)))]^Sign(i) :
 			     i in Eltseq(g@@psi)] :
 			    g in orbit[2]];
 	      mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
 			    &*seq : seq in mat_gen_seq];
+	      */
+	      mat_lifts := [pMaximalBasis^(-1)*g*pMaximalBasis : g in orbit[2]];
 
 	      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :
 		      g in mat_lifts];

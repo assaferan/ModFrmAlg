@@ -22,11 +22,14 @@ import "../utils/helper.m" : printEstimate;
 
 declare attributes ModTupFld: parent, rank, isom;
 
-intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
-			  k::RngIntElt : Estimate := true) -> SeqEnum
+// We want to pass the original group (not its reduction) to be able to
+// write the isometries more easily in the hecke operator
+// intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
+intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat,
+			  k::RngIntElt, proj::Map : Estimate := true) -> SeqEnum
 { Computes orbits of isotropic lines. }
 	// Verify that the base rings agree.
-	require BaseRing(V) eq BaseRing(G): "Base fields must agree.";
+//	require BaseRing(V) eq BaseRing(G): "Base fields must agree.";
 
 	// Retrieve all isotropic subspaces and store them in memory.
         list := AllIsotropicSubspaces(V, k : Estimate := Estimate);
@@ -104,7 +107,7 @@ intrinsic IsotropicOrbits(V::ModTupFld[FldFin], G::GrpMat[FldFin],
 	// Apply the generators of the automorphism group to each subspace.
 	for x in list do
 	  for g in gs do
-		gens := [ b * g : b in Basis(x)];
+		gens := [ b * proj(g) : b in Basis(x)];
 		// S := sub< V | x.1 * g >;
 		S := sub< V | gens >;
 // idx := Index(list, S);

@@ -38,6 +38,10 @@ import "../utils/helper.m" : my_facAlgExt;
 forward testExample;
 forward testUnitaryMassFormula;
 forward testRamaTornaria9;
+forward testCMF492aa;
+forward testDiscriminant2;
+forward testRank8Disc45;
+forward testRank4Root3Disc1;
 
 intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 				       UseExisting := false,
@@ -48,6 +52,14 @@ intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 	  SeqEnum[ModFrmAlg], SeqEnum
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting Num_primes.}
 
+  // Testing the classical modular form 49.2.a.a.
+  testCMF492aa();
+  // Testing John's question about discriminant 2
+  testDiscriminant2();
+  // Testing Dan's example of a rank 8 lattice with discriminant 45
+  testRank8Disc45();
+  // Testing Dan's example of a rank 4 lattice over Q(rt3)
+  testRank4Root3Disc1();
   // Testing the unitary mass formula
   testUnitaryMassFormula();
   // Testing Example 9 from Rama Tornaria - non-lift paramodular form.
@@ -527,10 +539,67 @@ procedure testRamaTornariaTable1ANTS()
   assert CFENew(lser) lt 10^(-30);
 end procedure;
 
+procedure testCMF492aa()
+  Q := SymmetricMatrix([6,1,6,1,-1,20]);
+  G := OrthogonalGroup(Q);
+  L := IdentityMatrix(Rationals(),3);
+  M := AlgebraicModularForms(G, HighestWeightRepresentation(G,[0]), L);
+  fs := HeckeEigenforms(M);
+  f := fs[2];
+  evs := HeckeEigensystem(f, 1 : Precision := 100);
+  cfs := [Coefficient(qExpansion(CuspForms(49).1,100),p) : p in PrimesUpTo(100)];
+  assert evs eq cfs;
+end procedure;
 
+procedure testDiscriminant2()
+  T := Matrix([[2,0,0,0,1],[0,2,0,0,1],[0,0,2,1,1],[0,0,1,2,0],[1,1,1,0,2]]);
+  L := LatticeWithGram(T);
+  Lambda := LatticeFromLat(L);
+  assert Discriminant(Lambda) eq FractionalIdeal(2);
+  assert Norm(Discriminant(Lambda)) eq 2;
+end procedure;
 
+procedure testRank8Disc45()
+  mat := [ 2, 1, -1, -1, 1, -1, -1, -1, 1, 2, -1, -1, 1, -1, 0, 0, -1,
+-1, 2, 1, -1, 1, 1, 1, -1, -1, 1, 2, -1, 1, 1, 1, 1, 1, -1, -1, 2, -1,
+-1, -1, -1, -1, 1, 1, -1, 2, 1, 1, -1, 0, 1, 1, -1, 1, 4, 1, -1, 0, 1,
+1, -1, 1, 1, 4 ];
+  Q := Matrix(Rationals(),8,8, mat);
+  G := OrthogonalGroup(Q);
+  W := HighestWeightRepresentation(G, [0]);
+  L := IdentityMatrix(Rationals(),8);
+  M := AlgebraicModularForms(G, W, L);
+  assert Dimension(M) eq 4;
+end procedure;
 
+procedure testRank4Root3Disc1()
+  K<rt3>:=QuadraticField(3);
+  mat:=[2,rt3,rt3,2];
+  Q:=DiagonalJoin(Matrix(K,2,2,mat),Matrix(K,2,2,mat));
+  L:=IdentityMatrix(K,#Rows(Q));
+  G:=OrthogonalGroup(Q);
+  W:=HighestWeightRepresentation(G,[0,0,0,0]);
+  M:=AlgebraicModularForms(G,W,L:GramFactor:=2);
+  E:=HeckeEigenforms(M);
+  pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q));
+  _<x> := Parent(pol);
+  assert pol eq 16*x^4 - 36*x^3 + 28*x^2 - 9*x + 1;
+end procedure;
 
+procedure testRank8Root3Disc1()
+  K<rt3>:=QuadraticField(3);
+  mat:=Matrix(K,2,2,[2,rt3,rt3,2]);
+  Q := DirectSum([mat : i in [1..4]]);
+  L:=IdentityMatrix(K,#Rows(Q));
+  G:=OrthogonalGroup(Q);
+  W:=HighestWeightRepresentation(G,[0,0,0,0]);
+  M:=AlgebraicModularForms(G,W,L:GramFactor:=2);
+  E:=HeckeEigenforms(M);
+  pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q));
+  _<x> := Parent(pol);
+end procedure;
+
+// !! TODO - add tests for SetGenus and SetAutomorphismGroups
 
 
 

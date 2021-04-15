@@ -197,6 +197,146 @@ declare attributes Lat:
 	// An associative array storing quadratic spaces modulo primes
 	Vpp;
 
+declare type RngIntFracIdl;
+declare attributes RngIntFracIdl:
+  gen;
+
+intrinsic FractionalIdeal(a::FldRatElt) -> RngIntFracIdl
+{.}
+  I := New(RngIntFracIdl);
+  I`gen := a;
+  return I;
+end intrinsic;
+
+intrinsic FractionalIdeal(a::RngIntElt) -> RngIntFracIdl
+{.}
+  I := New(RngIntFracIdl);
+  I`gen := a;
+  return I;
+end intrinsic;
+
+intrinsic FractionalIdeal(I::RngInt) -> RngIntFracIdl
+{.}
+  J := New(RngIntFracIdl);
+  J`gen := Norm(I);
+  return J;
+end intrinsic;
+
+intrinsic FractionalIdeal(seq::SeqEnum) -> RngIntFracIdl
+{.}
+  I := New(RngIntFracIdl);
+  nums := [Numerator(x) : x in seq];
+  dens := [Denominator(x) : x in seq];
+  I`gen := GCD(nums) / LCM(dens);
+  return I;
+end intrinsic;
+
+intrinsic '!!'(QQ::FldRat, I::RngOrdFracIdl) -> RngIntFracIdl
+{.}
+  J := New(RngIntFracIdl);
+  J`gen := Norm(I);
+  return J;
+end intrinsic;
+
+intrinsic '!!'(QQ::FldRat, I::RngIntFracIdl) -> RngIntFracIdl
+{.}
+  J := New(RngIntFracIdl);
+  J`gen := Norm(I);
+  return J;
+end intrinsic;
+
+intrinsic '^'(I::RngIntFracIdl, n::RngIntElt) -> RngIntFracIdl
+{.}
+  J := New(RngIntFracIdl);
+  J`gen := I`gen^n;
+  return J;
+end intrinsic;
+
+intrinsic Norm(I::RngIntFracIdl) -> RngIntElt
+{.}
+  return I`gen;
+end intrinsic;
+
+intrinsic '*'(I::RngIntFracIdl, J::RngIntFracIdl) -> RngIntFracIdl
+{.}
+  L := New(RngIntFracIdl);
+  L`gen := I`gen*J`gen;
+  return L;
+end intrinsic;
+
+intrinsic '+'(I::RngIntFracIdl, J::RngIntFracIdl) -> RngIntFracIdl
+{.}
+  return FractionalIdeal([I`gen, J`gen]);
+end intrinsic;
+
+intrinsic '*'(a::FldRatElt, I::RngIntFracIdl) -> RngIntFracIdl
+{.}
+  J := New(RngIntFracIdl);
+  J`gen := a*I`gen;
+  return J;
+end intrinsic;
+
+intrinsic '*'(a::RngIntElt, I::RngIntFracIdl) -> RngIntFracIdl
+{.}
+  J := New(RngIntFracIdl);
+  J`gen := a*I`gen;
+  return J;
+end intrinsic;
+
+intrinsic 'eq'(I::RngIntFracIdl, J::RngIntFracIdl) -> BoolElt
+{.}
+  return (I`gen eq J`gen) or (I`gen eq -J`gen);
+end intrinsic;
+
+intrinsic 'eq'(I::RngIntFracIdl, J::RngInt) -> BoolElt
+{.}
+  return I eq FractionalIdeal(J);
+end intrinsic;
+
+intrinsic IsIntegral(I::RngIntFracIdl) -> BoolElt
+{.}
+  return IsIntegral(I`gen);
+end intrinsic;
+
+intrinsic Factorization(I::RngIntFracIdl) -> SeqEnum[Tup]
+{.}
+  fac_num := Factorization(Numerator(I`gen));
+  fac_denom := Factorization(Denominator(I`gen));
+  fac := Sort(fac_num cat [<x[1], -x[2]> : x in fac_denom]);
+  return [<ideal<Integers() | x[1]>, x[2]> : x in fac];
+end intrinsic;
+
+intrinsic Basis(I::RngIntFracIdl) -> SeqEnum[FldRatElt]
+{.}
+  return [I`gen];
+end intrinsic;
+
+intrinsic Order(I::RngIntFracIdl) -> Rng
+{.}
+  return Integers();
+end intrinsic;
+
+intrinsic Valuation(I::RngIntFracIdl, p::RngInt) -> RngIntElt
+{.}
+  return Valuation(I`gen, p);
+end intrinsic;
+
+intrinsic Generators(I::RngIntFracIdl) -> SeqEnum[FldRatElt]
+{.}
+  return [I`gen];
+end intrinsic;
+
+intrinsic Print(I::RngIntFracIdl, level::MonStgElt)
+{.}
+  if (level eq "Magma") then
+    printf "FractionalIdeal(%o)", I`gen;			  
+  else			
+    printf "Principal Ideal of Integer Ring\n";
+    printf "Generator:\n";
+    printf "%o", I`gen;
+  end if;
+end intrinsic;
+
 // Implementation of lattice routines.
 
 intrinsic Parent(lat::ModDedLat) {}
@@ -327,10 +467,10 @@ matrix provided. }
   return lat;
 end intrinsic;
 
-intrinsic LatticeFromLat(L::Lat : GramFactor := 1) -> ModDedLat
+intrinsic LatticeFromLat(L::Lat : GramFactor := 2) -> ModDedLat
 { Builds a ModDedLat structure from a native Lat structure. }
   // The inner form.
-  innerForm := (1/GramFactor) * InnerProductMatrix(L);
+  innerForm := (2/GramFactor) * InnerProductMatrix(L);
 
   // The ambient reflexive space.
   Q := AmbientReflexiveSpace(innerForm);
@@ -389,6 +529,7 @@ intrinsic ChangeRing(lat::ModDedLat, R::Rng) -> ModDedLat
    pb := PseudoBasis(lat);
    // Is there a bettter way to handle this? 
    F := FieldOfFractions(Integers(R));
+/*
    if Type(BaseRing(lat)) eq RngInt then
      idls := [ideal<Integers(R) | Norm(x[1])> : x in pb];
      if Type(F) ne FldRat then
@@ -397,6 +538,8 @@ intrinsic ChangeRing(lat::ModDedLat, R::Rng) -> ModDedLat
    else
      idls := [F!!x[1] : x in pb];
    end if;
+*/
+   idls := [F!!x[1] : x in pb];
    basis := ChangeRing(Matrix([x[2] : x in pb]), R);
    V := ChangeRing(ReflexiveSpace(lat), R);
    return LatticeWithBasis(V, basis, idls);
@@ -601,7 +744,7 @@ intrinsic Level(lat::ModDedLat) -> RngOrdFracIdl
   // The coefficient ideals of the dual.
   idls := [ pb[1]^-1 : pb in PseudoBasis(Module(lat)) ];
 
-  gram := GramMatrix(lat, Basis(Module(lat)))^(-1);
+  gram := GramMatrix(lat, Basis(Module(lat)) : Half := IsQuadratic(lat))^(-1);
 
   // The dimension.
   dim := Nrows(gram);
@@ -630,7 +773,7 @@ intrinsic Divisor(lat::ModDedLat) -> RngOrdFracIdl
   // This is only implemented for ternary lattices.
   require dim eq 3: "Only implemented for ternary lattices.";
 
-  gram := GramMatrix(lat, Basis(Module(lat)));
+  gram := GramMatrix(lat, Basis(Module(lat)) : Half := IsQuadratic(lat));
 
   // Values of the Gram matrix for easy reference.
   a := gram[1,1] / 2; b := gram[2,2] / 2; c := gram[3,3] / 2;
@@ -654,16 +797,22 @@ intrinsic Trace(p::RngOrdFracIdl, a::FldAut) -> RngOrdFracIdl
   return ideal<Integers(F) | [g + a(g) : g in Generators(p)]>;
 end intrinsic;
 
+intrinsic Trace(p::RngIntFracIdl, a::FldAut) -> RngIntFracIdl
+{Return the ideal generated by [g + a(g) : g in Generators(p)].}
+  F := FixedField(a);
+  return FractionalIdeal([g + a(g) : g in Generators(p)]);
+end intrinsic;
+
 intrinsic Norm(p::RngOrdFracIdl, a::FldAut) -> RngOrdFracIdl
 {Return the ideal generated by [g * a(g) : g in Generators(p)].}
   F := FixedField(a);
   return ideal<Integers(F) | [g * a(g) : g in Generators(p)]>;
 end intrinsic;
 
-intrinsic Norm(p::RngInt, a::FldAut) -> RngOrdFracIdl
+intrinsic Norm(p::RngIntFracIdl, a::FldAut) -> RngIntFracIdl
 {Return the ideal generated by [g * a(g) : g in Generators(p)].}
   F := FixedField(a);
-  return ideal<Integers(F) | [g * a(g) : g in Generators(p)]>;
+  return FractionalIdeal([g * a(g) : g in Generators(p)]);
 end intrinsic;
 
 intrinsic Norm(lat::ModDedLat) -> RngOrdFracIdl
@@ -674,22 +823,22 @@ intrinsic Norm(lat::ModDedLat) -> RngOrdFracIdl
   // The coefficient ideals.
   idls := [ pb[1] : pb in PseudoBasis(Module(lat)) ];
 
-  gram := GramMatrix(lat, Basis(Module(lat)));
+  gram := GramMatrix(lat, Basis(Module(lat)) : Half := IsQuadratic(lat));
 
   // The dimension.
   dim := Nrows(gram);
 
   a := Involution(ReflexiveSpace(lat));
   F := FixedField(a);
-
+/*
   if Type(BaseRing(lat)) eq RngInt then
     return  &+[ ideal<Integers()| gram[i,i]> : i in [1..dim] ] +
-	      &+[ ideal<Integers() | gram[i,j] > : i,j in [1..dim] | i lt j ];
+	      &+[ ideal<Integers() | 2*gram[i,j] > : i,j in [1..dim] | i lt j ];
   end if;
-
+*/
   // Compute the norm ideal for the lattice.
   lat`Norm := &+[ (F!gram[i,i]) * Norm(idls[i], a) : i in [1..dim] ] +
-	      &+[ Trace(idls[i] * a(idls[j]) * gram[i,j], a) : i,j in [1..dim]
+    &+[ Trace(gram[i,j] * idls[i] * a(idls[j]), a) : i,j in [1..dim]
 		  | i lt j ];
   
   // Return the norm.
@@ -759,13 +908,14 @@ intrinsic Scale(lat::ModDedLat) -> RngOrdFracIdl
   dim := Nrows(gram);
 
   a := Involution(ReflexiveSpace(lat));
-
+/*
   if Type(BaseRing(lat)) eq RngInt then
     lat`Scale := &+[ideal<Integers() | gram[i,j]> : i,j in [1..dim]];
   else
+*/
     // Compute the scale of the lattice.
     lat`Scale := &+[gram[i,j] * idls[i] * a(idls[j]) : i,j in [1..dim]];
-  end if;
+//  end if;
 
   // Return the scale.
   return lat`Scale;
@@ -777,7 +927,8 @@ intrinsic ElementaryDivisors(lambda::ModDedLat, pi::ModDedLat) -> SeqEnum
    Pi := Module(pi);
    if Type(L) eq Lat then
      invs := [d^(-1) : d in ElementaryDivisors((Pi + L) / L)];
-     return invs cat ElementaryDivisors((Pi + L) / Pi);
+     elem := invs cat ElementaryDivisors((Pi + L) / Pi);
+     return [FractionalIdeal(x) : x in elem];
    end if;
    return ElementaryDivisors(L, Pi);
 end intrinsic;
@@ -1115,9 +1266,11 @@ intrinsic DualLattice(L::ModDedLat) -> ModDedLat
 //  BB:= [ &+[ GI[i,j] * B[j] : j in [1..#B] ] : i in [1..#B] ];
   BB:= GI * Matrix(B);
   a:= Involution(V);
+/*
   if ExtendedType(C) eq SeqEnum[RngInt] then
     return LatticeWithBasis(V, BB);
   end if;
+*/
   return LatticeWithBasis(V, BB, [a(c)^(-1) : c in C]);
 end intrinsic;
 
@@ -1132,6 +1285,11 @@ intrinsic '*'(a::FldRatElt, L::ModDedLat) -> ModDedLat
 end intrinsic;
 
 intrinsic '*'(a::RngInt, L::Lat) -> Lat
+{.}
+  return Norm(a)*L;
+end intrinsic;
+
+intrinsic '*'(a::RngIntFracIdl, L::Lat) -> Lat
 {.}
   return Norm(a)*L;
 end intrinsic;
@@ -1187,7 +1345,7 @@ function MyDiagonal(L, Ambient)
     return Diagonal(OrthogonalizeGram(InnerProductMatrix(L)));
   else
       F:= IsFull(L) select InnerProductMatrix(L) else
-	  GramMatrix(L, Basis(Module(L)));
+          GramMatrix(L, Basis(Module(L)) : Half := IsQuadratic(L));
       diagonal:= Diagonal(OrthogonalizeGram(F));
   end if;
   return diagonal;
@@ -1536,8 +1694,7 @@ intrinsic IsMaximalIntegral(L::ModDedLat, p::RngInt) -> BoolElt, ModDedLat
   a := Involution(ReflexiveSpace(L));
   // In this case it is not integral
   if IsIdentity(a) then
-      norm := ideal<Order(p)| Norm(L) >;
-      if Valuation(norm, p) lt 0 then return false, _; end if;
+      if Valuation(Norm(L), p) lt 0 then return false, _; end if;
       if GuessMaxDet(L, p) eq Valuation(Discriminant(L), p)
 	  then return true, _;
       end if;
@@ -1659,16 +1816,20 @@ intrinsic BadPrimes(L::ModDedLat) -> []
 {The list of prime ideals at which L is not unimodular or which are even}
   disc := Discriminant(L);
   scale := Scale(L);
+/*
   if Type(disc) eq FldRatElt then
     disc := Integers()!disc;
   end if;
   if Type(scale) eq FldRatElt then 
     scale := Integers()!scale;  
   end if;
+*/
   ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(2*disc) };
+/*
   if Type(BaseRing(L)) eq RngInt then
     ret := {ideal<Integers()| p> : p in ret};
   end if;
+*/
   return ret;
 end intrinsic;  
 
@@ -1714,20 +1875,7 @@ intrinsic MaximalIntegralLattice(V::RfxSpace) -> ModDedLat
 {A lattice which is maximal integral in the reflexive space V}
 
   R:= BaseRing(V); T:= Type(R); Q := InnerForm(V); a:= Involution(V);
-/*
-  if ISA(T, RngOrd) then
-    F:= FieldOfFractions(R);
-    Q:= Matrix(F, Q);
-  elif ISA(T, FldNum) then
-    R:= Integers(R);
-    F:= FieldOfFractions(R);
-    Q:= Matrix(F, Q);
-  else
-    require ISA(T, FldOrd) : "The matrix must be over (the field of fractions of) an order";
-    F:= R;
-    R:= Integers(R);
-  end if;
-*/
+
   F := FixedField(a);
   R := Integers(F);
   n:= Nrows(Q);
@@ -1736,12 +1884,17 @@ intrinsic MaximalIntegralLattice(V::RfxSpace) -> ModDedLat
   // We start with some integral lattice.
   L:= StandardLattice(V);
   N:= Norm(L);
+/*
   if Type(N) eq FldRatElt then
     N := Integers()!N;
   end if;
-  if (Type(N) eq RngIntElt and N ne 1) or (Type(N) ne RngIntElt and N ne 1*R) then
+*/
+//  if (Type(N) eq RngIntElt and N ne 1) or (Type(N) ne RngIntElt and N ne 1*R) then
+  if N ne 1*R then
     FN:= Factorization(N);
     d:= &*[ f[1]^(f[2] div 2) : f in Factorization(N) ];
+    // For ideals in the ring of integers, inverse is not defined
+    if Type(d) eq RngInt then d := Norm(d); end if;
     L:= d^-1*L;
     N:= Norm(L);
     assert IsIntegral(N);
@@ -2075,7 +2228,7 @@ end function;
 intrinsic PseudoBasis(L::Lat) -> SeqEnum
 {A sequence of tuples containing ideals and vectors which generate
  the lattice L, for compatiblity with ModDedLat. The ideals are trivial.}
-  return [< Integers(), b> : b in Basis(L)];
+  return [< FractionalIdeal(1), b> : b in Basis(L)];
 end intrinsic;
 
 /*

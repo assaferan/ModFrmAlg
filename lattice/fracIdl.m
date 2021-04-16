@@ -151,7 +151,7 @@ intrinsic Norm(I::RngIntFracIdl) -> RngIntElt
   return I`gen;
 end intrinsic;
  
-intrinsic Factorization(I::RngIntFracIdl) -> SeqEnum[<RngInt, RngIntElt>]
+intrinsic Factorization(I::RngIntFracIdl) -> SeqEnum[Tup]
 {Returns the prime ideal factorization of an ideal I , as a sequence of 2-tuples (prime ideal and integer exponent).}
   fac_num := Factorization(Numerator(I`gen));
   fac_denom := Factorization(Denominator(I`gen));

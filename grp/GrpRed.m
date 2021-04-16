@@ -89,11 +89,9 @@ freeze;
 
 // imports
 
-import "../io/path.m" : thirdPartyPath;
+// !! TODO - fix this terrible patch
 
-SetPath(thirdPartyPath() cat "LieThry/Root/");
-
-import "RootDtm.m" : rootDatum;
+import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
 
 
 ///////////////////////////////////////////////////////////////////
@@ -335,9 +333,6 @@ end intrinsic;
 intrinsic Dimension(G::GrpRed) -> RngIntElt
 {Returns n such that G embeds into GL_n through the representation by the
 		   forms given.}
-  if not assigned G`InnerForms and IsTorus(G) then
-    return Dimension(LieAlgebra(G));
-  end if;
   return &+[Dimension(V) : V in G`InnerForms];
 end intrinsic;
 

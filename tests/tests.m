@@ -586,6 +586,7 @@ procedure testRank4Root3Disc1()
   assert pol eq 16*x^4 - 36*x^3 + 28*x^2 - 9*x + 1;
 end procedure;
 
+// This one is rather long, but it test for the FPAut issue we had.
 procedure testRank8Root3Disc1()
   K<rt3>:=QuadraticField(3);
   mat:=Matrix(K,2,2,[2,rt3,rt3,2]);

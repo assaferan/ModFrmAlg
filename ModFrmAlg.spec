@@ -4,6 +4,7 @@
 
   io/saveload.m
 
+  lattice/fracIdl.m
   lattice/lattice.m
   lattice/reflexive.m
 

@@ -590,10 +590,11 @@ function pMaximalGram(L, pR : BeCareful := false, given_coeffs := [])
     gram := GramMatrix(L, vecs : Half := IsQuadratic(L));
     
     // Store the p-maximal basis for future use.
-    L`pMaximal[pR] := < ChangeRing(2*gram, BaseRing(L)), Matrix(vecs) >;
+    L`pMaximal[pR] := < ChangeRing(2*gram, BaseRing(L)), Matrix(vecs),
+                        Denominator(Matrix(vecs))>;
     
-    // Return the Gram matrix and the basis.
-    return L`pMaximal[pR][1], L`pMaximal[pR][2];
+    // Return the Gram matrix, the basis, and its denominator
+    return Explode(L`pMaximal[pR]);
 end function;
 
 intrinsic Level(lat::ModDedLat) -> RngOrdFracIdl

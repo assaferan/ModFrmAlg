@@ -175,7 +175,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 
     alpha_pR := Vpp`inv_pR;
 
-    // Extract our target isotropic subspace modulo pR.
+    // Extract our target isotropic subspace modulo pR.   
     X := [ MVM(basis, V.i, alpha_pR) : i in pivots ];
 
     if Vpp`splitting_type eq "split" then
@@ -202,6 +202,7 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
 	num_non_paired +:= 1;
 	Append(~paired, remain[num_non_paired]);
     end for;
+ 
     Z := [ MVM(basis, V.i, alpha_pR) : i in Reverse(paired) ];
 
     // Extract the remaining basis vectors.
@@ -374,10 +375,17 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
     end if;
 
     // Lift Z so that it is isotropic modulo pR*alpha(pR).
-    Z := [ Z[i] -
+    if Type(nProc`pR) ne RngInt or IsInvertible(Codomain(alpha_pR2)!2) then
+      Z := [ Z[i] -
 	   &+[ alpha_pR2(gram[k+i,2*k+1-j])/
 	       (i+j-1 eq k select 2 else 1) * X[j]
 	       : j in [k+1-i..k] ] : i in [1..k] ];
+    else
+      Z := [ Z[i] -
+	      &+[ (alpha_pR2(gram[k+i,2*k+1-j]) div
+		   (i+j-1 eq k select 2 else 1)) * X[j]
+		    : j in [k+1-i..k] ] : i in [1..k] ];
+    end if;
 
     // Verify that Z is isotropic modulo pR^2.
     if BeCareful then
@@ -472,7 +480,11 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 	    qAff`pR := pR;
 
 	    // A uniformizing element of pR.
-	    qAff`pElt := SafeUniformizer(pR);
+            if Type(pR) eq RngInt then
+              qAff`pElt := Norm(pR);
+            else
+	      qAff`pElt := SafeUniformizer(pR);
+            end if;
 
 	    // The residue class field.
 	    qAff`F, qAff`proj_pR := ResidueClassField(pR);
@@ -675,12 +687,12 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	nLat := LatticeWithBasis(Q, Matrix(basis), idls);
     else
       // Special treatment of the rationals to speed things up
-      if (deg eq 1) then
+      if (Type(BaseRing(L)) eq RngInt) then
 	// The spacess we'll perform HNF on; they need to be scaled by D*p so
 	//  that HNF will be happy. We'll undo this once we perform HNF.
 	// Here D is the common denominator, which is a power of 2
 	p := Norm(nProc`pR);
-        denom := Integers()!LCM([Denominator(v) : v in XX cat ZZ cat UU])[1];
+        denom := LCM([Denominator(v) : v in XX cat ZZ cat UU]);
         denom := LCM(Denominator(Matrix(Basis(ZLattice(L)))), denom);
         XX := [ denom*v : v in XX];
         ZZ := [ denom*p^2 * v : v in ZZ ];

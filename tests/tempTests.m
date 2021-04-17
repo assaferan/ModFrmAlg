@@ -48,13 +48,13 @@ forms := AssociativeArray();
 std_reps[3] := StandardRepresentation(GL(3,QQ));
 std_reps[5] := StandardRepresentation(GL(5,QQ));
 forms[3] := [IdentityMatrix(QQ,3),
-	  SymmetricMatrix(QQ, [1,0,1,1/2,0,3]),
-	  SymmetricMatrix(QQ, [2,-1/2,2,-1/2,0,6]) // Alok Shukla's example
+	  SymmetricMatrix(QQ, [2,0,2,1,0,6]),
+	  SymmetricMatrix(QQ, [4,-1,4,-1,0,12]) // Alok Shukla's example
 	  ];
 forms[5] := [
 	  IdentityMatrix(QQ,5),
-	  SymmetricMatrix(QQ, [1,0,1,0,0,1,0,0,0,1,1/2,0,0,0,3]),
-	  SymmetricMatrix(QQ, [1,0,1,0,0,1,0,1/2,0,1,1/2,0,0,0,3])
+	  SymmetricMatrix(QQ, [2,0,2,0,0,2,0,0,0,2,1,0,0,0,6]),
+	  SymmetricMatrix(QQ, [2,0,2,0,0,2,0,1,0,2,1,0,0,0,6])
 ];
 // understand which of these examples is suitable to become a test
 /*
@@ -84,7 +84,7 @@ print "memory used: ", GetMemoryUsage();
 ratios := [[[timing[i][j][k]/timing2[i][j][k] : k in [1..#timing[i][j]]
 		     | timing2[i][j][k] ne 0] : j in [1..#timing[i]]]
 	      : i in [1..#timing]];
-print "ratios are: ", ratios;
+// print "ratios are: ", ratios;
 print "testing L series cmoputation for O(5)...";
 print "testing level 61, weights (3,0), (3,2) and (4,0)...";
 // This is quite long, so we reduce the precision
@@ -116,7 +116,7 @@ a := [eval(x) : x in a];
 tmp := [a[1],a[6],a[2]] cat a[7..8] cat [a[3]] cat a[9..11] cat [a[4]] cat 
        a[12..15] cat [a[5]];
 A := SymmetricMatrix(tmp);
-A := 1/2*(A + DiagonalMatrix(Diagonal(A)));
+A := A + DiagonalMatrix(Diagonal(A));
 Determinant(A);
 d := 1;
 G := OrthogonalGroup(A);

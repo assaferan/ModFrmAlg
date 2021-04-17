@@ -325,9 +325,39 @@ intrinsic '@'(I::RngOrdFracIdl[FldOrd], alpha::FldAut) -> RngOrdFracIdl[FldOrd]
   require Z_L eq Order(I) :
     "Fractional ideal must be in the ring of integers of the field the automorphism is acting on.";
   return ideal<Z_L | [alpha`map(g) : g in Generators(I)]>;
-  end intrinsic;
+end intrinsic;
+
+// We duplicate for the case of rational field
+intrinsic '@'(I::RngInt, alpha::FldAut) -> RngInt
+{.}
+  L := BaseField(alpha);
+  Z_L := RingOfIntegers(L);
+  require Z_L eq Order(I) :
+    "Fractional ideal must be in the ring of integers of the field the automorphism is acting on.";
+  return ideal<Z_L | [alpha`map(g) : g in Generators(I)]>;
+end intrinsic;
+
+// We duplicate for the case of rational field
+
+intrinsic '@'(I::RngIntFracIdl, alpha::FldAut) -> RngIntFracIdl
+{.}
+  L := BaseField(alpha);
+  Z_L := RingOfIntegers(L);
+  require Z_L eq Order(I) :
+    "Fractional ideal must be in the ring of integers of the field the automorphism is acting on.";
+//  return ideal<Z_L | [alpha`map(g) : g in Generators(I)]>;
+  return FractionalIdeal([alpha`map(g) : g in Generators(I)]);
+end intrinsic;
 
 intrinsic '@'(x::RngOrdElt, alpha::FldAut) -> RngOrdElt
+{.}
+  L := BaseField(alpha);
+  require IsCoercible(L,x) :
+    "element must be in the field the automorphism is acting on.";
+  return Parent(x)!(alpha(L!x));
+end intrinsic;
+
+intrinsic '@'(x::RngIntElt, alpha::FldAut) -> RngIntElt
 {.}
   L := BaseField(alpha);
   require IsCoercible(L,x) :

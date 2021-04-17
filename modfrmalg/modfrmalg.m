@@ -150,13 +150,13 @@ declare attributes ModFrmAlg:
 intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep,
 				level::AlgMatElt[Fld] :
-				GramFactor := 1) -> ModFrmAlg
+				GramFactor := 2) -> ModFrmAlg
 {Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
-    If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
-    If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
+    If GramFactor is 1, we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
+    If it is 2 (by default), we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
   K := SplittingField(G);
-  V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
+  V := AmbientReflexiveSpace((2/GramFactor) * InnerForm(InnerForm(G,1)));
   return AlgebraicModularForms(G, weight,
 			       LatticeWithBasis(V, ChangeRing(level, K))
 			       : GramFactor := GramFactor);
@@ -165,10 +165,10 @@ end intrinsic;
 intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep,
 				level::ModDedLat :
-				GramFactor := 1) -> ModFrmAlg
+				GramFactor := 2) -> ModFrmAlg
 {Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
-    If GramFactor is 1 (by default), we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
-    If it is 2, we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
+    If GramFactor is 1, we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
+    If it is 2 (by default), we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
         require IsCompact(G) : "Group must be compact at infinity.";
         K := SplittingField(G);
@@ -184,7 +184,7 @@ intrinsic AlgebraicModularForms(G::GrpRed,
 
         cartanType := CartanName(G)[1];
 
-        V := AmbientReflexiveSpace((1/GramFactor) * InnerForm(InnerForm(G,1)));
+        V := AmbientReflexiveSpace((2/GramFactor) * InnerForm(InnerForm(G,1)));
 
 	// Build the lattice from the level
 //	L := LatticeWithBasis(V, ChangeRing(level, K));
@@ -255,11 +255,11 @@ end intrinsic;
 function normalizeField(R)
     K := AbsoluteField(FieldOfFractions(R));
 //    K := AbsoluteField(NumberField(R));
-
+/*
     if Type(K) eq FldRat then
-	K := RationalsAsNumberField();
+      K := RationalsAsNumberField();
     end if;
-
+*/
     return K;
 end function;
 
@@ -269,7 +269,6 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
 
   K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
-// weight`G := GL(n,K);
   O_n := OrthogonalGroup(ChangeRing(innerForm, K));
   return AlgebraicModularForms(O_n, weight);
 end intrinsic;
@@ -618,10 +617,22 @@ intrinsic 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
 {.}
   K1 := BaseRing(M1);
   K2 := BaseRing(M2);
-  isom_fields, psi := IsIsomorphic(K1, K2);
+  if Type(K1) eq FldRat or Type(K2) eq FldRat then
+    isom_fields := IsIsomorphic(K1, K2);
+    psi := hom<K1 -> K2 | >;
+  else
+    isom_fields, psi := IsIsomorphic(K1, K2);
+  end if;
   if not isom_fields then return false; end if;
   // Checking the groups
-  isom_G, psi_G := IsIsomorphic(SplittingField(M1`G), SplittingField(M2`G));
+  K_G1 := SplittingField(M1`G);
+  K_G2 := SplittingField(M2`G);
+  if Type(K_G1) eq FldRat or Type(K_G2) eq FldRat then
+    isom_G := IsIsomorphic(K_G1,K_G2);
+    psi_G := hom<K_G1 -> K_G2 | >;
+  else
+    isom_G, psi_G := IsIsomorphic(K_G1,K_G2);
+  end if;
   if not isom_G then return false; end if;
   // !!! TODO : change this to check the entire G, and not just G0
   if not (ChangeRing(M1`G`G0, DefinitionField(M2`G)) eq M2`G`G0) then
@@ -634,9 +645,13 @@ intrinsic 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
       primes1 := [p : p in Keys(M1`Hecke`Ts[k])];
       // We have to convert to ideals in K2,
       // otherwise magma doesn't like it
-      primes2 := [K2!!ideal<Integers(K2)|[psi(K1!x) : x in Generators(p)]> :
+      primes2 := [ideal<Integers(K2)|[psi(K1!x) : x in Generators(p)]> :
 		  p in primes1];
-      hecke_keys := {K2!!p : p in Keys(M2`Hecke`Ts[k])};
+      hecke_keys := {p : p in Keys(M2`Hecke`Ts[k])};
+      if Type(K2) ne FldRat then
+        primes2 := [K2!!p : p in primes2];
+        hecke_keys := {K2!!p : p in hecke_keys};
+      end if;
       if Set(primes2) ne hecke_keys then return false; end if;
       for idx in [1..#primes1] do
 	  p1 := primes1[idx];

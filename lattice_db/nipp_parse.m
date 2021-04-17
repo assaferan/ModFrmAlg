@@ -167,10 +167,10 @@ intrinsic NippToForms(nipp_entry::Rec) -> AlgMatElt
   as := [lat`form : lat in nipp_entry`lattices];
   triangular := [j*(j-1) div 2 : j in [1..5]];
   for a in as do
-    off_diag := [x / 2 : x in a[6..#a]];
+    off_diag := a[6..#a];
     columns := [[]];
     columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..4]];
-    a_magma := &cat[columns[i] cat [a[i]] : i in [1..5]];
+    a_magma := &cat[columns[i] cat [2*a[i]] : i in [1..5]];
     Append(~forms, SymmetricMatrix(a_magma));
   end for;
   return forms; 
@@ -220,7 +220,8 @@ end function;
 intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
 {Return representatives for all positive definite ternary quadratic forms of discriminant d, up to isometry.}
   forms := [];
-  max_a := Floor(Root(d/2, 3)); 
+  max_a := Floor(Root(d/2, 3));
+  cnt := 0;
   for a in [1..max_a] do
     max_b := Floor(Sqrt(d/(2*a)));
     for b in [a..max_b] do
@@ -235,6 +236,7 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
 	      if disc eq d and IsFormReduced(a,b,c,r,s,t) then
 		Append(~forms, A);
               end if;
+              cnt +:= 1;
 	    end for;
           end for;
 	end for;
@@ -246,12 +248,14 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
 	      if disc eq d and IsFormReduced(a,b,c,r,s,t) then
 		Append(~forms, A);
               end if;
+              cnt +:= 1;
 	    end for;
           end for;
 	end for;
       end for;
     end for;
    end for;
+   printf "Checked %o forms.\n", cnt;
    return forms;
 end intrinsic;
 
@@ -361,9 +365,7 @@ function QuadraticLattice(n, D)
       for idx in idxs do
         i := idx[1];
         j := idx[2];
-// c := (i ne j) select 2 else 1;
-        c := 1;
-        vec[Position(idxs, <i,j>)] := c*l_sigma[i]*l_sigma[j];
+        vec[Position(idxs, <i,j>)] := l_sigma[i]*l_sigma[j];
       end for;
       k := act(1, sigma);
       vec[Position(idxs, <k,k>)] -:= 1;
@@ -375,10 +377,13 @@ function QuadraticLattice(n, D)
     vec[Position(idxs, <i+1,i+1>)] := 1;
     vec[Position(idxs, <i,i>)] := -1;
     Append(~constraints, vec);
+    vec := [0 : i in [1..n*(n+1) div 2]];
+    vec[Position(idxs, <i,i+1>)] := 1;
+    Append(~constraints, vec);
   end for;
-  // !! TODO - go over possible values of the diagonal and for each
-  // create the proper ineqs and bds
+ 
   ineq_idxs := [idx : idx in idxs | idx[1] ne idx[2]];
+  printf "There are %o diagonals.\n", #diags;
   for diag in diags do
     ineqs := [];
     bds := [];
@@ -388,19 +393,34 @@ function QuadraticLattice(n, D)
       Append(~ineqs, ineq);
       Append(~bds, bd);
     end for;
+    bds_uniq := AssociativeArray();
+    for i in [1..#bds] do
+      ineq := ineqs[i];
+      if IsZero(ineq) then continue; end if;
+      if not IsDefined(bds_uniq, ineq) then
+        bds_uniq[ineq] := bds[i];
+      else
+        bds_uniq[ineq] := Maximum(bds[i], bds_uniq[ineq]);
+      end if;
+    end for;
+    ineqs := SetToSequence(Keys(bds_uniq));
+    bds := [bds_uniq[ineq] : ineq in ineqs];
     ineqs := [LatticeVector(v) : v in ineqs];
+    // This is not very efficient - should rethink how to do that
     P := PolyhedronWithInequalities(ineqs, bds);
+    printf "Checking %o points.\n", #Points(P);
     for p in Points(P) do
       ordered := [[Eltseq(p)[Position(ineq_idxs, <i,j>)]
 		      : i in [1..j-1]] cat [2*diag[j]] : j in [1..n]];
       Q := SymmetricMatrix(&cat ordered);
-      exp := IsEven(n) select n else n-1;
-      if IsPositiveDefinite(Q) and 2^exp*Determinant(Q) eq D then
-        return Q;
+      // half discriminant for odd ranks
+      factor := IsEven(n) select 1 else 2;
+      if IsPositiveDefinite(Q) and Determinant(Q) eq factor*D then
+        return [Q];
       end if;
     end for;
   end for;
   // something went wrong
-  assert false;
+  return [];
 end function;
 // end intrinsic;

@@ -355,7 +355,21 @@ end intrinsic;
 intrinsic TrivialRepresentation(G::Grp, R::Rng : name := "v") -> GrpRep
 {Constructs the trivial representation for G over the ring R.}
   M := CombinatorialFreeModule(R, [name]);
-//  a := map < CartesianProduct(G,[1..Dimension(M)]) -> M | x :-> M.(x[2])>;
+  a := Sprintf("
+  function action(g,m,V)
+  	   return (V`M).m;
+  end function; 
+  return action;
+  ");
+  V := GroupRepresentation(G, M, a);
+  V`trivial := true;
+  return V;
+end intrinsic;
+
+// We duplicate because something goes wrong when trying to inherit from Grp
+intrinsic TrivialRepresentation(G::GrpRed, R::Rng : name := "v") -> GrpRep
+{Constructs the trivial representation for G over the ring R.}
+  M := CombinatorialFreeModule(R, [name]);
   a := Sprintf("
   function action(g,m,V)
   	   return (V`M).m;

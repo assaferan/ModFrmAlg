@@ -93,9 +93,6 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	innerForm := ChangeRing(M`L`rfxSpace`innerForm,
 				FieldOfFractions(M`L`R));
 
-	// The defining polynomial of the number field.
-	f := DefiningPolynomial(M`L`R);
-
 	// The genus representatives.
 	genus := [* *];
 	if assigned M`genus then
@@ -103,7 +100,6 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 			// Shortcut to the current genus representative.
 			L := M`genus`Representatives[idx];
 
-			// if M`L`rfxSpace`deg eq 1 then
 			if Type(BaseRing(M`L)) eq FldRat then
 				// If we're over the rationals, we simply
 				//  choose the basis of L.
@@ -210,43 +206,13 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 	    end for;
 	end if;
 
-	/*
-	function build_root_data(root_datum)
-	    root_data := [*
-			  < "SIMPLE_ROOTS", root_datum`SimpleRoots >,
-			  < "SIMPLE_COROOTS", root_datum`SimpleCoroots >,
-			  < "SIGNS", root_datum`ExtraspecialSigns >,
-			  < "TYPE", Sprintf("%o", root_datum`Type) >
-			  *];
 
-	    return root_data;
-	end function;
-	
-	group_data := [* *];
-	Append(~group_data, < "IS_TWISTED", IsTwisted(M`G)>);
-	if IsTwisted(M`G) then
-	    base_group := M`G`c`A`A`G;
-	    root_datum := RootDatum(base_group);
-	    base_field := BaseRing(base_group);
-	    fixed_field := M`G`c`A`k;
-	    coc_images := [img`Data`g : img in M`G`c`imgs];
-	    
-	    Append(~group_data, < "ROOT_DATUM", build_root_data(root_datum) >);
-	    Append(~group_data, < "BASE_FIELD", base_field >);
-	    Append(~group_data, < "FIXED_FIELD", fixed_field >);
-	    Append(~group_data, < "COCYCLE_IMAGES", coc_images>);
-	else
-	    Append(~group_data, < "ROOT_DATUM", build_root_data(RootDatum(M`G)) >);
-	    Append(~group_data, < "BASE_FIELD", BaseRing(M`G) >);
-	end if;
-*/
 	// Build the data structure that will be saved to file.
 	data := [*
-		< "GROUP", /* group_data */ M`G >,
+		< "GROUP", M`G >,
 		< "WEIGHT", M`W >,
 		< "LEVEL", M`L >,
 		< "FIXED_SUBSPACES", M`H >,
-		< "POLY", f >,
 		< "INNER", innerForm >,
 		< "GENUS", genus >,
 		< "HECKE", hecke >,
@@ -288,21 +254,12 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	// Store meta data.
 	for entry in data do array[entry[1]] := entry[2]; end for;
 
-	if not IsDefined(array, "POLY") or
-	       not IsDefined(array, "INNER")  then
+	if not IsDefined(array, "INNER")  then
 	    print "ERROR: Corrupt data.";
 	    return false;
 	end if;
 
-	// TODO: Something weird going on here, try to get this under control a
-	//  bit more elegantly.
-
 	// Build the space of algebraic modular forms.
-	// TODO: Refine the parameters to construct this appropriate space with
-	//  specified weight and isogeny type.
-
-	// group_data := array["GROUP"];
-	// G := build_GroupOfLieType(group_data);
 
 	G := array["GROUP"];
 	
@@ -316,18 +273,6 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
         if IsDefined(array, "FIXED_SUBSPACES") then
           H := array["FIXED_SUBSPACES"];
         end if;
-
-        // Do we really need that?
-	if Degree(K) eq 1 then
-	    K := RationalsAsNumberField();
-            G := ChangeRing(G, K);
-            W := ChangeRing(W, K);
-	end if;
-
-	if Type(BaseRing(W)) eq FldRat then
-	    QQ := RationalsAsNumberField();
-	    W := ChangeRing(W,QQ);
-	end if;
 
         if IsDefined(array, "FIXED_SUBSPACES") then 
 	  for i in [1..#H] do
@@ -360,7 +305,6 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 	    genus := New(GenusSym);
 	    genus`Representatives := [];
 
-	    //		if M`L`rfxSpace`deg eq 1 then
 	    if Type(BaseRing(M`L)) eq FldRat then
 		// Handle the rationals separately.
 		for i in [1..#reps] do
@@ -521,10 +465,6 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 
                         // Assign vector.
                         mform`vec := Vector(data[1]);
-			if Type(BaseRing(mform`vec)) eq FldRat then
-			    QQ := RationalsAsNumberField();
-			    mform`vec := ChangeRing(mform`vec, QQ);
-			end if;
 
                         // for backward compatiblity
                         if #data lt 4 then 

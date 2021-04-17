@@ -279,20 +279,21 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
       // Determine field of fractions.
       if IsField(R) then
 
+/*
 	  if R cmpeq Rationals() then
-	      R := RationalsAsNumberField();
+	    R := RationalsAsNumberField();
 	  end if;
-
+*/
 	  // Make sure we're dealing with a number field.
-	  require IsNumberField(R) or (Type(R) eq FldOrd) or Type(R)eq FldRat:
+	  require IsNumberField(R) or (Type(R) eq FldOrd) or Type(R) eq FldRat:
 	          "Base ring must be a number field or number ring.";
 	  // The maximal order of our number field.
 	  R := Integers(R);
-
+/*
       elif R cmpeq Integers() then
 	  // Convert to a maximal order format.
 	  R := Integers(RationalsAsNumberField());
-
+*/
       end if;
 
       // The field of fractions of the maximal order of our number field.

@@ -510,6 +510,7 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
   //  that the first bilinear pairing is symmetric and positive definite.
   // We no longer make sure of the conditions in the second line.
   try
+  //      factor := IsQuadratic(lat) select 1 else 2;
       phis := [ ChangeRing(2*phi, Integers()) : phi in phis ];
       // !! TODO : in char. 2 check that we are alternating.
       assert Transpose(phis[1]) in [phis[1], -phis[1]];
@@ -590,10 +591,11 @@ function pMaximalGram(L, pR : BeCareful := false, given_coeffs := [])
     gram := GramMatrix(L, vecs : Half := IsQuadratic(L));
     
     // Store the p-maximal basis for future use.
-    L`pMaximal[pR] := < ChangeRing(2*gram, BaseRing(L)), Matrix(vecs) >;
+    L`pMaximal[pR] := < ChangeRing(2*gram, BaseRing(L)), Matrix(vecs),
+                        Denominator(Matrix(vecs))>;
     
-    // Return the Gram matrix and the basis.
-    return L`pMaximal[pR][1], L`pMaximal[pR][2];
+    // Return the Gram matrix, the basis, and its denominator
+    return Explode(L`pMaximal[pR]);
 end function;
 
 intrinsic Level(lat::ModDedLat) -> RngOrdFracIdl
@@ -2088,7 +2090,12 @@ end function;
 intrinsic PseudoBasis(L::Lat) -> SeqEnum
 {A sequence of tuples containing ideals and vectors which generate
  the lattice L, for compatiblity with ModDedLat. The ideals are trivial.}
-  return [< FractionalIdeal(1), b> : b in Basis(L)];
+  ret := [];
+  for b in Basis(L) do
+    Append(~ret, < FractionalIdeal(1), b>);
+  end for;	
+// return [< FractionalIdeal(1), b> : b in Basis(L)];
+  return ret;
 end intrinsic;
 
 /*

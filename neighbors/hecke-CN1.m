@@ -301,18 +301,11 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
             y := nProc`isoSubspace;
           end while;
 	else
-	//	  gens_modp := [[L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]
-	  //		      : g in conj_gens];
-	
-//	  Aut := sub<GL(n, F) | gens_modp>;
-// fp_aut, psi := FPGroup(Aut);
-
 	  // The isotropic orbit data.
           tm := Realtime();
-//          isoOrbits := IsotropicOrbits(V, Aut, k : Estimate := Estimate);
           proj := map< G_conj -> GL(n,F) |
 	    g :-> [L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]>;
-	  //		      
+
           isoOrbits := IsotropicOrbits(V, G_conj, k,
 				       proj : Estimate := Estimate);
           // The constant per neighbor is really small, so we need more precision
@@ -333,14 +326,6 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
             if IsTrivial(M`W) then
 	      w := #orbit[2];
             else
-	      /*
-	      mat_gen_seq := [[gens[Index(gens_modp,
-					Eltseq(Aut.Abs(i)))]^Sign(i) :
-			     i in Eltseq(g@@psi)] :
-			    g in orbit[2]];
-	      mat_lifts := [IsEmpty(seq) select GL(n,BaseRing(Q))!1 else
-			    &*seq : seq in mat_gen_seq];
-	      */
 	      mat_lifts := [pMaximalBasis^(-1)*g*pMaximalBasis : g in orbit[2]];
 
 	      w := &+[Matrix(getMatrixAction(M`W, Transpose(M`W`G!g))) :

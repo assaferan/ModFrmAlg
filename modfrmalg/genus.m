@@ -106,7 +106,12 @@ intrinsic SetGenus(~M::ModFrmAlg, reps::SeqEnum[Lat] : GramFactor := 2)
     V := ReflexiveSpace(lat);
     V_F := AmbientReflexiveSpace(ChangeRing(InnerForm(V),F));
     pb := PseudoBasis(lat);
-    idls := [Integers(F)!!p[1] : p in pb];
+    R := Integers(F);
+    if Type(R) eq RngInt then
+      idls := [p[1] : p in pb];
+    else
+      idls := [Integers(F)!!p[1] : p in pb];
+    end if;
     basis := ChangeRing(Matrix([p[2] : p in pb]), F);
     lat := LatticeWithBasis(V_F, basis, idls);
     Append(~lats, lat);

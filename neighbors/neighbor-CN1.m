@@ -631,19 +631,36 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
     // Degree of the field extension over the rationals.
     deg := Degree(BaseRing(Q));
 
+    // for profiling reasons we need here a function
+    function __pullUp(nProc, R, dim, proj)
+      if Type(R) eq RngInt then
+        Univ := RSpace(R, dim);
+        XX := [Univ | x : x in nProc`X_skew];
+        ZZ := [Univ | z : z in nProc`Z];
+        UU := [Univ | u : u in nProc`U];
+      else
+        XX := [ Vector([ e @@ proj : e in Eltseq(x) ]) : x in nProc`X_skew ];
+        ZZ := [ Vector([ e @@ proj : e in Eltseq(z) ]) : z in nProc`Z ];
+        UU := [ Vector([ e @@ proj : e in Eltseq(u) ]) : u in nProc`U ];
+      end if;
+      return XX, ZZ, UU;
+    end function;
     // Pull the pR*alpha(pR)-isotropic basis back to the number ring.
-    XX := [ Vector([ e @@ proj : e in Eltseq(x) ]) : x in nProc`X_skew ];
-    ZZ := [ Vector([ e @@ proj : e in Eltseq(z) ]) : z in nProc`Z ];
-    UU := [ Vector([ e @@ proj : e in Eltseq(u) ]) : u in nProc`U ];
+    XX, ZZ, UU := __pullUp(nProc, R, dim, proj);
     BB := Rows(Id(MatrixRing(R, dim)));
 
     // Convert the pulled-back basis to an appropriate p-maximal basis.
     pMaximalBasis :=
 	ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
- 
-    XX := [ ChangeRing(x, BaseRing(Q)) * pMaximalBasis : x in XX ];
-    ZZ := [ ChangeRing(z, BaseRing(Q)) * pMaximalBasis : z in ZZ ];
-    UU := [ ChangeRing(u, BaseRing(Q)) * pMaximalBasis : u in UU ];
+
+    // for profiling reasons we need here a function
+    function __changeBasis(XX,ZZ,UU, Q, pMaximalBasis)
+      XX := [ ChangeRing(x, BaseRing(Q)) * pMaximalBasis : x in XX ];
+      ZZ := [ ChangeRing(z, BaseRing(Q)) * pMaximalBasis : z in ZZ ];
+      UU := [ ChangeRing(u, BaseRing(Q)) * pMaximalBasis : u in UU ];
+      return XX, ZZ, UU;
+    end function;
+    XX, ZZ, UU := __changeBasis(XX,ZZ,UU, Q, pMaximalBasis);
 
     // Construct a basis on which to perform HNF.
     bb := Matrix(Rows(Matrix(XX cat ZZ cat UU)) cat Basis(Module(L)));
@@ -692,31 +709,51 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	//  that HNF will be happy. We'll undo this once we perform HNF.
 	// Here D is the common denominator, which is a power of 2
 	p := Norm(nProc`pR);
-        denom := LCM([Denominator(v) : v in XX cat ZZ cat UU]);
-        denom := LCM(Denominator(Matrix(Basis(ZLattice(L)))), denom);
-        XX := [ denom*v : v in XX];
-        ZZ := [ denom*p^2 * v : v in ZZ ];
-	UU := [ denom*p * v : v in UU ];
-        BB := [ denom*p^3 * v : v in Basis(ZLattice(L))];
-        xzub := [ChangeRing(v, Integers()) : v in XX cat ZZ cat UU];
-        xzub cat:= [Universe(xzub)!v : v in BB];
-//      H := HermiteForm(ChangeRing(Matrix(XX cat ZZ cat UU cat BB), Integers()));
+        function __scale(XX, ZZ, UU, BB, p, L)
+	  denom := 2*L`pMaximal[nProc`pR][3];
+          V := RSpace(Integers(), Rank(L));
+          xzub := [V | ];
+          for v in XX do
+	    Append(~xzub, denom * v);
+          end for;
+          for v in ZZ do
+	    Append(~xzub, denom * p^2*v);
+          end for;
+          for v in UU do
+	    Append(~xzub, denom * p * v);
+          end for;
+          for v in Basis(ZLattice(L)) do
+	    Append(~xzub, denom*p^3*v);
+          end for;
+/*
+	  XX := [ denom*v : v in XX];
+          ZZ := [ denom*p^2 * v : v in ZZ ];
+	  UU := [ denom*p * v : v in UU ];
+          BB := [ denom*p^3 * v : v in Basis(ZLattice(L))];
+          xzub := [ChangeRing(v, Integers()) : v in XX cat ZZ cat UU];
+          xzub cat:= [Universe(xzub)!v : v in BB];
+*/
+          return xzub, denom;
+	end function;
+        xzub, denom := __scale(XX, ZZ, UU, BB, p, L);
+
         H := HermiteForm(Matrix(xzub));
 	H := Rows(H);
 
+        function __rescale(H, denom, p, dim)
+	  return [ ChangeRing(H[i], Rationals()) / (denom*p)
+		     : i in [1..dim] ];
+	end function;
         // Get new basis for the neighbor lattice.
-        nLatBasis := Matrix([ ChangeRing(H[i], Rationals()) / (denom*p)
-				: i in [1..dim] ]);
-
-	// The new basis for the neighbor lattice with respect to the standard
-	//  coordinates.
-        newBasis := nLatBasis * Matrix(Basis(ZLattice(L)));
-
-	// The inner form.
-	// innerForm := ChangeRing(InnerProductMatrix(L), Rationals());
-
-	// Rebuild the neighbor lattice in standard coordinates.
-        //nLat := LatticeWithBasis(Q, ChangeRing(newBasis, BaseRing(Q)));
+        nLatBasis := Matrix(__rescale(H, denom, p, dim));
+        // skip conversions back and forth
+        if UseLLL and not BeCareful then
+          zlat := Lattice(nLatBasis, 2*InnerForm(Q));
+	  lll_ZZ := LLL(zlat : Proof := false);
+          nLat := LatticeWithBasis(Q,
+				   ChangeRing(BasisMatrix(lll_ZZ), Rationals()));
+          return nLat;
+	end if;
         nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
       else
 	//  order to construct the neighbor lattice.
@@ -745,9 +782,18 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	lll_ZZ := LLL(ZLattice(nLat) : Proof := false);
 	K := BaseRing(Q);
 	d := Degree(K);
-	n := Dimension(Q);
-	basis := [VectorSpace(Q)![ K![b[j] : j in [d*(i-1)+1..d*i]] : i in [1..n]] : b in Basis(lll_ZZ)];
-	nLat := LatticeWithBasis(Q, Matrix(basis));
+        if d eq 1 then
+	  nLat := LatticeWithBasis(Q,
+				   ChangeRing(BasisMatrix(lll_ZZ), Rationals()));
+        else
+	  n := Dimension(Q);
+          function __getBasis(Q, K, d, n, lll_ZZ)
+	    basis := [VectorSpace(Q)![ K![b[j] : j in [d*(i-1)+1..d*i]] : i in [1..n]] : b in Basis(lll_ZZ)];
+            return basis;
+          end function;
+          basis := __getBasis(Q, K, d, n, lll_ZZ);
+	  nLat := LatticeWithBasis(Q, Matrix(basis));
+        end if;
     end if;
     
     return nLat;
@@ -886,7 +932,6 @@ procedure GetNextNeighbor(~nProc : BeCareful := false)
 	end if;
 	
 	// Lift the subspace if we haven't reached the end of the list.
-//	if nProc`isoSubspace ne [] then
 	    
 	nProc`X, nProc`Z, nProc`U :=
 	    LiftSubspace(nProc : BeCareful := BeCareful);

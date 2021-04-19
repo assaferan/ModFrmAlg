@@ -711,12 +711,28 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	p := Norm(nProc`pR);
         function __scale(XX, ZZ, UU, BB, p, L)
 	  denom := 2*L`pMaximal[nProc`pR][3];
+          V := RSpace(Integers(), Rank(L));
+          xzub := [V | ];
+          for v in XX do
+	    Append(~xzub, denom * v);
+          end for;
+          for v in ZZ do
+	    Append(~xzub, denom * p^2*v);
+          end for;
+          for v in UU do
+	    Append(~xzub, denom * p * v);
+          end for;
+          for v in Basis(ZLattice(L)) do
+	    Append(~xzub, denom*p^3*v);
+          end for;
+/*
 	  XX := [ denom*v : v in XX];
           ZZ := [ denom*p^2 * v : v in ZZ ];
 	  UU := [ denom*p * v : v in UU ];
           BB := [ denom*p^3 * v : v in Basis(ZLattice(L))];
           xzub := [ChangeRing(v, Integers()) : v in XX cat ZZ cat UU];
           xzub cat:= [Universe(xzub)!v : v in BB];
+*/
           return xzub, denom;
 	end function;
         xzub, denom := __scale(XX, ZZ, UU, BB, p, L);

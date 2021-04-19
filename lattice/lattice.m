@@ -510,6 +510,7 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
   //  that the first bilinear pairing is symmetric and positive definite.
   // We no longer make sure of the conditions in the second line.
   try
+  //      factor := IsQuadratic(lat) select 1 else 2;
       phis := [ ChangeRing(2*phi, Integers()) : phi in phis ];
       // !! TODO : in char. 2 check that we are alternating.
       assert Transpose(phis[1]) in [phis[1], -phis[1]];
@@ -2089,7 +2090,12 @@ end function;
 intrinsic PseudoBasis(L::Lat) -> SeqEnum
 {A sequence of tuples containing ideals and vectors which generate
  the lattice L, for compatiblity with ModDedLat. The ideals are trivial.}
-  return [< FractionalIdeal(1), b> : b in Basis(L)];
+  ret := [];
+  for b in Basis(L) do
+    Append(~ret, < FractionalIdeal(1), b>);
+  end for;	
+// return [< FractionalIdeal(1), b> : b in Basis(L)];
+  return ret;
 end intrinsic;
 
 /*

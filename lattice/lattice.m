@@ -1483,7 +1483,7 @@ end intrinsic;
 
 intrinsic LocalBasis(M::Lat, p::RngInt : ModuleType:= "") -> []
 {A basis of a free module that coincides with M at the prime ideal p}
-  require Order(p) cmpeq BaseRing(M) : "Incompatible arguments";
+  require Order(p) cmpeq Integers(BaseRing(M)) : "Incompatible arguments";
   require ModuleType in {"", "Submodule", "Supermodule"} : "Type must be \"Submodule\" or \"Supermodule\" when specified";
   if ModuleType eq "" then
     pi:= Norm(p);

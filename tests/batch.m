@@ -325,7 +325,8 @@ end procedure;
 function createAutGrpBatchFile(disc)
   fname := Sprintf("batch_files/autgrp_disc_%o.m", disc);
   f := Open(fname, "w");
-  output_str := "AttachSpec(\"ModFrmAlg.spec\");\n";
+  output_str := "GetSeed();\n";
+  output_str cat:= "AttachSpec(\"ModFrmAlg.spec\");\n";
   output_str cat:= "import \"tests/batch.m\" : write_aut_group_data;\n";
   output_str cat:= "time0 := Cputime();\n";
   output_str cat:= Sprintf("write_aut_group_data(%o);\n", disc);

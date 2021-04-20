@@ -608,7 +608,7 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
           nProc`scale := DiagonalMatrix(Rationals(), [1 : i in [1..k]]
 					cat [p^2 : i in [1..k]]
 				 cat [p : i in [1..dim-2*k]]
-					cat [p^3 : i in [1..dim]]);;
+					cat [p^3 : i in [1..dim]]);
         end if;
 
 	return nProc;
@@ -721,7 +721,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	//  that HNF will be happy. We'll undo this once we perform HNF.
 	// Here D is the common denominator, which is a power of 2
 	p := Norm(nProc`pR);
-        denom := 2*L`pMaximal[nProc`pR][3];
+        denom := L`pMaximal[nProc`pR][3]*BasisDenominator(Module(L));
         diag := nProc`scale;
         function __scale(XX, ZZ, UU, BB, p, denom)
 	//	  diag := DiagonalMatrix(Rationals(), [1 : v in XX] cat [p^2 : v in ZZ]

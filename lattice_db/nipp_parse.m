@@ -392,7 +392,7 @@ function QuadraticLattice(n, D)
   diags :=  possible_diagonals(D / lambda, n, n);
   
   constraints := prepareMinkowskiInequalities(n);
- 
+  idxs := [<i,j> : i,j in [1..n] | i le j];
   ineq_idxs := [idx : idx in idxs | idx[1] ne idx[2]];
   printf "There are %o diagonals.\n", #diags;
   for diag in diags do
@@ -480,4 +480,66 @@ function MinkowskiReduction(A)
     end if;
   end while;
   return B;
+end function;
+
+function VoronoiCoordinateBounds(d)
+  // !! TODO - check what the real bounds are !!
+  return [1 : i in [1..d]];
+end function;
+
+function closestLatticeVectorMinkowskiReduced(b, t, gram)
+  d := #b + 1;
+  one := IdentityMatrix(Rationals(), d);
+  e_d := Matrix(Rows(one)[d]);
+  diag := DiagonalMatrix(Rationals(), Diagonal(gram)[1..d-1]);
+  H_v := diag^(-1)*Submatrix(gram, [1..d-1], [1..d]);
+  H := Submatrix(H_v, [1..d-1], [1..d-1]);
+  v := Submatrix(H_v, [1..d-1], [d]);
+  // This is the precision to which we will want to compute H^(-1)
+  // (we don't need it to be exact)
+  r := Ceiling(Log(Maximum([1] cat Eltseq(v))));
+  y := -H^(-1)*v;
+  voronoi := VoronoiCoordinateBounds(d-1);
+  x_min := [Ceiling(y[i,1] - voronoi[i]) : i in [1..d-1]];
+  x_max := [Floor(y[i,1] + voronoi[i]) : i in [1..d-1]];
+  xs := CartesianProduct([[x_min[i]..x_max[i]] : i in [1..d-1]]);
+  min_dist := Infinity();
+  min_g := one;
+  min_x := Vector([0 : i in [1..d-1]]);
+  for x in xs do
+    xvec := Transpose(Matrix(Rationals(), Vector([x[i] : i in [1..d-1]])));
+    g := one - VerticalJoin(xvec*e_d, 0*e_d);
+    x_gram := Transpose(g)*gram*g;
+    if x_gram[d,d] lt min_dist then
+      min_dist := x_gram[d,d];
+      min_g := g;
+      min_x := xvec;
+    end if;
+  end for;
+  return Transpose(min_x)*Matrix(b), min_g;
+end function;
+
+function GreedyReduction(b, gram)
+  d := #b;
+  one := IdentityMatrix(Rationals(), d);
+  mult := one;
+  if d eq 1 then return b, one; end if;
+  repeat
+    perm := [x[2] : x in Sort([<gram[i,i],i> : i in [1..d]])];
+    b := [b[i] : i in perm];
+    // Is it faster to do SwapRows and SwapCol?
+    g := PermutationMatrix(Rationals(), perm);
+    gram := Transpose(g)*gram*g;
+    mult := mult*g;
+    b0, mult0 := GreedyReduction(b[1..d-1], Submatrix(gram, [1..d-1], [1..d-1]));
+    g := DirectSum(mult0, Matrix(Rationals(), [[1]]));
+    b := b0 cat [b[d]];
+    gram := Transpose(g)*gram*g;
+    mult := mult*g;
+    c, g := closestLatticeVectorMinkowskiReduced(b0, b[d], gram);
+    b[d] := Vector(Eltseq(b[d])) - Vector(Eltseq(c));
+    gram := Transpose(g)*gram*g;
+    mult := mult*g;
+  until gram[d,d] ge gram[d-1,d-1];
+  return b, mult;
 end function;

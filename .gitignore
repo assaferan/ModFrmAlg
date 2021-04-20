@@ -1,4 +1,5 @@
-
+batch_files/*
+data/*
 *.m~
 .DS_Store
 structure/spec~

@@ -319,27 +319,10 @@ function possible_diagonals(M, k, n)
   return ret;
 end function;
 
-// Right now only supports n le 6 !!!
-// intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
-// {Return a positive-definite quadratic form of dimension n and determinant D using Minkowski's description of the space of reduced forms.}
-function QuadraticLattice(n, D)
-  // These are Hermite's constants gamma^n for n in [1..8]
-  hermite_pow := [1, 4/3, 2, 4, 8, 64/3, 64, 256];
-  // here gamma is a lower bound for Hermite's constant
-  // i.e. the constant such that gamma*a_{n,n}^n le D
-  if n le 8 then
-    gamma := Root(hermite_pow[n], n);
-  else
-    // !!! TODO - there are known lower bounds for
-    // Hermite's constant for general n, implement them !!!
-    gamma := 1;
-  end if;
-  // lambda is a lower bound for a constant such that
-  // lambda * prod a_{i,i} le D
-  lambda := gamma * (4/5)^(1/2*(n-3)*(n-4));
-  // !!! - TODO - restrict also by gamma separately
-  diags :=  possible_diagonals(D / lambda, n, n);
-  
+function prepareMinkowskiInequalities(n)
+  aux_reflect := [];
+  aux_permute := [];
+  aux_sign := [];
   l_table := [CartesianProduct([{1}] cat [{-1,1} : k in [1..j]] cat
 			       [{0} : i in [1..n-j-1]]) : j in [1..n-1]];
   if n ge 5 then
@@ -370,6 +353,7 @@ function QuadraticLattice(n, D)
       k := act(1, sigma);
       vec[Position(idxs, <k,k>)] -:= 1;
       Append(~constraints, vec);
+      Append(~aux_reflect, <Vector(l_sigma), k>);
     end for;
   end for;
   for i in [1..n-1] do
@@ -377,10 +361,37 @@ function QuadraticLattice(n, D)
     vec[Position(idxs, <i+1,i+1>)] := 1;
     vec[Position(idxs, <i,i>)] := -1;
     Append(~constraints, vec);
+    Append(~aux_permute, [i, i+1]);
     vec := [0 : i in [1..n*(n+1) div 2]];
     vec[Position(idxs, <i,i+1>)] := 1;
     Append(~constraints, vec);
+    Append(~aux_sign, i+1);
   end for;
+return constraints, aux_reflect, aux_permute, aux_sign;
+end function;
+
+// Right now only supports n le 6 !!!
+// intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
+// {Return a positive-definite quadratic form of dimension n and determinant D using Minkowski's description of the space of reduced forms.}
+function QuadraticLattice(n, D)
+  // These are Hermite's constants gamma^n for n in [1..8]
+  hermite_pow := [1, 4/3, 2, 4, 8, 64/3, 64, 256];
+  // here gamma is a lower bound for Hermite's constant
+  // i.e. the constant such that gamma*a_{n,n}^n le D
+  if n le 8 then
+    gamma := Root(hermite_pow[n], n);
+  else
+    // !!! TODO - there are known lower bounds for
+    // Hermite's constant for general n, implement them !!!
+    gamma := 1;
+  end if;
+  // lambda is a lower bound for a constant such that
+  // lambda * prod a_{i,i} le D
+  lambda := gamma * (4/5)^(1/2*(n-3)*(n-4));
+  // !!! - TODO - restrict also by gamma separately
+  diags :=  possible_diagonals(D / lambda, n, n);
+  
+  constraints := prepareMinkowskiInequalities(n);
  
   ineq_idxs := [idx : idx in idxs | idx[1] ne idx[2]];
   printf "There are %o diagonals.\n", #diags;
@@ -424,3 +435,49 @@ function QuadraticLattice(n, D)
   return [];
 end function;
 // end intrinsic;
+
+function isReduced(vec, constraints)
+  for i in [1..#constraints] do
+    if (vec, constraints[i]) lt 0 then
+      return false, i;
+    end if;
+  end for;
+  return true, _;
+end function;
+
+function MinkowskiReduction(A)
+  assert IsPositiveDefinite(A);
+  B := A;
+  n := NumberOfRows(A);
+  one := IdentityMatrix(Integers(), n);
+  // This could be made in precomputation
+  constraints, aux_reflect,
+  aux_permute, aux_sign := prepareMinkowskiInequalities(n);
+  constraints := [Vector(v) : v in constraints];
+  n_reflect := #aux_reflect;
+  n_permute := #aux_permute;
+  reduced := false;
+  while not reduced do
+    B_flat := Vector([(i eq j select 1 else 2)*B[i,j] : i,j in [1..n] | i le j]);
+    reduced, i := isReduced(B_flat, constraints);
+    if not reduced then
+      if i le n_reflect then
+        l := aux_reflect[i][1];
+        k := aux_reflect[i][2];
+	e_k := one[k];
+        // currently performing small steps - can do the actual reflection
+	g := one + Transpose(Matrix(l-e_k))*Matrix(e_k);
+      elif i le n_reflect + n_permute then
+	i -:= n_reflect;
+        g := PermutationMatrix(Integers(), Sym(n)!aux_permute[i]);
+      else
+        i -:= (n_reflect + n_permute);
+        g := one;
+        k := aux_sign[i];
+        g[k,k] := -1;
+      end if;
+      B := Transpose(g)*B*g;
+    end if;
+  end while;
+  return B;
+end function;

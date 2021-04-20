@@ -255,7 +255,10 @@ end intrinsic;
 
 intrinsic PseudoBasis(L::ModDedLat) -> SeqEnum[Tup]
 { Returns the pseudobasis for the underlying module structure. }
-	return L`psBasis;
+  if not assigned L`psBasis then
+    L`psBasis := PseudoBasis(Module(L));
+  end if;
+  return L`psBasis;
 end intrinsic;
 
 intrinsic BaseRing(L::ModDedLat) -> RngOrd
@@ -312,8 +315,9 @@ matrix provided. }
     lat`Module := Module(Rows(basis));
   end if;
 
+// This takes too much time, we do it only when we need.
   // Assign the pseudobasis if we're over a number field.
-  lat`psBasis := PseudoBasis(Module(lat));
+//  lat`psBasis := PseudoBasis(Module(lat));
 
   // Assign the ambient reflexive space.
   lat`rfxSpace := rfxSpace;
@@ -372,8 +376,9 @@ coefficient ideals. }
     lat`Module := Lattice(basis);
   end if;
 
+  // Takes too much time, compute it only when we need to
   // The pseudobasis.
-  lat`psBasis := PseudoBasis(lat`Module);
+  // lat`psBasis := PseudoBasis(lat`Module);
 
   // The associative array of affine reflexive spaces.
   lat`Vpp := AssociativeArray();
@@ -790,7 +795,10 @@ intrinsic ElementaryDivisors(lambda::ModDedLat, pi::ModDedLat) -> SeqEnum
    if Type(L) eq Lat then
      invs := [d^(-1) : d in ElementaryDivisors((Pi + L) / L)];
      elem := invs cat ElementaryDivisors((Pi + L) / Pi);
-     return [FractionalIdeal(x) : x in elem];
+     // padding with 1's
+     elem cat:= [1 : i in [1..Rank(L)-#elem]];
+     ret := [FractionalIdeal(x) : x in Sort(elem)];
+     return ret;
    end if;
    return ElementaryDivisors(L, Pi);
 end intrinsic;
@@ -822,7 +830,10 @@ intrinsic IntersectionLattice(lat1::ModDedLat, lat2::ModDedLat) -> ModDedLat
   // Make sure both lattices belong to the same ambient reflexive space.
   require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
 		"Both lattices must belong to the same reflexive space.";
-
+  if Type(BaseRing(lat1)) eq RngInt then
+    B := ChangeRing(BasisMatrix(Module(lat1) meet Module(lat2)), Rationals());
+    return LatticeWithBasis(ReflexiveSpace(lat1),B);
+  end if;
   return LatticeWithPseudobasis(
 		 ReflexiveSpace(lat1),
 		 PseudoMatrix(Module(lat1) meet Module(lat2)));
@@ -834,7 +845,7 @@ intrinsic Index(lat1::ModDedLat, lat2::ModDedLat) -> RngOrdFracIdl
   require ReflexiveSpace(lat1) eq ReflexiveSpace(lat2):
 		"Both lattices must belong to the same reflexive space.";
 
-  index :=  &*ElementaryDivisors(Module(lat1), Module(lat2));
+  index :=  &*ElementaryDivisors(lat1, lat2);
 
   // Make sure this is an integral ideal
   assert Denominator(index) eq 1;
@@ -2091,10 +2102,10 @@ intrinsic PseudoBasis(L::Lat) -> SeqEnum
 {A sequence of tuples containing ideals and vectors which generate
  the lattice L, for compatiblity with ModDedLat. The ideals are trivial.}
   ret := [];
+  one := FractionalIdeal(1);
   for b in Basis(L) do
-    Append(~ret, < FractionalIdeal(1), b>);
+    Append(~ret, < one, b >);
   end for;	
-// return [< FractionalIdeal(1), b> : b in Basis(L)];
   return ret;
 end intrinsic;
 

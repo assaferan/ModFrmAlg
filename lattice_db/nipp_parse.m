@@ -54,7 +54,7 @@ function parseNextEntry(entry, desc_to_field : multiple := false)
   if multiple then 
     ans := [eval s[j] : j in [offset+1..#s]];
   else
-    ans := eval s[offset+1];
+    ans := IsEmpty(s) select "" else eval s[offset+1];
   end if;
   if is_rec then
     return true, ans, fld;

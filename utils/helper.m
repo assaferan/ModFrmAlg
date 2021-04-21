@@ -182,7 +182,7 @@ function my_facAlgExtSqrf(F)
          buf div:= factor;
          if shiftBuf then
 	   if shift ne 0 then
-	     factor := factor(x+shift*y);
+	     factor := Evaluate(factor, x+shift*y);
 	   end if;
 	 end if;
          if (i[2] eq 1) or (Degree(factor) eq 1) then

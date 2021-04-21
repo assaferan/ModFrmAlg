@@ -64,7 +64,7 @@ function parseNextEntry(entry, desc_to_field : multiple := false)
 end function;
 
 function parseNextGenus(r_entries, idx, desc_to_field)
-  if idx gt #r_entries then
+  if idx ge #r_entries then
     return 0, _, _;
   end if;
   latticeGen := rec<latticeGenus_RF | >;

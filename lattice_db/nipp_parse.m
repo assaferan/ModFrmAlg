@@ -64,6 +64,7 @@ function parseNextEntry(entry, desc_to_field : multiple := false)
 end function;
 
 function parseNextGenus(r_entries, idx, desc_to_field)
+  assert idx lt #r_entries;
   latticeGen := rec<latticeGenus_RF | >;
   for j in [1..4] do 
     is_rec, ans, fld := parseNextEntry(r_entries[idx+j], desc_to_field);
@@ -144,7 +145,9 @@ intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
   latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
   while (latGen`D eq d) do
     Append(~genera, latGen);
-    latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
+    if idx lt #r_entries then
+      latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
+    end if;
   end while;
   return genera;
 end intrinsic;

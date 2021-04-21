@@ -64,15 +64,17 @@ function parseNextEntry(entry, desc_to_field : multiple := false)
 end function;
 
 function parseNextGenus(r_entries, idx, desc_to_field)
-  if idx ge #r_entries then
-    return 0, _, _;
-  end if;
   latticeGen := rec<latticeGenus_RF | >;
+  latticeGen`D := 0;
+
+  if idx ge #r_entries then
+    return latticeGen, idx;
+  end if;
+  
   for j in [1..4] do 
     is_rec, ans, fld := parseNextEntry(r_entries[idx+j], desc_to_field);
-// assert is_rec;
     if not is_rec then
-      return 0, _, _;
+      return latticeGen, idx + j;
     end if;
     latticeGen``(fld`name) := ans;
   end for;

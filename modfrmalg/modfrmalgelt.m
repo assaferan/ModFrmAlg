@@ -61,6 +61,7 @@ freeze;
 
 import "modfrmalg.m" : ModFrmAlgInit;
 
+import "../neighbors/inv-CN1.m" : Invariant;
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../representation/representation.m" : nu;
 
@@ -1126,3 +1127,14 @@ function SatakeLSeries(f : Precision := 0)
   return LSeries(k, gammas, D, local_factor :
 		 Sign := sign, Precision := Precision);
 end function;
+
+intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt
+{return the theta series associated to f.}
+  v := f`vec;
+  R<q> := PuiseuxSeriesRing(BaseRing(v));
+  dim := Degree(v);
+  reps := Representatives(Genus(f`M));
+  aut := [#AutomorphismGroup(r) : r in reps];
+  invs := [R | Invariant(r : Precision := Precision) : r in reps];
+  return &+[aut[i]^-1*v[i]*invs[i] : i in [1..dim]];
+end intrinsic;

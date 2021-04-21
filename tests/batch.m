@@ -289,7 +289,7 @@ function aut_group_data(disc : Estimate := false)
     for d in Divisors(disc) do
       W := SpinorNormRepresentation(G, d);
       M := AlgebraicModularForms(G, W);
-      fs := HeckeEigenforms(M);
+      fs := HeckeEigenforms(M : Estimate := Estimate);
       if d eq 1 then
         reps := Representatives(Genus(M));
         auts := [AutomorphismGroup(r) : r in reps];

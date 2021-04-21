@@ -41,7 +41,7 @@ recField_RF := recformat< name : MonStgElt,
 function parseNextEntry(entry, desc_to_field : multiple := false)
   sep := " ";
   s := Split(entry, sep);
-  is_rec := s[1] in Keys(desc_to_field);
+  is_rec := (not IsEmpty(s)) and (s[1] in Keys(desc_to_field));
   if is_rec then
     fld := desc_to_field[s[1]];
     sep := fld`sep;
@@ -54,7 +54,7 @@ function parseNextEntry(entry, desc_to_field : multiple := false)
   if multiple then 
     ans := [eval s[j] : j in [offset+1..#s]];
   else
-    ans := eval s[offset+1];
+    ans := IsEmpty(s) select "" else eval s[offset+1];
   end if;
   if is_rec then
     return true, ans, fld;
@@ -65,9 +65,17 @@ end function;
 
 function parseNextGenus(r_entries, idx, desc_to_field)
   latticeGen := rec<latticeGenus_RF | >;
+  latticeGen`D := 0;
+
+  if idx ge #r_entries then
+    return latticeGen, idx;
+  end if;
+  
   for j in [1..4] do 
     is_rec, ans, fld := parseNextEntry(r_entries[idx+j], desc_to_field);
-    assert is_rec;
+    if not is_rec then
+      return latticeGen, idx + j;
+    end if;
     latticeGen``(fld`name) := ans;
   end for;
   lattices := [];
@@ -127,12 +135,6 @@ intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
   num_str := Sprintf("%o", d);
   blank := &cat[" " : i in [1..5-#num_str]];
   find_str := "D=" cat blank cat num_str;
-/*
-  start := Index(r, Sprintf("D=  %o;",d));
-  if start eq 0 then
-    start := Index(r, Sprintf("D=   %o;",d));
-  end if;
-*/
   start := Index(r, find_str);
   require start ne 0 : Sprintf("No entry with discriminant %o found", d);
     
@@ -259,6 +261,51 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
    return forms;
 end intrinsic;
 
+intrinsic TernaryQuadraticLattice(d::RngIntElt) -> Mtrx
+{get a positive definite quadratic lattice.}
+  // B<i,j,k> := QuaternionAlgebra(d);
+  // This does not make it easy for us to find the square root of -d in the
+  // quaternion algebra after constructing it. Therefore we use Ibukiyama's
+  // recipe.
+  all_primes := [x[1] : x in Factorization(d)];
+  primes := [x : x in all_primes | x ne 2]; 
+  // a quadratic non-residue suffices here, but this is usually not
+  // time consuming.
+  if IsOdd(#all_primes) then
+    // In this case there is a definite quaternion algebra of discriminant d
+    residues := [3] cat [-Integers()!PrimitiveElement(Integers(p)) : p in primes];
+    q := CRT(residues, [8] cat primes);
+    while not IsPrime(q) do
+      q +:= &*([8] cat primes);
+    end while;	    
+    B<i,j,k> := QuaternionAlgebra(Rationals(), -q, -d);
+    assert Discriminant(B) eq d;
+  else
+    // I'm not sure which quaternion algebra we want here
+    // Is it this one?
+    B<i,j,k> := QuaternionAlgebra(Rationals(), -1, -d);
+  end if;
+  // We could also form the maximal order directly from Ibukiyama's recipe
+  // if necessary
+  O_B := MaximalOrder(B);
+  alpha := Basis(O_B);
+  x := Basis(B);
+  gram := Matrix([[Trace(x[m]*Conjugate(x[n]))
+		      : n in [1..4]] : m in [1..4]]);
+  basis := Matrix([Eltseq(x) : x in alpha]);
+  lat_O := Lattice(basis, gram);
+  mat_beta := [Eltseq(x) : x in Basis(Dual(lat_O : Rescale := false))];
+  beta0 := [B!b : b in mat_beta];
+  mat := [[Trace(alpha[m]*Conjugate(beta0[n])) : n in [1..4]] : m in [1..4]];
+  beta := [B!b : b in Rows(Transpose(Matrix(mat))^(-1)*Matrix(mat_beta))];
+  assert IsOne(Matrix([[Trace(alpha[m]*Conjugate(beta[n]))
+			   : n in [1..4]] : m in [1..4]]));
+  Q := Matrix([[Trace((beta[m]*j)*Conjugate(beta[n]*j))
+		   : n in [2..4]] : m in [2..4]]);
+  assert Determinant(Q) eq 2*d;
+  return Q;
+end intrinsic;
+
 // Should change this, right now only works for small discs (up to 256)
 // and slowly
 function get_nipp_idx(disc, nipp)
@@ -319,27 +366,10 @@ function possible_diagonals(M, k, n)
   return ret;
 end function;
 
-// Right now only supports n le 6 !!!
-// intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
-// {Return a positive-definite quadratic form of dimension n and determinant D using Minkowski's description of the space of reduced forms.}
-function QuadraticLattice(n, D)
-  // These are Hermite's constants gamma^n for n in [1..8]
-  hermite_pow := [1, 4/3, 2, 4, 8, 64/3, 64, 256];
-  // here gamma is a lower bound for Hermite's constant
-  // i.e. the constant such that gamma*a_{n,n}^n le D
-  if n le 8 then
-    gamma := Root(hermite_pow[n], n);
-  else
-    // !!! TODO - there are known lower bounds for
-    // Hermite's constant for general n, implement them !!!
-    gamma := 1;
-  end if;
-  // lambda is a lower bound for a constant such that
-  // lambda * prod a_{i,i} le D
-  lambda := gamma * (4/5)^(1/2*(n-3)*(n-4));
-  // !!! - TODO - restrict also by gamma separately
-  diags :=  possible_diagonals(D / lambda, n, n);
-  
+function prepareMinkowskiInequalities(n)
+  aux_reflect := [];
+  aux_permute := [];
+  aux_sign := [];
   l_table := [CartesianProduct([{1}] cat [{-1,1} : k in [1..j]] cat
 			       [{0} : i in [1..n-j-1]]) : j in [1..n-1]];
   if n ge 5 then
@@ -370,6 +400,7 @@ function QuadraticLattice(n, D)
       k := act(1, sigma);
       vec[Position(idxs, <k,k>)] -:= 1;
       Append(~constraints, vec);
+      Append(~aux_reflect, <Vector(l_sigma), k>);
     end for;
   end for;
   for i in [1..n-1] do
@@ -377,11 +408,38 @@ function QuadraticLattice(n, D)
     vec[Position(idxs, <i+1,i+1>)] := 1;
     vec[Position(idxs, <i,i>)] := -1;
     Append(~constraints, vec);
+    Append(~aux_permute, [i, i+1]);
     vec := [0 : i in [1..n*(n+1) div 2]];
     vec[Position(idxs, <i,i+1>)] := 1;
     Append(~constraints, vec);
+    Append(~aux_sign, i+1);
   end for;
- 
+return constraints, aux_reflect, aux_permute, aux_sign;
+end function;
+
+// Right now only supports n le 6 !!!
+// intrinsic QuadraticLattice(n::RngIntElt, D::RngIntElt) -> AlgMatElt
+// {Return a positive-definite quadratic form of dimension n and determinant D using Minkowski's description of the space of reduced forms.}
+function QuadraticLattice(n, D)
+  // These are Hermite's constants gamma^n for n in [1..8]
+  hermite_pow := [1, 4/3, 2, 4, 8, 64/3, 64, 256];
+  // here gamma is a lower bound for Hermite's constant
+  // i.e. the constant such that gamma*a_{n,n}^n le D
+  if n le 8 then
+    gamma := Root(hermite_pow[n], n);
+  else
+    // !!! TODO - there are known lower bounds for
+    // Hermite's constant for general n, implement them !!!
+    gamma := 1;
+  end if;
+  // lambda is a lower bound for a constant such that
+  // lambda * prod a_{i,i} le D
+  lambda := gamma * (4/5)^(1/2*(n-3)*(n-4));
+  // !!! - TODO - restrict also by gamma separately
+  diags :=  possible_diagonals(D / lambda, n, n);
+  
+  constraints := prepareMinkowskiInequalities(n);
+  idxs := [<i,j> : i,j in [1..n] | i le j];
   ineq_idxs := [idx : idx in idxs | idx[1] ne idx[2]];
   printf "There are %o diagonals.\n", #diags;
   for diag in diags do
@@ -424,3 +482,111 @@ function QuadraticLattice(n, D)
   return [];
 end function;
 // end intrinsic;
+
+function isReduced(vec, constraints)
+  for i in [1..#constraints] do
+    if (vec, constraints[i]) lt 0 then
+      return false, i;
+    end if;
+  end for;
+  return true, _;
+end function;
+
+function MinkowskiReduction(A)
+  assert IsPositiveDefinite(A);
+  B := A;
+  n := NumberOfRows(A);
+  one := IdentityMatrix(Integers(), n);
+  // This could be made in precomputation
+  constraints, aux_reflect,
+  aux_permute, aux_sign := prepareMinkowskiInequalities(n);
+  constraints := [Vector(v) : v in constraints];
+  n_reflect := #aux_reflect;
+  n_permute := #aux_permute;
+  reduced := false;
+  while not reduced do
+    B_flat := Vector([(i eq j select 1 else 2)*B[i,j] : i,j in [1..n] | i le j]);
+    reduced, i := isReduced(B_flat, constraints);
+    if not reduced then
+      if i le n_reflect then
+        l := aux_reflect[i][1];
+        k := aux_reflect[i][2];
+	e_k := one[k];
+        // currently performing small steps - can do the actual reflection
+	g := one + Transpose(Matrix(l-e_k))*Matrix(e_k);
+      elif i le n_reflect + n_permute then
+	i -:= n_reflect;
+        g := PermutationMatrix(Integers(), Sym(n)!aux_permute[i]);
+      else
+        i -:= (n_reflect + n_permute);
+        g := one;
+        k := aux_sign[i];
+        g[k,k] := -1;
+      end if;
+      B := Transpose(g)*B*g;
+    end if;
+  end while;
+  return B;
+end function;
+
+function VoronoiCoordinateBounds(d)
+  // !! TODO - check what the real bounds are !!
+  return [1 : i in [1..d]];
+end function;
+
+function closestLatticeVectorMinkowskiReduced(b, t, gram)
+  d := #b + 1;
+  one := IdentityMatrix(Rationals(), d);
+  e_d := Matrix(Rows(one)[d]);
+  diag := DiagonalMatrix(Rationals(), Diagonal(gram)[1..d-1]);
+  H_v := diag^(-1)*Submatrix(gram, [1..d-1], [1..d]);
+  H := Submatrix(H_v, [1..d-1], [1..d-1]);
+  v := Submatrix(H_v, [1..d-1], [d]);
+  // This is the precision to which we will want to compute H^(-1)
+  // (we don't need it to be exact)
+  r := Ceiling(Log(Maximum([1] cat Eltseq(v))));
+  y := -H^(-1)*v;
+  voronoi := VoronoiCoordinateBounds(d-1);
+  x_min := [Ceiling(y[i,1] - voronoi[i]) : i in [1..d-1]];
+  x_max := [Floor(y[i,1] + voronoi[i]) : i in [1..d-1]];
+  xs := CartesianProduct([[x_min[i]..x_max[i]] : i in [1..d-1]]);
+  min_dist := Infinity();
+  min_g := one;
+  min_x := Vector([0 : i in [1..d-1]]);
+  for x in xs do
+    xvec := Transpose(Matrix(Rationals(), Vector([x[i] : i in [1..d-1]])));
+    g := one - VerticalJoin(xvec*e_d, 0*e_d);
+    x_gram := Transpose(g)*gram*g;
+    if x_gram[d,d] lt min_dist then
+      min_dist := x_gram[d,d];
+      min_g := g;
+      min_x := xvec;
+    end if;
+  end for;
+  return Transpose(min_x)*Matrix(b), min_g;
+end function;
+
+function GreedyReduction(b, gram)
+  d := #b;
+  one := IdentityMatrix(Rationals(), d);
+  mult := one;
+  if d eq 1 then return b, one; end if;
+  repeat
+    perm := [x[2] : x in Sort([<gram[i,i],i> : i in [1..d]])];
+    b := [b[i] : i in perm];
+    // Is it faster to do SwapRows and SwapCol?
+    g := PermutationMatrix(Rationals(), perm);
+    gram := Transpose(g)*gram*g;
+    mult := mult*g;
+    b0, mult0 := GreedyReduction(b[1..d-1], Submatrix(gram, [1..d-1], [1..d-1]));
+    g := DirectSum(mult0, Matrix(Rationals(), [[1]]));
+    b := b0 cat [b[d]];
+    gram := Transpose(g)*gram*g;
+    mult := mult*g;
+    c, g := closestLatticeVectorMinkowskiReduced(b0, b[d], gram);
+    b[d] := Vector(Eltseq(b[d])) - Vector(Eltseq(c));
+    gram := Transpose(g)*gram*g;
+    mult := mult*g;
+  until gram[d,d] ge gram[d-1,d-1];
+  return b, mult;
+end function;

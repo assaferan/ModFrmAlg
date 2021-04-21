@@ -96,7 +96,10 @@ declare attributes NeighborProc:
 
 	// The dimension of the isotropic subspaces.
 	k,
-	
+
+        // for the case of the rationals as base field, we save a scaling matrix
+        scale,
+  
 	// Skew vector. This is used to "twist" the isotropic lifts when
 	//  computing neighbor lattices when k gt 1.
 	skew,
@@ -599,6 +602,15 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 
 	nProc`X_skew := [ x : x in nProc`X ];
 
+        if Type(BaseRing(L)) eq RngInt then
+          p := Norm(pR);
+          // a scaling matrix for Hermite Normal Form over the rationals
+          nProc`scale := DiagonalMatrix(Rationals(), [1 : i in [1..k]]
+					cat [p^2 : i in [1..k]]
+				 cat [p : i in [1..dim-2*k]]
+					cat [p^3 : i in [1..dim]]);
+        end if;
+
 	return nProc;
 end function;
 
@@ -709,49 +721,38 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	//  that HNF will be happy. We'll undo this once we perform HNF.
 	// Here D is the common denominator, which is a power of 2
 	p := Norm(nProc`pR);
-        function __scale(XX, ZZ, UU, BB, p, L)
-	  denom := 2*L`pMaximal[nProc`pR][3];
-          V := RSpace(Integers(), Rank(L));
-          xzub := [V | ];
-          for v in XX do
-	    Append(~xzub, denom * v);
-          end for;
-          for v in ZZ do
-	    Append(~xzub, denom * p^2*v);
-          end for;
-          for v in UU do
-	    Append(~xzub, denom * p * v);
-          end for;
-          for v in Basis(ZLattice(L)) do
-	    Append(~xzub, denom*p^3*v);
-          end for;
-/*
-	  XX := [ denom*v : v in XX];
-          ZZ := [ denom*p^2 * v : v in ZZ ];
-	  UU := [ denom*p * v : v in UU ];
-          BB := [ denom*p^3 * v : v in Basis(ZLattice(L))];
-          xzub := [ChangeRing(v, Integers()) : v in XX cat ZZ cat UU];
-          xzub cat:= [Universe(xzub)!v : v in BB];
-*/
-          return xzub, denom;
+        denom := L`pMaximal[nProc`pR][3]*BasisDenominator(Module(L));
+        diag := nProc`scale;
+        function __scale(XX, ZZ, UU, BB, p, denom)
+	//	  diag := DiagonalMatrix(Rationals(), [1 : v in XX] cat [p^2 : v in ZZ]
+	//			 cat [p : v in UU] cat [p^3 : v in BB]);
+          ret := denom*diag*Matrix(XX cat ZZ cat UU cat BB);
+          return ChangeRing(ret, Integers());
 	end function;
-        xzub, denom := __scale(XX, ZZ, UU, BB, p, L);
+        BB := Basis(ZLattice(L));
 
-        H := HermiteForm(Matrix(xzub));
-	H := Rows(H);
+        xzub := __scale(XX, ZZ, UU, BB, p, denom);
+
+        H := HermiteForm(xzub);
 
         function __rescale(H, denom, p, dim)
-	  return [ ChangeRing(H[i], Rationals()) / (denom*p)
-		     : i in [1..dim] ];
+	  return 1/(denom*p) * ChangeRing(H, Rationals());
 	end function;
         // Get new basis for the neighbor lattice.
-        nLatBasis := Matrix(__rescale(H, denom, p, dim));
+        nLatBasis := __rescale(H, denom, p, dim);
         // skip conversions back and forth
         if UseLLL and not BeCareful then
           zlat := Lattice(nLatBasis, 2*InnerForm(Q));
 	  lll_ZZ := LLL(zlat : Proof := false);
           nLat := LatticeWithBasis(Q,
 				   ChangeRing(BasisMatrix(lll_ZZ), Rationals()));
+          // trying to save time in the next conversion
+/*
+          nLat`ZLattice := Lattice(ChangeRing(BasisMatrix(lll_ZZ), Rationals()),
+				   2*InnerForm(Q));
+          nLat`ZLattice`basisR := Basis(lll_ZZ);
+          nLat`ZLattice`basisZ := ChangeRing(BasisMatrix(lll_ZZ), Rationals());
+*/
           return nLat;
 	end if;
         nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));

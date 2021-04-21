@@ -365,11 +365,7 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 
   // Assign the reflexive form.
   rfxSpace`Q := ReflexiveForm(innerForm, alpha);
-  /*
-  if SpaceType(rfxSpace) eq "Symmetric" then
-      rfxSpace`Q := QuadraticForm(innerForm) / 2;
-  end if;
-  */
+
   // Assign the dimension.
   rfxSpace`dim := Nrows(innerForm);
 

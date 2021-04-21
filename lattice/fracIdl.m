@@ -150,7 +150,12 @@ intrinsic Norm(I::RngIntFracIdl) -> RngIntElt
 {The norm of the fraction ideal I.}
   return I`gen;
 end intrinsic;
- 
+
+intrinsic Denominator(I::RngIntFracIdl) -> RngIntElt
+{The denominator of I.}
+  return Denominator(I`gen);
+end intrinsic;
+
 intrinsic Factorization(I::RngIntFracIdl) -> SeqEnum[Tup]
 {Returns the prime ideal factorization of an ideal I , as a sequence of 2-tuples (prime ideal and integer exponent).}
   fac_num := Factorization(Numerator(I`gen));

@@ -312,6 +312,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           tm := ChangePrecision(Realtime() - tm, 10);
           vprintf AlgebraicModularForms, 1 :
 	    "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / fullCount;
+          loopCount := #isoOrbits * #F^nProc`skewDim;
           orb_start := Realtime();
 	  for orbit in isoOrbits do
 	    skew0 := Zero(MatrixRing(F, k));
@@ -348,7 +349,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
                 nbr_tm +:= Realtime() - tm;
 		if Estimate then
 		  if IsTrivial(M`W) then
-		    printEstimate(orb_start, ~count, ~elapsed, #isoOrbits,
+		    printEstimate(orb_start, ~count, ~elapsed, loopCount,
 				  Sprintf("T_%o^%o", Norm(pR), k));
 		  else
 		    printEstimate(orb_start, ~count, ~elapsed,

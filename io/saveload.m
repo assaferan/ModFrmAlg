@@ -109,7 +109,7 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 				basis := [*
 					< [ Eltseq(b) : b in Generators(pb[1]) ],
 					[ Eltseq(x) : x in Eltseq(pb[2]) ] >
-						: pb in L`psBasis *];
+					     : pb in PseudoBasis(L) *];
 			end if;
 
 			// Add the appropriate basis to the genus list.

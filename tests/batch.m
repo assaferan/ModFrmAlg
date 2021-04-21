@@ -218,7 +218,6 @@ function compute_lsers(disc, g, nipp, nipp_idx, wt, prec : Estimate := false)
   return lsers;
 end function;
 
-
 // get the first prec*sqrt(disc) coefficients of the L-series
 // !!! TODO - the hard coded 138.84 is the number for (k,j) = (3,0), (4,0)
 // Should replace by reading from the Edgar file !!!
@@ -271,6 +270,84 @@ procedure prepareLSerBatchFile(t_idx, start, upto, wt)
   output_str cat:= "\t magma -b ${i%%/*}/./${i##*/} > ${i}.log 2>&1 &\n";
   output_str cat:= "done\n";
 // output_str cat:= "wait\n";
+  fprintf f, output_str;
+  delete f;
+  chmod_cmd := Sprintf("chmod +x %o", fname);
+  System(chmod_cmd);
+  // we will run it from outside
+  // System("./" cat fname);
+end procedure;
+
+function aut_group_data(disc : Estimate := false)
+  Qs := QuinaryQuadraticLattices(disc);
+  all_aut_size := [];
+  all_aut_fs := [];
+  for Qgen in Qs do
+    Q := Qgen[1];
+    G := OrthogonalGroup(Q);
+    aut_fs := [];
+    for d in Divisors(disc) do
+      W := SpinorNormRepresentation(G, d);
+      M := AlgebraicModularForms(G, W);
+      fs := HeckeEigenforms(M : Estimate := Estimate);
+      if d eq 1 then
+        reps := Representatives(Genus(M));
+        auts := [AutomorphismGroup(r) : r in reps];
+        aut_size := [#aut : aut in auts];
+        Append(~all_aut_size, aut_size);
+      end if;
+      nonlift_idxs := get_nonlifts(fs, disc : Estimate := Estimate);
+      for idx in nonlift_idxs do
+        f := fs[idx];
+        pivot := 1;
+        while f`vec[pivot] eq 0 do pivot +:= 1; end while;
+        Append(~aut_fs, aut_size[pivot]);
+      end for;
+   end for;
+   Append(~all_aut_fs, aut_fs);
+  end for;
+  return all_aut_size, all_aut_fs;
+end function;
+
+procedure write_aut_group_data(disc : Estimate := false)
+  fname := Sprintf("autgrp/autgrp_disc_%o_wt_3_0.m", disc);
+  file := Open(path() cat fname, "w");
+  autgrp_invs := AssociativeArray();
+  aut_size, aut_fs := aut_group_data(disc : Estimate := Estimate); 
+  autgrp_invs["aut_size"] := aut_size;
+  autgrp_invs["aut_fs"] := aut_fs;
+  for key in Keys(autgrp_invs) do
+    fprintf file, "%o := %m;\n", key, autgrp_invs[key];
+  end for;
+  delete file;
+end procedure;
+
+function createAutGrpBatchFile(disc)
+  fname := Sprintf("batch_files/autgrp_disc_%o.m", disc);
+  f := Open(fname, "w");
+  output_str := "GetSeed();\n";
+  output_str cat:= "AttachSpec(\"ModFrmAlg.spec\");\n";
+  output_str cat:= "import \"tests/batch.m\" : write_aut_group_data;\n";
+  output_str cat:= "time0 := Cputime();\n";
+  output_str cat:= Sprintf("write_aut_group_data(%o);\n", disc);
+  output_str cat:= "printf \"elapsed: %%o\\n\", Cputime()-time0;\n";
+  output_str cat:= "exit;\n";
+  fprintf f, output_str;
+  delete f;
+  return fname;
+end function;
+
+procedure prepareAutGrpBatchFile(start, upto)
+  cmds := [createAutGrpBatchFile(disc) : disc in [start..upto]];
+  fname := Sprintf("batch_files/autgrp_discs_%o_%o.sh",
+		   start, upto);
+  f := Open(fname, "w");
+  output_str := "#!/bin/bash\n";
+  all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  
+  output_str cat:= "PROCESSES_TO_RUN=(" cat all_cmds cat ")\n";
+  output_str cat:= "for i in ${PROCESSES_TO_RUN[@]}; do\n";
+  output_str cat:= "\t magma -b ${i%%/*}/./${i##*/} > ${i}.log 2>&1 &\n";
+  output_str cat:= "done\n";
   fprintf f, output_str;
   delete f;
   chmod_cmd := Sprintf("chmod +x %o", fname);

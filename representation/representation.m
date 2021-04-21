@@ -1394,7 +1394,7 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
   denom := Z_K!Denominator(Determinant(A));
   fac := Factorization(ideal< Z_K | num*denom>);
   // We only care about the discriminant modulo squares in this case
-  D := my_prod([f[1] : f in fac | IsOdd(f[2])], Parent(ideal<Z_K|>));
+  D := &*([ideal<Z_K | 1>] cat [f[1] : f in fac | IsOdd(f[2])]);
 //  require D subset Z_K!!d :
 //		"d should divide the discriminant";
   n := Nrows(A);

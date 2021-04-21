@@ -128,12 +128,6 @@ intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
   num_str := Sprintf("%o", d);
   blank := &cat[" " : i in [1..5-#num_str]];
   find_str := "D=" cat blank cat num_str;
-/*
-  start := Index(r, Sprintf("D=  %o;",d));
-  if start eq 0 then
-    start := Index(r, Sprintf("D=   %o;",d));
-  end if;
-*/
   start := Index(r, find_str);
   require start ne 0 : Sprintf("No entry with discriminant %o found", d);
     
@@ -145,7 +139,7 @@ intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
   latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
   while (latGen`D eq d) do
     Append(~genera, latGen);
-    if idx lt #r_entries then
+    if idx+4 le #r_entries then
       latGen, idx := parseNextGenus(r_entries, idx, desc_to_field);
     end if;
   end while;

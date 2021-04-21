@@ -41,7 +41,7 @@ recField_RF := recformat< name : MonStgElt,
 function parseNextEntry(entry, desc_to_field : multiple := false)
   sep := " ";
   s := Split(entry, sep);
-  is_rec := s[1] in Keys(desc_to_field);
+  is_rec := (not IsEmpty(s)) and (s[1] in Keys(desc_to_field));
   if is_rec then
     fld := desc_to_field[s[1]];
     sep := fld`sep;

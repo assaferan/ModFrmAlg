@@ -259,6 +259,51 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
    return forms;
 end intrinsic;
 
+intrinsic TernaryQuadraticLattice(d::RngIntElt) -> Mtrx
+{get a positive definite quadratic lattice.}
+  // B<i,j,k> := QuaternionAlgebra(d);
+  // This does not make it easy for us to find the square root of -d in the
+  // quaternion algebra after constructing it. Therefore we use Ibukiyama's
+  // recipe.
+  all_primes := [x[1] : x in Factorization(d)];
+  primes := [x : x in all_primes | x ne 2]; 
+  // a quadratic non-residue suffices here, but this is usually not
+  // time consuming.
+  if IsOdd(#all_primes) then
+    // In this case there is a definite quaternion algebra of discriminant d
+    residues := [3] cat [-Integers()!PrimitiveElement(Integers(p)) : p in primes];
+    q := CRT(residues, [8] cat primes);
+    while not IsPrime(q) do
+      q +:= &*([8] cat primes);
+    end while;	    
+    B<i,j,k> := QuaternionAlgebra(Rationals(), -q, -d);
+    assert Discriminant(B) eq d;
+  else
+    // I'm not sure which quaternion algebra we want here
+    // Is it this one?
+    B<i,j,k> := QuaternionAlgebra(Rationals(), -1, -d);
+  end if;
+  // We could also form the maximal order directly from Ibukiyama's recipe
+  // if necessary
+  O_B := MaximalOrder(B);
+  alpha := Basis(O_B);
+  x := Basis(B);
+  gram := Matrix([[Trace(x[m]*Conjugate(x[n]))
+		      : n in [1..4]] : m in [1..4]]);
+  basis := Matrix([Eltseq(x) : x in alpha]);
+  lat_O := Lattice(basis, gram);
+  mat_beta := [Eltseq(x) : x in Basis(Dual(lat_O : Rescale := false))];
+  beta0 := [B!b : b in mat_beta];
+  mat := [[Trace(alpha[m]*Conjugate(beta0[n])) : n in [1..4]] : m in [1..4]];
+  beta := [B!b : b in Rows(Transpose(Matrix(mat))^(-1)*Matrix(mat_beta))];
+  assert IsOne(Matrix([[Trace(alpha[m]*Conjugate(beta[n]))
+			   : n in [1..4]] : m in [1..4]]));
+  Q := Matrix([[Trace((beta[m]*j)*Conjugate(beta[n]*j))
+		   : n in [2..4]] : m in [2..4]]);
+  assert Determinant(Q) eq 2*d;
+  return Q;
+end intrinsic;
+
 // Should change this, right now only works for small discs (up to 256)
 // and slowly
 function get_nipp_idx(disc, nipp)

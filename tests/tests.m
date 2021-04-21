@@ -42,6 +42,7 @@ forward testCMF492aa;
 forward testDiscriminant2;
 forward testRank8Disc45;
 forward testRank4Root3Disc1;
+forward testQuinaryLattice;
 
 intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 				       UseExisting := false,
@@ -52,6 +53,8 @@ intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 	  SeqEnum[ModFrmAlg], SeqEnum
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting Num_primes.}
 
+  // Testing production of Quinary lattices
+  testQuinaryLattice();
   // Testing the classical modular form 49.2.a.a.
   testCMF492aa();
   // Testing John's question about discriminant 2
@@ -598,6 +601,12 @@ procedure testRank8Root3Disc1()
   E:=HeckeEigenforms(M);
   pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q));
   _<x> := Parent(pol);
+end procedure;
+
+procedure testQuinaryLattice()
+  // These ones are at the end of their fiel and appeared to be problematic
+  Q := QuinaryQuadraticLattices(256);
+  Q := QuinaryQuadraticLattices(300);
 end procedure;
 
 // !! TODO - add tests for SetGenus and SetAutomorphismGroups

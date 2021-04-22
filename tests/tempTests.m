@@ -86,7 +86,8 @@ ratios := [[[timing[i][j][k]/timing2[i][j][k] : k in [1..#timing[i][j]]
 	      : i in [1..#timing]];
 // print "ratios are: ", ratios;
 print "Testing canonical form  version...";
-M3, timing3 := AlgebraicModularFormsTests(: NumPrimes := 3, ThetaPrec := -1);
+// M3, timing3 := AlgebraicModularFormsTests(: NumPrimes := 3, ThetaPrec := -1);
+
 print "testing L series computation for O(5)...";
 print "testing level 61, weights (3,0), (3,2) and (4,0)...";
 // This is quite long, so we reduce the precision

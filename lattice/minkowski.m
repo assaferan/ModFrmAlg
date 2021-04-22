@@ -630,6 +630,10 @@ function level_to_input(level : ramified_primes := [])
   return primes;
 end function;
 
+
+// This is what Jeff does for ternary forms
+// For quinary we actually need the ramification
+// for each of the quaternion algebras - something to think about for later
 function get_quad_form(input)
   det := 1;
   disc := 1;

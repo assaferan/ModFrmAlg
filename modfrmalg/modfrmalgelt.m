@@ -328,7 +328,7 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 			   Orbits := Orbits, LowMemory := LowMemory,
 			   ThetaPrec := ThetaPrec);
 
-        // This actually repeats the previous to get the also the eigenvectors.
+        // This actually repeats the previous to get also the eigenvectors.
         // Since main computation is Hecke operators, we let it go for now
 
 	// Decompose eigenspace.

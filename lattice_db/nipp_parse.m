@@ -261,18 +261,51 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
    return forms;
 end intrinsic;
 
-intrinsic TernaryQuadraticLattice(d::RngIntElt) -> Mtrx
+function foo(r, N)
+  assert N ge 2;
+  ret := [];
+  fac := Factorization(N);
+  R<x> := PolynomialRing(Rationals(),r);
+  factor_sets := [];
+  for fa in fac do
+    exp_set := [Exponents(x) : x in MonomialsOfDegree(R, fa[2])];
+    Append(~factor_sets, [[fa[1]^e : e in exps] : exps in exp_set]); 
+  end for;
+  possible_factors := CartesianProduct(factor_sets);
+  diags := {};
+  for poss in possible_factors do
+    diag := Multiset([&*[x[i] : x in poss] : i in [1..r]]);
+    Include(~diags, diag);
+  end for;
+  diags := [MultisetToSequence(diag) : diag in diags];
+  for diag in diags do
+    D := 2*DiagonalMatrix(diag);
+    lat := LatticeWithGram(D);
+    L := LatticeFromLat(lat);
+    // That's nice, but only when we are square-free
+    // maybe we can make it stop at the appropriate level
+    L_max := MaximalIntegralLattice(L);
+    Append(~ret, GramMatrix(L_max, Basis(Module(L_max))));
+  end for;
+  return ret;
+end function;
+
+intrinsic TernaryQuadraticLattice(N::RngIntElt) -> Mtrx
 {get a positive definite quadratic lattice.}
+  assert N ge 2;
+  fac := Factorization(N);
+  require &and[x[2] le 2 : x in fac] : "Only supports cube-free levels.";
   // B<i,j,k> := QuaternionAlgebra(d);
   // This does not make it easy for us to find the square root of -d in the
   // quaternion algebra after constructing it. Therefore we use Ibukiyama's
   // recipe.
-  all_primes := [x[1] : x in Factorization(d)];
+  all_primes := [x[1] : x in Factorization(N) | IsOdd(x[2])];
   primes := [x : x in all_primes | x ne 2]; 
-  // a quadratic non-residue suffices here, but this is usually not
-  // time consuming.
-  if IsOdd(#all_primes) then
-    // In this case there is a definite quaternion algebra of discriminant d
+  d := &*([1] cat all_primes);
+  // In this case there is a definite quaternion algebra of discriminant d
+  if IsOdd(#all_primes) then  
+    // a quadratic non-residue suffices here, but this is usually not
+    // time consuming.
     residues := [3] cat [-Integers()!PrimitiveElement(Integers(p)) : p in primes];
     q := CRT(residues, [8] cat primes);
     while not IsPrime(q) do
@@ -280,15 +313,30 @@ intrinsic TernaryQuadraticLattice(d::RngIntElt) -> Mtrx
     end while;	    
     B<i,j,k> := QuaternionAlgebra(Rationals(), -q, -d);
     assert Discriminant(B) eq d;
+    // We could also form the maximal order directly from Ibukiyama's recipe
+    // if necessary
+    // O_B := MaximalOrder(B);
   else
     // I'm not sure which quaternion algebra we want here
-    // Is it this one?
-    B<i,j,k> := QuaternionAlgebra(Rationals(), -1, -d);
+    // This one covers [1,1,d]
+    // Step by step - when d is prime, the above has disc p
+    // and it is the unique
+    // when d = pq, we can have [1,1,pq] or [1,p,q]
+    // In the first case we need (-pq,-pq), in the second we need
+    // (-p,-q).
+    // The first has discriminant 
+    B<i,j,k> := QuaternionAlgebra(Rationals(), -d, -d);
+// O_B := QuaternionOrder(B, N div Discriminant(B));
   end if;
-  // We could also form the maximal order directly from Ibukiyama's recipe
-  // if necessary
-  O_B := MaximalOrder(B);
+
+  O_B := QuaternionOrder(B, N div Discriminant(B));
   alpha := Basis(O_B);
+  // maybe we are lucky
+  Q := Matrix([[Trace((alpha[m])*Conjugate(alpha[n]))
+		   : n in [2..4]] : m in [2..4]]);
+  if Determinant(Q) eq 2*N then
+    return Q;
+  end if;
   x := Basis(B);
   gram := Matrix([[Trace(x[m]*Conjugate(x[n]))
 		      : n in [1..4]] : m in [1..4]]);
@@ -302,7 +350,8 @@ intrinsic TernaryQuadraticLattice(d::RngIntElt) -> Mtrx
 			   : n in [1..4]] : m in [1..4]]));
   Q := Matrix([[Trace((beta[m]*j)*Conjugate(beta[n]*j))
 		   : n in [2..4]] : m in [2..4]]);
-  assert Determinant(Q) eq 2*d;
+
+  assert Determinant(Q) eq 2*N;
   return Q;
 end intrinsic;
 
@@ -491,7 +540,7 @@ function isReduced(vec, constraints)
   end for;
   return true, _;
 end function;
-
+/*
 function MinkowskiReduction(A)
   assert IsPositiveDefinite(A);
   B := A;
@@ -528,7 +577,7 @@ function MinkowskiReduction(A)
   end while;
   return B;
 end function;
-
+*/
 function VoronoiCoordinateBounds(d)
   // !! TODO - check what the real bounds are !!
   return [1 : i in [1..d]];
@@ -545,7 +594,8 @@ function closestLatticeVectorMinkowskiReduced(b, t, gram)
   // This is the precision to which we will want to compute H^(-1)
   // (we don't need it to be exact)
   r := Ceiling(Log(Maximum([1] cat Eltseq(v))));
-  y := -H^(-1)*v;
+  // There's an annoying sign error in the paper here
+  y := H^(-1)*v;
   voronoi := VoronoiCoordinateBounds(d-1);
   x_min := [Ceiling(y[i,1] - voronoi[i]) : i in [1..d-1]];
   x_max := [Floor(y[i,1] + voronoi[i]) : i in [1..d-1]];
@@ -566,16 +616,91 @@ function closestLatticeVectorMinkowskiReduced(b, t, gram)
   return Transpose(min_x)*Matrix(b), min_g;
 end function;
 
+import "/Applications/Magma/package/Lattice/Lat/minkowski.m" :
+  NeighborReduction, SignNormalization, PermutationReduction,
+  replacement_successive_minima;
+
+function magmaKohelReduction(M)
+    deg := Degree(Parent(M));
+    ZMat := MatrixAlgebra(Integers(),deg);
+    I := Identity(ZMat);
+    if Type(BaseRing(Parent(M))) eq RngInt then
+	coeffs := Eltseq(M);
+	c := GCD(coeffs);
+	M0 := ZMat ! [ 1/c * x : x in coeffs ];
+    else
+	coeffs := Eltseq(M);
+	den := LCM([ Denominator(x) : x in coeffs ]);
+	num := GCD([ Numerator(den*x) : x in coeffs ]);
+	c := num/den;
+	M0 := ZMat![ 1/c * x : x in coeffs ];
+    end if;
+    // Treat some special cases here?
+    if Eltseq(M0) eq [2,1,1,0,1,2,1,1,1,1,2,1,0,1,1,2] then
+	return M, I;
+    end if;
+    //     D, B := SuccessiveMinima(LatticeWithGram(M0));
+    D,B:=replacement_successive_minima(M0); // MW Dec 2017
+    // Treat some special cases here.
+    if deg eq 4 and &and[ D[i] eq D[1] : i in [2..4] ] then
+	if D[1] le 2 then
+	    MS := [
+	            Matrix(4,4,[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),
+   		    Matrix(4,4,[2,1,1,0,1,2,1,1,1,1,2,1,0,1,1,2]),
+		    Matrix(4,4,[2,1,0,0,1,2,0,0,0,0,2,1,0,0,1,2])
+		  ];
+	    for M1 in MS do
+		L1 := LatticeWithGram(M1);
+		bool, T1 := IsIsometric(LatticeWithGram(M0),L1);
+		if bool then
+		    return Parent(M) ! (c * M1), T1;
+		end if;
+	    end for;
+	end if;
+    elif deg eq 4 and D[1] eq D[2] then
+	if D[1] le 2 then
+	    MS := [
+	            Matrix(4,4,[2,0,1,1,0,2,1,1,1,1,4,1,1,1,1,4]),
+		    Matrix(4,4,[2,1,0,0,1,2,0,0,0,0,4,2,0,0,2,4]),
+	            Matrix(4,4,[2,1,1,0,1,2,1,1,1,1,10,5,0,1,5,10])
+		  ];
+	    for M1 in MS do
+		L1 := LatticeWithGram(M1);
+		bool, T1 := IsIsometric(LatticeWithGram(M0),L1);
+		if bool then
+		    return Parent(M) ! (c * M1), T1;
+		end if;
+	    end for;
+	end if;
+    end if;
+    if &or[ D[i] lt M0[i,i] : i in [1..deg] ] then
+	T := ZMat! &cat [ Eltseq(v) : v in B ];
+	M0 := T*M0*Transpose(T); 
+    else // don't change if already there
+	T := I;
+    end if;
+    repeat
+	M0, T1 := PermutationReduction(M0);
+        M0, T2 := SignNormalization(M0);
+        M0, T3 := NeighborReduction(M0);
+	T1 := T3*T2*T1; 
+	T := T1*T;
+    until T1 eq I;
+    return Parent(M) ! (c * M0), T;
+end function;
+
 function GreedyReduction(b, gram)
   d := #b;
   one := IdentityMatrix(Rationals(), d);
   mult := one;
   if d eq 1 then return b, one; end if;
   repeat
-    perm := [x[2] : x in Sort([<gram[i,i],i> : i in [1..d]])];
+    // we add the vector itself for a unique ordering
+  //    perm := [x[3] : x in Sort([<gram[i,i],b[i], i> : i in [1..d]])];
+    perm := [x[2] : x in Sort([<gram[i,i], i> : i in [1..d]])];
     b := [b[i] : i in perm];
     // Is it faster to do SwapRows and SwapCol?
-    g := PermutationMatrix(Rationals(), perm);
+    g := PermutationMatrix(Rationals(), perm)^(-1);
     gram := Transpose(g)*gram*g;
     mult := mult*g;
     b0, mult0 := GreedyReduction(b[1..d-1], Submatrix(gram, [1..d-1], [1..d-1]));
@@ -588,5 +713,337 @@ function GreedyReduction(b, gram)
     gram := Transpose(g)*gram*g;
     mult := mult*g;
   until gram[d,d] ge gram[d-1,d-1];
+  // we force the secondary diagonal to be positive
+  for i in [1..d-1] do
+    if gram[i, i+1] lt 0 then
+      b[i+1] := -b[i+1];
+      g := one;
+      g[i+1,i+1] := -1;
+      mult := mult*g;
+      gram := Transpose(g)*gram*g;
+    end if;
+  end for;
+  // we add the vector itself for a unique ordering
+  // min_gram := [Minimum(Eltseq(gram[i])) : i in [1..d]];
+  min_gram := [Sort(Eltseq(gram[i])) : i in [1..d]];
+  perm := [x[4] : x in Sort([<gram[i,i],min_gram[i], b[i], i> : i in [1..d]])];
+  b := [b[i] : i in perm];
+  // Is it faster to do SwapRows and SwapCol?
+  g := PermutationMatrix(Rationals(), perm)^(-1);
+  gram := Transpose(g)*gram*g;
+  mult := mult*g;
   return b, mult;
+end function;
+
+intrinsic GreedyReduce(L::ModDedLat) -> AlgMatElt
+{Reduce L using the Greedy algorithm of Nguyen and Stehle.}
+  lat := ZLattice(L);
+  b := Basis(lat);
+  gram := InnerProductMatrix(lat);
+  b := [ChangeRing(Vector(Eltseq(x)), Rationals()) : x in b];
+  gram_b := Matrix(b)*gram*Transpose(Matrix(b));
+// b, mult := GreedyReduction(b, gram_b);
+// return Transpose(mult)*gram_b*mult, Matrix(b);
+  return magmaKohelReduction(gram_b);
+end intrinsic;
+
+primeSymbol := recformat <
+        p  : RngIntElt, // prime
+        power : RngIntElt,   // exponent
+        ramified : BoolElt // whether ramified
+      >;
+
+function sign_vector(x, det, primes)
+  vec := x eq -1 select 1 else 0;
+  for symb in primes do
+    value := HilbertSymbol(x, -det, symb`p);
+    vec := 2*vec + (value eq -1 select 1 else 0);
+  end for;
+  return vec;
+end function;
+
+function GF2_solve_naive(vecs, start, target)
+  upper := 2^#vecs;
+  num_vecs := #vecs;
+  for i in [start+1..upper-1] do
+    x := 0;
+    mask := upper div 2;
+    for j in [0..num_vecs-1] do
+      if (BitwiseAnd(i, mask) ne 0) then x := BitwiseXor(x, vecs[j+1]); end if;
+      mask div:= 2;
+    end for;
+    if x eq target then return i; end if;
+  end for;
+  return 0;
+end function;
+
+function discriminant(q)
+  a := q[1,1];
+  b := q[2,2];
+  c := q[3,3];
+  f := q[2,3]+q[3,2];
+  g := q[1,3]+q[3,1];
+  h := q[1,2]+q[2,1];
+  disc := 4*a*b*c-a*f^2-b*g+h*(f*g-c*h);
+  return disc;
+end function;
+
+function Z_isotropic_mod_pp(q, p)
+  pp := p*p;
+  vec := [0,0,1];
+  if Evaluate(q, vec) mod pp eq 0 then
+    return vec;
+  end if;
+  vec[2] := 1;
+  for z in [0..pp-1] do
+    vec[3] := z;
+    if Evaluate(q, vec) mod pp eq 0 then
+      return vec;
+    end if;
+  end for;
+  vec[1] := 1;
+  for y in [0..pp-1] do
+    for z in [0..pp-1] do
+      if Evaluate(q, vec) mod pp eq 0 then
+        return vec;
+      end if;
+    end for;
+  end for;
+  vec := [0,0,0];
+  return vec;
+end function;
+
+function level_to_input(level : ramified_primes := [])
+  facs := Factorization(level);
+  ps := [x[1] : x in facs];
+  es := [x[2] : x in facs];
+  if IsEmpty(ramified_primes) then
+    if IsEven(#ps) then
+      ramified_primes := ps[1..#ps-1];
+    else
+      ramified_primes := ps;
+    end if;
+  else
+    ramified_primes := [p : p in ramified_primes | p in ps];    
+  end if;
+
+  primes := [];
+  for n in [1..#ps] do
+    p := ps[n];
+    prime := rec<primeSymbol | p := p, power := es[n],
+                 ramified := p in ramified_primes>;
+
+    Append(~primes, prime);
+  end for;
+  return primes;
+end function;
+
+function get_quad_form(input)
+  det := 1;
+  disc := 1;
+  two_specified := false;
+  num_ramified := 0;
+  for symb in input do
+    assert IsOdd(symb`power);
+    if symb`p eq 2 then
+      two_specified := true;
+    end if;
+    if symb`ramified then
+      num_ramified +:= 1;
+    end if;
+    det *:= symb`p;
+    for k in [0..symb`power-1] do
+      disc *:= symb`p;
+    end for;
+  end for;
+  assert IsOdd(num_ramified);  //"Must specify an odd number of ramified primes.";
+  primes := [];
+  target := 1;
+  if not two_specified then
+    s := rec < primeSymbol | p := 2, power := 0, ramified := false>;
+    Append(~primes, s);
+    target *:= 2;
+  end if;
+  for symb in input do
+    Append(~primes, symb);
+    target *:= 2;
+    if symb`ramified then
+      target +:= 1;
+    end if;
+  end for;
+  fullbase := [];
+  signs := [];
+
+  Append(~fullbase, -1);
+  Append(~signs, sign_vector(-1, det, primes));
+
+  for symb in primes do
+    Append(~signs, sign_vector(symb`p, det, primes));
+    Append(~fullbase, symb`p);
+  end for;
+
+  p := 2;
+  done := false;
+  added_to_end := false;
+  while not done do
+    solution := 0;
+    repeat
+      solution := GF2_solve_naive(signs, solution, target);
+      if solution ne 0 then
+	mask := 2^#fullbase;
+        b := -1;
+        det2 := det;
+	for q in fullbase do
+	  mask := mask div 2;
+	  if BitwiseAnd(solution, mask) ne 0 then
+            b *:= q;
+	    if q gt 0 then
+	      if det2 mod q eq 0 then
+	        det2 := det2 div q;
+	      else
+	        det2 *:= q;
+	      end if;
+	    end if;
+	  end if;
+	end for;
+        mask := 2^#primes;
+	for symb in primes do
+	  mask := mask div 2;
+          sign := (BitwiseAnd(target, mask) ne 0) select -1 else 1;
+          assert HilbertSymbol(-b, -disc, symb`p) eq sign;  
+	end for;
+        good := true;
+        for n in [#primes+1..#fullbase-1] do
+	  sign := HilbertSymbol(-b, -disc, fullbase[n+1]);
+	  if sign eq -1 then good := false; end if;
+	end for;
+	if good then
+          done := true;
+	  break;
+	end if;
+      end if;
+    until solution eq 0;
+    if done then break; end if;
+    p := NextPrime(p);
+    while disc mod p eq 0 do
+      p := NextPrime(p);
+    end while;
+    if added_to_end then
+      signs := signs[1..#signs-1];
+      fullbase := fullbase[1..#fullbase-1];
+    end if;
+    Append(~signs, sign_vector(p, det, primes));
+    Append(~fullbase, p);
+    added_to_end := true;
+  end while;
+  b := -1;
+  mask := 2^#fullbase;
+  base := [2];
+  for p in fullbase do
+    mask div:= 2;
+    if BitwiseAnd(solution, mask) ne 0 then
+      b *:= p;
+      if p gt 0 then
+	if det mod p eq 0 then
+	  det div:= p;
+	else
+	  det *:= p;
+	   Append(~base, p);
+	end if;
+      end if;
+    end if;
+  end for;
+  mask := 2^#primes;
+  for symb in primes do
+    mask div:= 2;
+    sign := (BitwiseAnd(target, mask) ne 0) select -1 else 1;
+    assert HilbertSymbol(-b, -disc, symb`p) eq sign;
+  end for;
+  a := 1;
+  c := det;
+  f := 0;
+  g := 0;
+  h := 0;
+  b_q := SymmetricMatrix([a,h/2,b,g/2,f/2,c]);
+  q := ChangeRing(QuadraticForm(b_q), Integers());
+  N := Integers()!discriminant(b_q);
+  assert N eq 4*Determinant(b_q);
+  for p in base do
+    pp := p*p;
+    while N mod p^2 eq 0 do
+      vec := Z_isotropic_mod_pp(q,p);
+      assert Evaluate(q, vec) mod p^2 eq 0;
+      if IsZero(vec) then
+	break;
+      elif vec[1] eq 0 and vec[2] eq 0 then
+	assert vec[3] eq 1;
+	assert g mod p eq 0;
+	assert f mod p eq 0;
+	assert c mod pp eq 0;
+        c div:= pp;
+	f div:= p;
+	g div:= p;
+      elif vec[1] eq 0 then
+	b +:= c*vec[3]^2 + f*vec[3];
+	f +:= 2*c*vec[3];
+	h +:= g*vec[3];
+	assert vec[2] eq 1;
+	assert b mod pp eq 0;
+	assert f mod p eq 0;
+	b div:= pp;
+	f div:= p;
+	h div:= p;
+      else
+  	a +:= b*vec[2]^2+c*vec[3]^2+f*vec[2]*vec[3]+g*vec[3]+h*vec[2];
+	g +:= 2*c*vec[3] + f*vec[2];
+	h +:= 2*b*vec[2] + f*vec[3];
+	assert vec[1] eq 1;
+	assert a mod pp eq 0;
+	assert g mod p eq 0;
+	assert h mod p eq 0;
+	a div:= pp;
+	g div:= p;
+	h div:= p;
+      end if;
+      b_q := SymmetricMatrix([a,h/2,b,g/2,f/2,c]);
+      q := ChangeRing(QuadraticForm(b_q), Integers());
+      N := Integers()!discriminant(b_q); 
+    end while;
+  end for;
+//lat := LatticeWithGram(b_q);
+//  b_q := InnerProductMatrix(MinkowskiReduction(lat : Canonical));
+  b_q := magmaKohelReduction(b_q);
+  a := b_q[1,1];
+  b := b_q[2,2];
+  c := b_q[3,3];
+  f := b_q[2,3]+b_q[3,2];
+  g := b_q[1,3]+b_q[3,1];
+  h := b_q[2,1] + b_q[1,2];
+  q := ChangeRing(QuadraticForm(b_q), Integers());
+  for symb in primes do
+    for j := 3 to symb`power by 2 do
+      f *:= symb`p;
+      g *:= symb`p;
+      c *:= symb`p*symb`p;
+    end for;
+  end for;
+  b_q := SymmetricMatrix([a,h/2,b,g/2,f/2,c]);
+//  lat := LatticeWithGram(b_q);
+//  b_q := InnerProductMatrix(MinkowskiReduction(lat : Canonical));
+  b_q := magmaKohelReduction(b_q);
+  a := b_q[1,1];
+  b := b_q[2,2];
+  c := b_q[3,3];
+  f := b_q[2,3]+b_q[3,2];
+  g := b_q[1,3]+b_q[3,1];
+  h := b_q[2,1] + b_q[1,2];
+  q := ChangeRing(QuadraticForm(b_q), Integers());
+  x := Integers()!(4*a*b-h*h);
+  mask := 2^#primes;
+  for symb in primes do
+    mask div:= 2;
+    sign := (BitwiseAnd(target, mask) ne 0) select -1 else 1;
+    assert HilbertSymbol(-x, -disc, symb`p) eq sign;
+  end for;
+  return 2*b_q;
 end function;

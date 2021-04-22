@@ -82,10 +82,15 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   end if;
 
   // Compute the invariant of the neighbor lattice.
-  inv := Invariant(nLat : Precision := ThetaPrec);
+  if ThetaPrec eq -1 then
+    inv := GreedyReduce(nLat);
+  else
+    inv := Invariant(nLat : Precision := ThetaPrec);
+  end if;
 
   // Retrieve the array of isometry classes matching this invariant.
   if not IsDefined(invs, inv) then
+    assert ComputeGenus;
     invs[inv] := [];
   end if;
   array := invs[inv];
@@ -189,6 +194,19 @@ function createInvsWithPrecision(M, ThetaPrec)
   return invs;
 end function;
 
+function createReducedInvs(reps)
+  invs := AssociativeArray();
+  for i in [1..#reps] do
+    r := reps[i];
+    red := GreedyReduce(r);
+    if not IsDefined(invs, red) then
+      invs[red] := [];
+    end if;
+    Append(~invs[red], <r, i>);
+  end for;
+  return invs;
+end function;
+
 // This procedure updates the matrix of the Hecke operator at
 // column idx.
 procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
@@ -202,7 +220,11 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 ThetaPrec := 25)
     L := reps[idx];
 
-    invs := createInvsWithPrecision(M, ThetaPrec);
+    if ThetaPrec eq -1 then
+      invs := createReducedInvs(Representatives(Genus(M)));
+    else
+      invs := createInvsWithPrecision(M, ThetaPrec);
+    end if;
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
@@ -310,9 +332,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				       proj : Estimate := Estimate);
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
+          nNbrs := NumberOfNeighbors(M, pR, k);
           vprintf AlgebraicModularForms, 1 :
-	    "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / fullCount;
-          loopCount := #isoOrbits * #F^nProc`skewDim;
+	    "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
+          loopCount := fullCount - nNbrs + #isoOrbits * #F^nProc`skewDim;
           orb_start := Realtime();
 	  for orbit in isoOrbits do
 	    skew0 := Zero(MatrixRing(F, k));
@@ -430,7 +453,8 @@ function HeckeOperatorCN1(M, pR, k
       L := Module(M);
       reps := [L];
       invs := AssociativeArray();
-      invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
+// invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
+      invs[GreedyReduce(L)] := [<L,1>];
       gamma_rep := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
       gamma := sub<M`W`G|
 		[Transpose(PullUp(Matrix(g), L, L :
@@ -446,7 +470,11 @@ function HeckeOperatorCN1(M, pR, k
       //  tests by filtering out those isometry classes whose invariant
       //  differs from the one specified.
       // invs := M`genus`RepresentativesAssoc;
-      invs := createInvsWithPrecision(M, ThetaPrec);
+      if ThetaPrec eq -1 then
+        invs := createReducedInvs(reps);
+      else
+        invs := createInvsWithPrecision(M, ThetaPrec);
+      end if;
     end if;
 
     hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]

@@ -169,7 +169,7 @@ intrinsic EigenspaceDecomposition(array::Assoc : Warning := true)
 			       BaseRing(newSp[1]), BaseRing(space))[1];
                   F_space := BaseRing(space);
                   homs := [hom<F_space ->F | r[1]> :
-				r in Roots(DefiningPolynomial(F_space), F>];
+				r in Roots(DefiningPolynomial(F_space), F)];
 		  assert exists(homF){h : h in homs |
 		      Dimension(ChangeRing(space, F, h) meet
 				ChangeRing(newSp[1], F)) ne 0};

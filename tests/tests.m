@@ -43,6 +43,7 @@ forward testDiscriminant2;
 forward testRank8Disc45;
 forward testRank4Root3Disc1;
 forward testQuinaryLattice;
+forward testEigenspaceDecomposition;
 
 intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 				       UseExisting := false,
@@ -70,6 +71,8 @@ intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
   testUnitaryMassFormula();
   // Testing Example 9 from Rama Tornaria - non-lift paramodular form.
   testRamaTornaria9();
+  // Testing a bug that appeared in eigenform decomposition
+  testEigenformDecomposition();
   all_spaces := [];
   all_timings := [];
   for example in AlgebraicModularFormsExamples do
@@ -630,6 +633,15 @@ procedure testQuinaryLattice()
   // These ones are at the end of their fiel and appeared to be problematic
   Q := QuinaryQuadraticLattices(256);
   Q := QuinaryQuadraticLattices(300);
+end procedure;
+
+// This tests a bug that appeared in eigenspace decomposition
+procedure testEigenspaceDecomposition()
+  Q := QuinaryQuadraticLattices(390)[2][1];
+  G := OrthogonalGroup(Q);
+  W := SpinorNormRepresentation(G, 6);
+  M := AlgebraicModularForms(G, W);
+  fs := HeckeEigenforms(M);
 end procedure;
 
 // !! TODO - add tests for SetGenus and SetAutomorphismGroups

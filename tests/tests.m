@@ -72,7 +72,7 @@ intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
   // Testing Example 9 from Rama Tornaria - non-lift paramodular form.
   testRamaTornaria9();
   // Testing a bug that appeared in eigenform decomposition
-  testEigenformDecomposition();
+  testEigenspaceDecomposition();
   all_spaces := [];
   all_timings := [];
   for example in AlgebraicModularFormsExamples do

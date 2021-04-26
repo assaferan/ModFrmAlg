@@ -195,6 +195,45 @@ intrinsic TernaryQuadraticLattice(N::RngIntElt) -> Mtrx
   return Q;
 end intrinsic;
 
+// Still not working - has to make it positive definite
+intrinsic QuinaryQuadraticOfPrimeLevel(p::RngIntElt) -> Mtrx
+{.}
+  // For now we assume p is an odd prime
+  require IsPrime(p) and IsOdd(p) : "Currently only implemented for odd primes.";
+  residues := [3] cat [-Integers()!PrimitiveElement(Integers(p))];
+  q := CRT(residues, [8,p]);
+  while not IsPrime(q) do
+    q +:= 8*p;
+  end while;	    
+  B<i,j,k> := QuaternionAlgebra(Rationals(), -p, -q);
+  assert Discriminant(B) eq p;
+
+  // we look for an element of norm -1, and we will only
+  // be interested at its value mod p
+  Bp := ChangeRing(B, Integers(p));
+  assert exists(a){x : x in Bp | Norm(x) eq -1};
+  a := [Integers()!x : x in Eltseq(a)];
+  V := VectorSpace(Rationals(), 5);
+  v1 := V!([1] cat a);
+  v2 := V![0,p,0,0,0];
+  v3 := V!([0] cat Eltseq(p*(1+j)/2));
+  v4 := V!([0] cat Eltseq(i*(1+j)/2));
+  s := CRT([0,1],[p,q]);
+  _, r := IsSquare(GF(q)!(-p));
+  r := Integers()!r;
+  v5 := V!([0] cat Eltseq((r*s+i)*j/q));
+  basis := [v1, v2, v3, v4, v5];
+  function bilinear(v1, v2)
+    t1 := v1[1];
+    t2 := v2[1];
+    r1 := B!(Eltseq(v1)[2..5]);
+    r2 := B!(Eltseq(v2)[2..5]);
+    return (2*t1*t2 + Trace(r1*Conjugate(r2)))/p;
+  end function;
+  Q := Matrix([[bilinear(basis[i], basis[j]) : j in [1..5]] : i in [1..5]]);
+  return ChangeRing(Q, Rationals());
+end intrinsic;
+
 function possible_diagonals(M, k, n)
   if k eq 1 then
     return [[x] : x in [1..Floor(Root(M,n))]];

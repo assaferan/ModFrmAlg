@@ -294,7 +294,7 @@ matrix provided. }
   //  ring of the supplied basis agree.
   // require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
   F := BaseRing(rfxSpace);
-  iso := IsIsomorphic(F, BaseRing(basis));
+  iso := IsIsomorphic(F, FieldOfFractions(BaseRing(basis)));
 
   require iso : "The base rings do not match.";
   basis := ChangeRing(basis, BaseRing(rfxSpace));
@@ -2138,4 +2138,263 @@ intrinsic WeakApproximation(I::SeqEnum[RngInt],
   // so all ideals have a single generator
   gens := [Norm(II) : II in I];
   return &*([1] cat [gens[i]^V[i] : i in [1..#V]]);
+end intrinsic;
+
+function MySquarefree(d)
+  T:= Type(d);
+  assert T notin {RngIntElt, FldRatElt};
+
+  return d; // FIXME
+
+  if ISA(T, FldElt) then
+    _, x:= IsIntegral(d);
+    d:= Integers(Parent(d)) ! (d*x^2);
+  end if;
+  R:= Parent(d); r:= R ! 1;
+  if IsSquare(d) then return r; end if;
+  F:= Reverse([ < f[1], f[2] div 2 >: f in Factorization(R*d) | f[2] ge 2 ]);
+  for i in [1..#F] do
+    for j in [1..F[i,2]] do
+      ok, x:= IsPrincipal(F[i,1]);
+      if ok then
+	r *:= x^(F[i,2] div j);
+        F[i,2] mod:= j;
+	break;
+      end if;
+    end for;
+  end for;
+
+  F:= [f : f in F | f[2] ne 0 ];
+  found := true;
+  while #F ge 2 and found do
+    found:= false;
+    Prods:= [ 1*R ]; Vecs:= [ RSpace(Integers(), #F) ! 0 ];
+    for i in [1..#F] do
+      v:= Universe(Vecs).i;
+      for j in [1..F[i,2]] do
+	for k in [1..#Prods] do 
+	  I:= Prods[k] * F[i,1];
+          w:= Vecs[k] + v;
+          ok, x:= IsPrincipal(I);
+	  if ok then
+	    found:= true;
+	    for i in [1..#F] do F[i,2] -:= w[i]; end for;
+	    r *:= x;
+	    break i;
+	  else
+	    Append(~Prods, I);
+	    Append(~Vecs, w);
+	  end if;
+	end for;
+      end for;
+    end for;
+    F:= [f : f in F | f[2] ne 0 ];
+  end while;
+  return R ! (d / r^2);
+end function;
+
+// Returns all elements in R supported at the prime ideals in PP (up to squares).
+function ElementsWithSupport(R, PP)
+//  if ISA(Type(PP), SetEnum) then PP:= Setseq(PP); end if;
+  if Type(R) eq RngInt then return [-1] cat PP, func<x|x>; end if;
+  U, h:= UnitGroup(R);
+  Result:= [ h(U.i): i in [1..Ngens(U)] ];
+  Cl, h:= ClassGroup(R);
+  if #Cl ne 1 then
+    F:= FreeAbelianGroup(#PP);
+    m:= hom< F -> Cl | [ p @@ h: p in PP ] >;
+    K:= Kernel(m);
+    for i in [1..Ngens(K)] do
+      ok, x:= IsPrincipal(PowerProduct(PP, Eltseq(F ! K.i))); assert ok;
+      Append(~Result, x);
+    end for;
+    _, hh:= quo< Cl | Image(m) >;
+    f:= function(I)
+      c:= (I @@ h);
+      o:= Order(c @ hh);
+      J:= PowerProduct(PP, Eltseq((-o * c) @@ m));
+      ok, x:= IsPrincipal(I^o*J); assert ok;
+      return x;
+    end function;
+  else
+    for p in PP do
+      ok, x := IsPrincipal(p); assert ok;
+      Append(~Result, x);
+    end for;
+    f:= func< I | x where _, x:= IsPrincipal(I) >;
+  end if;
+  return Result, f;
+end function;
+
+intrinsic QuadraticFormWithInvariants(Dim::RngIntElt, Det::FldAlgElt, Finite::Setq[RngOrdIdl], Negative::[RngIntElt]) -> AlgMatElt
+{Computes a quadratic form with of dimension Dim and determinant Det that has Hasse invariants -1 at the primes in Finite.
+ The number of negative entries of the i-th real signature is given in Negative[i]}
+
+  requirege Dim, 1;
+  require Det ne 0: "The determinant must be nonzero";
+  K:= Parent(Det);
+
+  // Infinite places checking
+  Inf:= RealPlaces(K);
+  require #Negative eq #Inf: "The number of negative entries must be the number of real places";
+  require forall(i){i : i in [1..#Inf] | Negative[i] in [0..Dim]}:
+    Sprintf("Impossible negative entry at position %o", i);
+  require forall(i){i : i in [1..#Inf] | Sign(Evaluate(Det, Inf[i])) eq (-1)^(Negative[i] mod 2)}:
+    Sprintf("Information at the real place number %o does not match the sign of the determinant", i);
+
+  // Dimension 1
+  if Dim eq 1 then
+    require IsEmpty(Finite): "Impossible Hasse invariants";
+    return Matrix(1, [ Det ]);
+  end if;
+
+  // Finite places checking
+  R:= Integers(K);
+  PI:= PowerIdeal(R);
+  require IsEmpty(Finite) or (Universe(Finite) cmpeq PI and forall{p : p in Finite | IsPrime(p)}):
+    "The Invariants must be a set of prime ideals of the base field";
+  Finite:= Set(Finite);
+
+  // Dimension 2 needs some more love
+  if Dim eq 2 then
+    ok:= forall(p){p: p in Finite | IsLocalSquare(-Det, p)};
+    require ok: Sprintf("A binary form with determinant %o must have Hasse invariant +1 at the prime ideal:\n%o", Det, p);
+  end if;
+
+  // Product formula checking
+  require IsEven(#[ n: n in Negative | n mod 4 ge 2 ] + #Finite):
+    "The number of places (finite or infinite) with Hasse invariant -1 must be even";
+
+  // OK, a space with these invariants must exist.
+  // For final testing, we store the invariants.
+  Dim0:= Dim; Det0:= Det; Finite0:= Finite; Negative0:= Negative;
+
+  // Reduce Det
+  Det:= K ! MySquarefree(Det);
+
+  // Pad with ones
+  k:= Max(0, Dim - Max(3, Max(Negative)));
+  D:= [ (K ! 1)^^k ];
+  Dim -:= k;
+
+  if Dim ge 4 then
+    // Pad with minus ones
+    k:= Min(Dim-3, Min(Negative));
+    D2 := [ (K ! -1)^^k ];
+    Dim -:= k;
+    Negative:= [ n-k: n in Negative ];
+
+    // Pad with other entries
+    while Dim ge 4 do
+      V:= []; Signs:= [];
+      for i in [1..#Negative] do
+        if Negative[i] eq 0 then 
+	  Append(~V, Inf[i]); Append(~Signs, +1);
+	elif Negative[i] eq Dim then
+	  Append(~V, Inf[i]); Append(~Signs, -1);
+	end if;
+      end for;
+      x:= RealWeakApproximation(V, Signs : Al:= "Small");
+      s:= RealSigns(x);
+      k:= Min([Dim-3] cat [ s[i] eq 1 select (Dim - Negative[i]) else (Negative[i]) : i in [1..#Negative] ]);
+      D2 cat:= [ (K ! x)^^k ];
+      Dim -:= k;
+      for i in [1..#Negative] do
+        if s[i] eq -1 then Negative[i] -:= k; end if;
+      end for;
+    end while;
+
+    // Adjust invariants: Dim and Negative are already ok.
+    d, f:= QuadraticFormInvariants(DiagonalMatrix(D2));
+    PP:= &join [ Support(R*x) : x in D2 cat [2, Det] ];
+    Finite:= { p: p in PP | HS(d, -Det, p) * (p in f select -1 else 1) * (p in Finite select -1 else 1) eq -1 };
+    D cat:= D2;
+    Det:= K ! MySquarefree(Det * d);
+    delete d, f;
+  end if;
+
+  // The ternary case
+  if Dim eq 3 then
+//  "Dim 3", Det;
+    // The primes at which the form is anisotropic
+    PP:= Finite join Support(2*R) join Support(Det*R);
+    PP:= [ PI | p : p in PP | HS(K ! -1, -Det, p) ne (p in Finite select -1 else 1) ];
+
+    // Find some a such that for all p in PP: -a*Det is not a local square
+    // TODO: Find some smaller a?! The approach below is very lame.
+    // We simply make sure that a*Det has valuation 1 at each prime in PP....
+    a:= K ! (#PP eq 0 select 1 else WeakApproximation(PP, [ (1+Valuation(Det, p)) mod 2 : p in PP ]));
+    // Fix the signs of a if necessary.
+    Idx:= [ i : i in [1..#Negative] | Negative[i] in {0,3} ];
+    S:= [ Negative[i] eq 0 select s[i] else -s[i] : i in Idx ] where s:= RealSigns(a);
+    a*:= K ! RealWeakApproximation(Inf[Idx], S: Al:= "Small", CoprimeTo:= &*PP);
+
+    // Adjust invariants for the last time:
+    s:= RealSigns(a);
+    for i in [ i: i in [1..#Negative] | s[i] lt 0 ] do 
+      Negative[i] -:= 1;
+    end for;
+    PP:= &join [ Support( R*x) : x in [K ! 2, Det, a] ];
+    Finite:= { p: p in PP | HS(a, -Det, p) * (p in Finite select -1 else 1) eq -1 };
+    Det:= K ! MySquarefree(Det * a);
+    Append(~D, a);
+  end if;
+
+  // The binary case
+  PP:= Setseq((Support(R*2) join Support(R*Det)) diff Finite); // the places at which we need +1
+//  PP:= [ p[1]: p in Factorization((2*Det)*R) | p[1] notin Finite ];	
+  I2:= [ i: i in [1..#Inf] | Negative[i] ne 1 ];
+
+  target:= Vector(GF(2), [ Negative[i] div 2 : i in I2 ] cat [ 1^^#Finite ] cat [ 0^^#PP ] );	// the sign vector we are searching for
+  if IsZero(target) then
+    a:= K ! 1;
+  else
+    found:= false;
+    //[ Norm(p): p in PP ], [ Norm(p): p in Finite ];
+    PP:= Setseq(Finite) cat PP;
+
+    U, h:= UnitGroup(R);
+    V:= VectorSpace(GF(2), #I2 + #PP); S:= sub< V | >; Base:= [ K | ]; M:= [];
+    SignVector:= func< g | Vector(GF(2), [ (1-Sign(Evaluate(g, Inf[i]))) div 2 : i in I2 ] cat [ (1-HS(g, -Det, p)) div 2 : p in PP ]) >;
+
+    // Get initial factor base
+    L, f:= ElementsWithSupport(R, PP);
+    for l in L do
+      x:= K ! l;
+      v:= SignVector(x);
+      if v in S then continue; end if;
+      Append(~Base, x); Append(~M, v); S:= sub< V | S, v >;
+      if target in S then
+        found:= true; break;
+      end if;
+    end for;
+
+    // Extend the factor base by one more prime ideal
+    p:= 2;
+    while not found do
+      p:= NextPrime(p);
+      for d in Decomposition(R, p) do
+        if d[1] in PP then continue; end if;	// already there
+        x:= K ! f(d[1]);
+        v:= SignVector(x);
+        // target notin S thus we can only hope for target+v in S
+        if (target+v) in S then
+          Append(~M, v); Append(~Base, x);
+          found:= true; break;
+        end if;
+      end for;
+    end while;
+
+    // solve for the exponents and assemble the solution.
+    exp:= Solution(Matrix(M), target);
+    a:= PowerProduct(Base, ChangeUniverse(Eltseq(exp), Integers()));
+  end if;
+  D cat:= [a, Det*a];
+  M:= DiagonalMatrix(D);
+
+  // The final test...
+  d, f, n:= QuadraticFormInvariants(M);
+  assert Dim0 eq #D and IsSquare(d*Det0) and f eq Finite0 and n eq Negative0;
+
+  return M;
 end intrinsic;

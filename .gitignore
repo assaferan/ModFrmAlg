@@ -18,3 +18,4 @@ tests/.#unitary-examples.m
 *.m#
 tests/.#unitary-tests.m
 *.amf
+neighbors/*scratch*

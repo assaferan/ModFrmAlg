@@ -6,6 +6,7 @@
 
   lattice/fracIdl.m
   lattice/lattice.m
+  lattice/minkowski.m
   lattice/reflexive.m
 
   lattice_db/nipp_parse.m

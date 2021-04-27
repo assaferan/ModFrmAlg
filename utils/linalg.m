@@ -163,15 +163,27 @@ intrinsic EigenspaceDecomposition(array::Assoc : Warning := true)
 			     Degree(BaseRing(newSp[1])));
 		  F := FiniteField(
 			       Characteristic(BaseRing(space)), deg);
+                  homF := hom<BaseRing(space) -> F | >;
 	      else
 		  F := CompositeFields(
 			       BaseRing(newSp[1]), BaseRing(space))[1];
+                  F_space := BaseRing(space);
+                  if Type(F_space) eq FldRat then
+                    homF := hom<F_space -> F| >;
+                  else
+                    homs := [hom<F_space -> F | r[1]> :
+				r in Roots(DefiningPolynomial(F_space), F)];
+		    assert exists(homF){h : h in homs |
+		      Dimension(ChangeRing(space, F, h) meet
+				ChangeRing(newSp[1], F)) ne 0};
+                  end if;
+		  
 	      end if;
 	      
 	      // Compute the intersection of these two spaces
 	      //  and add it to the list.
 	      Append(~sp, < ChangeRing(newSp[1], F)
-				      meet ChangeRing(space, F), newSp[2] >);
+		     meet ChangeRing(space, F, homF), newSp[2] >);
 	  end for;
       end for;
 

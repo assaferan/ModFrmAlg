@@ -43,30 +43,36 @@ forward testDiscriminant2;
 forward testRank8Disc45;
 forward testRank4Root3Disc1;
 forward testQuinaryLattice;
+forward testEigenspaceDecomposition;
 
 intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 				       UseExisting := false,
 				       Orbits := true,
+				       Estimate := true,
 				       UseLLL := true,
 				       Decomposition := true,
-				       LowMemory := false ) ->
+				     LowMemory := false,
+				     ThetaPrec := 25) ->
 	  SeqEnum[ModFrmAlg], SeqEnum
 {Run all tests on the examples we have so far. Can limit the number of primes for which Hecke operators are computed by setting Num_primes.}
 
   // Testing production of Quinary lattices
   testQuinaryLattice();
   // Testing the classical modular form 49.2.a.a.
-  testCMF492aa();
+  testCMF492aa(: Orbits := Orbits, LowMemory := LowMemory,
+	       ThetaPrec := ThetaPrec);
   // Testing John's question about discriminant 2
   testDiscriminant2();
   // Testing Dan's example of a rank 8 lattice with discriminant 45
   testRank8Disc45();
   // Testing Dan's example of a rank 4 lattice over Q(rt3)
-  testRank4Root3Disc1();
+  testRank4Root3Disc1(: Orbits := Orbits, LowMemory := LowMemory);
   // Testing the unitary mass formula
   testUnitaryMassFormula();
   // Testing Example 9 from Rama Tornaria - non-lift paramodular form.
   testRamaTornaria9();
+  // Testing a bug that appeared in eigenform decomposition
+  testEigenspaceDecomposition();
   all_spaces := [];
   all_timings := [];
   for example in AlgebraicModularFormsExamples do
@@ -75,8 +81,10 @@ intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 					  UseExisting := UseExisting,
 					  Orbits := Orbits,
 					  UseLLL := UseLLL,
+				Estimate := Estimate,
 				          Decomposition := Decomposition,
-				          LowMemory := LowMemory);
+				LowMemory := LowMemory,
+				ThetaPrec := ThetaPrec);
       // saving to a file
       fname := Sprintf("Example_%o.dat", example`name);
       Save(M, fname : Overwrite := true);
@@ -91,7 +99,8 @@ intrinsic AlgebraicModularFormsTests(: NumPrimes := 0,
 end intrinsic;
 
 function testHeckeOperators(M, example, ps, N :
-			    UseLLL := true, Orbits := true, LowMemory := false)
+			    UseLLL := true, Orbits := true, LowMemory := false,
+			    Estimate := true, ThetaPrec := 25)
     timings := [];
     for k in [1..#example`evs[1]] do
 	Ts_k := [];
@@ -103,10 +112,11 @@ function testHeckeOperators(M, example, ps, N :
 	    t := Cputime();
 	    // maybe should restrict Orbits to k eq 1 - ? check why !?
 	    Append(~Ts_k, HeckeOperator(M, p, k : BeCareful := false,
-						  Estimate := true,
+						  Estimate := Estimate,
 						  UseLLL := UseLLL,
 					          Orbits := Orbits,
-					          LowMemory := LowMemory
+					LowMemory := LowMemory,
+					ThetaPrec := ThetaPrec
 				                  ));
 	    timing := Cputime() - t;
 	    printf "took %o seconds.\n", timing;
@@ -177,11 +187,15 @@ procedure test_evs(example, evs, keys, N)
     end for;
 end procedure;
 
-function testDecomposition(M, example, ps, N : UseLLL := true,  Orbits := true)
+function testDecomposition(M, example, ps, N :
+			   UseLLL := true,  Orbits := true, Estimate := true,
+			   LowMemory := false, ThetaPrec := 25)
     
     D := Decomposition(M : Estimate := true,
 		           UseLLL := UseLLL,
-		           Orbits := Orbits);
+		       Orbits := Orbits,
+		       LowMemory := LowMemory,
+		       ThetaPrec := ThetaPrec);
     eigenforms := HeckeEigenforms(M);
     evs := [* *];
     RR := RealField();
@@ -194,9 +208,11 @@ function testDecomposition(M, example, ps, N : UseLLL := true,  Orbits := true)
                 for j in [1..N] do
 		  t := Cputime();
 		  evs_j := HeckeEigensystem(f, dim : Precision := ps[1..j],
-							 Estimate := true,
+							 Estimate := Estimate,
 							 UseLLL := UseLLL,
-					                 Orbits := Orbits);
+					    Orbits := Orbits,
+					    LowMemory := LowMemory,
+					    ThetaPrec := ThetaPrec);
 		  timings[dim][j] +:= Cputime() - t;
                 end for;
 		Append(~evs_f, evs_j);
@@ -208,8 +224,9 @@ function testDecomposition(M, example, ps, N : UseLLL := true,  Orbits := true)
 end function;
 
 function testExample(example : NumPrimes := 0, UseExisting := false,
-			       Orbits := true, UseLLL := true,
-		               Decomposition := true, LowMemory := false)
+		     Orbits := true, UseLLL := true, Estimate := true,
+		     Decomposition := true, LowMemory := false,
+		     ThetaPrec := 25)
     fname := Sprintf("Example_%o.dat", example`name);
     if UseExisting and FileExists(path() cat fname : ShowErrors := false) then
 	M := AlgebraicModularForms(fname);
@@ -247,13 +264,18 @@ function testExample(example : NumPrimes := 0, UseExisting := false,
     if Decomposition then
         eigenforms, evs, timings := testDecomposition(M, example, ps, N : 
 						      UseLLL := UseLLL,
-						      Orbits := Orbits);
+						      Orbits := Orbits,
+						      Estimate := Estimate,
+						      LowMemory := LowMemory,
+						      ThetaPrec := ThetaPrec);
 	keys := [1..#example`evs[1]];
     else
         timings := testHeckeOperators(M, example, ps, N : 
 				      UseLLL := UseLLL,
 				      Orbits := Orbits,
-				      LowMemory := LowMemory);
+				      Estimate := Estimate,
+				      LowMemory := LowMemory,
+				      ThetaPrec := ThetaPrec);
 	keys := Keys(M`Hecke`Ts);
 	keys := Sort([ x : x in keys ]);
 	// Compute eigenforms associated to this space of modular forms.
@@ -542,14 +564,14 @@ procedure testRamaTornariaTable1ANTS()
   assert CFENew(lser) lt 10^(-30);
 end procedure;
 
-procedure testCMF492aa()
+procedure testCMF492aa(: Orbits := true, LowMemory := false, ThetaPrec := 25)
   Q := SymmetricMatrix([6,1,6,1,-1,20]);
   G := OrthogonalGroup(Q);
   L := IdentityMatrix(Rationals(),3);
   M := AlgebraicModularForms(G, HighestWeightRepresentation(G,[0]), L);
-  fs := HeckeEigenforms(M);
+  fs := HeckeEigenforms(M : Orbits := Orbits, LowMemory := LowMemory, ThetaPrec := ThetaPrec);
   f := fs[2];
-  evs := HeckeEigensystem(f, 1 : Precision := 100);
+  evs := HeckeEigensystem(f, 1 : Precision := 100, Orbits := Orbits, LowMemory := LowMemory, ThetaPrec := ThetaPrec);
   cfs := [Coefficient(qExpansion(CuspForms(49).1,100),p) : p in PrimesUpTo(100)];
   assert evs eq cfs;
 end procedure;
@@ -575,7 +597,8 @@ procedure testRank8Disc45()
   assert Dimension(M) eq 4;
 end procedure;
 
-procedure testRank4Root3Disc1()
+procedure testRank4Root3Disc1(: Orbits := true, LowMemory := false,
+			      ThetaPrec := 25)
   K<rt3>:=QuadraticField(3);
   mat:=[2,rt3,rt3,2];
   Q:=DiagonalJoin(Matrix(K,2,2,mat),Matrix(K,2,2,mat));
@@ -583,14 +606,16 @@ procedure testRank4Root3Disc1()
   G:=OrthogonalGroup(Q);
   W:=HighestWeightRepresentation(G,[0,0,0,0]);
   M:=AlgebraicModularForms(G,W,L:GramFactor:=2);
-  E:=HeckeEigenforms(M);
-  pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q));
+  E:=HeckeEigenforms(M : Orbits := Orbits, LowMemory := LowMemory,
+		     ThetaPrec := ThetaPrec);
+  pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q) : Orbits := Orbits, LowMemory := LowMemory, ThetaPrec := ThetaPrec);
   _<x> := Parent(pol);
   assert pol eq 16*x^4 - 36*x^3 + 28*x^2 - 9*x + 1;
 end procedure;
 
-// This one is rather long, but it test for the FPAut issue we had.
-procedure testRank8Root3Disc1()
+// This one is rather long, but it tests for the FPAut issue we had.
+procedure testRank8Root3Disc1(: Orbits := true, LowMemory := false,
+			      ThetaPrec := 25)
   K<rt3>:=QuadraticField(3);
   mat:=Matrix(K,2,2,[2,rt3,rt3,2]);
   Q := DirectSum([mat : i in [1..4]]);
@@ -598,8 +623,9 @@ procedure testRank8Root3Disc1()
   G:=OrthogonalGroup(Q);
   W:=HighestWeightRepresentation(G,[0,0,0,0]);
   M:=AlgebraicModularForms(G,W,L:GramFactor:=2);
-  E:=HeckeEigenforms(M);
-  pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q));
+  E:=HeckeEigenforms(M : Orbits := Orbits, LowMemory := LowMemory,
+		     ThetaPrec := ThetaPrec);
+  pol:=LPolynomial(E[1],Factorization(2*Integers(K))[1][1],#Rows(Q) : Orbits := Orbits, LowMemory := LowMemory, ThetaPrec := ThetaPrec);
   _<x> := Parent(pol);
 end procedure;
 
@@ -607,6 +633,15 @@ procedure testQuinaryLattice()
   // These ones are at the end of their fiel and appeared to be problematic
   Q := QuinaryQuadraticLattices(256);
   Q := QuinaryQuadraticLattices(300);
+end procedure;
+
+// This tests a bug that appeared in eigenspace decomposition
+procedure testEigenspaceDecomposition()
+  Q := QuinaryQuadraticLattices(390)[2][1];
+  G := OrthogonalGroup(Q);
+  W := SpinorNormRepresentation(G, 6);
+  M := AlgebraicModularForms(G, W);
+  fs := HeckeEigenforms(M);
 end procedure;
 
 // !! TODO - add tests for SetGenus and SetAutomorphismGroups

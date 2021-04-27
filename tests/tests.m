@@ -381,6 +381,20 @@ function get_nonlifts(fs, disc : prec := 2, Estimate := false, Orbits := true,
   return nonlift_idxs;
 end function;
 
+// This is only for weight 5, 6 where theta = theta1 determines liftability
+// and only for prime discriminant
+function get_nonlifts_prime(fs : ThetaPrec := 25)
+  // This is just for checking irreducibility
+  nonlift_idxs := [];
+  for idx in [1..#fs] do
+    theta := ThetaSeries(fs[idx] : Precision := ThetaPrec);
+    if Valuation(theta) gt ThetaPrec then
+      Append(~nonlift_idxs, idx);
+    end if;
+  end for;
+  return nonlift_idxs;
+end function;
+
 // In order to find out interesting things
 // Right now focus on disc le 256
 // wt is a pair [k,j] for Paramodular P_{k,j}

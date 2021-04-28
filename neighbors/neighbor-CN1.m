@@ -786,8 +786,9 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
         idls := CoefficientIdeals(h);
         tmp := Matrix([Norm(idls[i]) * (Matrix(h)[i]) : i in [1..dim]]);
         tmp := ChangeRing(tmp, Rationals());
-        lat := LatticeWithBasis(tmp, InnerForm(Q));
-        nLat := LatticeFromLat(lat);
+//        lat := LatticeWithBasis(tmp, InnerForm(Q));
+// nLat := LatticeFromLat(lat);
+        nLat := LatticeWithBasis(Q, tmp);
 
 	// Build the neighbor lattice.
 	// nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));

@@ -10,26 +10,12 @@ if assigned testExample then
     delete testExample;
 end if;
 
-if assigned normalizeField then
-    delete normalizeField;
+if assigned testLSeries then
+    delete testLSeries;
 end if;
 
 import "tests/examples.m" : AlgebraicModularFormsExamples;
 import "tests/tests.m" : testExample, testLSeries;
-import "modfrmalg/modfrmalg.m" : normalizeField;
-import "neighbors/hecke-CN1.m" : processNeighborWeight,
-       HeckeOperatorCN1,
-       HeckeOperatorCN1Sparse,
-       printEstimate;
-import "neighbors/inv-CN1.m" : Invariant;
-import "neighbors/neighbor-CN1.m" : BuildNeighborProc,
-       SkipToNeighbor,
-       BuildNeighbor,
-       LiftSubspace,
-       GetNextNeighbor;
-
-import "neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
-import "lattice/lattice.m" : GuessMaxDet;
 
 function inspect(M : prec := 20)
     Dimension(M);
@@ -58,7 +44,8 @@ forms[5] := [
 ];
 // understand which of these examples is suitable to become a test
 
-for dim in [3,5] do
+//for dim in [3,5] do
+for dim in [3] do
     for A in forms[dim] do
 	A;
 	G := SpecialOrthogonalGroup(A);

@@ -158,9 +158,12 @@ intrinsic Print(R::RfxSpace, level::MonStgElt)
   K := NumberField(MaximalOrder(BaseRing(R`V)));
   // For display purposes
   _<x> := Parent(DefiningPolynomial(K));
+// now we want to distinguish whether we work over QNF or not
+/*
       if Degree(K) eq 1 then
 	K := Rationals();
       end if;
+*/
       if SpaceType(R) eq "Symmetric" then
         printf "quadratic space of dimension %o over %o", Rank(R`V), K;
       elif SpaceType(R) eq "Hermitian" then

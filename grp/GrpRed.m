@@ -181,6 +181,14 @@ intrinsic ReductiveGroup(group_data::List) -> GrpRed
 
 end intrinsic;
 
+// This might make more sense using the GroupScheme class
+/*
+intrinsic SubConstructor(G::GrpRed, t::.) -> GrpRed, Map
+{.}
+  
+end intrinsic;
+*/
+
 // constructors for special groups
 
 // symplectic
@@ -233,6 +241,12 @@ end intrinsic;
 intrinsic OrthogonalGroup(innerForm::AlgMatElt[Rng]) -> GrpRed
 {Construct the orthogonal group preserving the specified symmetric form.}
   return OrthogonalGroup(ChangeRing(innerForm,
+				    FieldOfFractions(BaseRing(innerForm))));
+end intrinsic;
+
+intrinsic SpecialOrthogonalGroup(innerForm::AlgMatElt[Rng]) -> GrpRed
+{Construct the special orthogonal group preserving the specified symmetric form.}
+  return SpecialOrthogonalGroup(ChangeRing(innerForm,
 				    FieldOfFractions(BaseRing(innerForm))));
 end intrinsic;
 
@@ -314,6 +328,11 @@ intrinsic DefinitionField(G::GrpRed) -> Fld
   return DefRing(G`G0);
 end intrinsic;
 
+intrinsic BaseRing(G::GrpRed) -> Fld
+{Return the field of definition of G.}
+  return DefRing(G`G0);
+end intrinsic;
+
 intrinsic CartanName(G::GrpRed) -> MonStgElt
 {Return a string concatenating the Cartan types of all simple factors and tori
 of the connected component of G.}	
@@ -330,6 +349,8 @@ intrinsic InnerForms(G::GrpRed) -> SeqEnum
   return G`InnerForms;
 end intrinsic;
 
+// !! - TODO
+// Might be that we want dimension to say something else in the end.
 intrinsic Dimension(G::GrpRed) -> RngIntElt
 {Returns n such that G embeds into GL_n through the representation by the
 		   forms given.}
@@ -397,6 +418,11 @@ groups defined over number fields}
 
   return IsTotallyReal(DefRing(G`G0)) and
        &and[IsDefinite(V) : V in G`InnerForms];
+end intrinsic;
+
+intrinsic Degree(G::GrpRed) -> RngIntElt
+{.}
+  return &+[Dimension(V) : V in G`InnerForms];
 end intrinsic;
 
 // print

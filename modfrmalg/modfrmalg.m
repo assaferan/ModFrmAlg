@@ -400,15 +400,15 @@ intrinsic Print(M::ModFrmAlg, level::MonStgElt) {}
 	  printf "Inner form:\n%o\n", InnerForm(M);
         end if;
         R := BaseRing(M`W);
-        if (Dimension(M`W) eq 1) and (Type(BaseRing(M)) eq Type(R))
-			   and BaseRing(M) eq R then
+        if IsTrivial(M`W) then
 	  weight := Sprintf("trivial weight");
 	else
           weight := "weight ";
           if Type(R) eq FldOrd then 
             R := NumberField(MaximalOrder(R));
           end if;
-          R := (Degree(R) eq 1) select Rationals() else R;
+// Right now we want to distinguish QQ from QNF
+//R := (Degree(R) eq 1) select Rationals() else R;
           weight cat:= (assigned M`W`lambda) select Sprintf("%o", M`W`lambda)
         	       else Sprintf("%o-dimensional vector space over %o",
 			     Dimension(M`W), R);
@@ -467,10 +467,12 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   for i in [1..#reps] do
      reps[i]`AutomorphismGroup := autgps[i];
   end for;
-  gamma_reps := autgps;
+//  gamma_reps := autgps;
   assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
 			    BaseRing(M`W`G));
-	
+
+  gamma_reps := [AutomorphismGroup(r : Special := IsSpecialOrthogonal(M))
+		: r in reps];
   gammas := [sub<M`W`G|
 		[Transpose(PullUp(Matrix(g), reps[i], reps[i] :
 				  BeCareful := BeCareful)) :
@@ -526,9 +528,7 @@ procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
 
 	// !!! TODO : treat the special unitary case
 	
-	gamma_reps := [AutomorphismGroup(r :
-					 Special := IsSpecialOrthogonal(M)) :
-		       r in reps];
+	gamma_reps := [AutomorphismGroup(r) : r in reps];
         SetAutomorphismGroups(~M, gamma_reps : BeCareful := BeCareful);
     end if;
 end procedure;

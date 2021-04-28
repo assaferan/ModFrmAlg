@@ -1136,5 +1136,5 @@ intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt
   reps := Representatives(Genus(f`M));
   aut := [#AutomorphismGroup(r) : r in reps];
   invs := [R | Invariant(r : Precision := Precision) : r in reps];
-  return &+[aut[i]^-1*v[i]*invs[i] : i in [1..dim]];
+  return &+[aut[i]^-1*v[i]*invs[i] : i in [1..#reps]];
 end intrinsic;

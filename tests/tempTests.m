@@ -10,26 +10,12 @@ if assigned testExample then
     delete testExample;
 end if;
 
-if assigned normalizeField then
-    delete normalizeField;
+if assigned testLSeries then
+    delete testLSeries;
 end if;
 
 import "tests/examples.m" : AlgebraicModularFormsExamples;
 import "tests/tests.m" : testExample, testLSeries;
-import "modfrmalg/modfrmalg.m" : normalizeField;
-import "neighbors/hecke-CN1.m" : processNeighborWeight,
-       HeckeOperatorCN1,
-       HeckeOperatorCN1Sparse,
-       printEstimate;
-import "neighbors/inv-CN1.m" : Invariant;
-import "neighbors/neighbor-CN1.m" : BuildNeighborProc,
-       SkipToNeighbor,
-       BuildNeighbor,
-       LiftSubspace,
-       GetNextNeighbor;
-
-import "neighbors/genus-CN1.m" : OrthogonalMass, UnitaryMass;
-import "lattice/lattice.m" : GuessMaxDet;
 
 function inspect(M : prec := 20)
     Dimension(M);
@@ -47,18 +33,19 @@ std_reps := AssociativeArray();
 forms := AssociativeArray();
 std_reps[3] := StandardRepresentation(GL(3,QQ));
 std_reps[5] := StandardRepresentation(GL(5,QQ));
-forms[3] := [IdentityMatrix(QQ,3),
+forms[3] := [2*IdentityMatrix(QQ,3),
 	  SymmetricMatrix(QQ, [2,0,2,1,0,6]),
 	  SymmetricMatrix(QQ, [4,-1,4,-1,0,12]) // Alok Shukla's example
 	  ];
 forms[5] := [
-	  IdentityMatrix(QQ,5),
+	  2*IdentityMatrix(QQ,5),
 	  SymmetricMatrix(QQ, [2,0,2,0,0,2,0,0,0,2,1,0,0,0,6]),
 	  SymmetricMatrix(QQ, [2,0,2,0,0,2,0,1,0,2,1,0,0,0,6])
 ];
 // understand which of these examples is suitable to become a test
-/*
-for dim in [3,5] do
+
+//for dim in [3,5] do
+for dim in [3] do
     for A in forms[dim] do
 	A;
 	G := SpecialOrthogonalGroup(A);
@@ -68,11 +55,11 @@ for dim in [3,5] do
 	    W := SymmetricRepresentation(std_reps[dim],k);
 	    //	M := OrthogonalModularForms(A, W);
 	    M := AlgebraicModularForms(G, W);
-	    inspect(M);
+            _ := inspect(M);
 	end for;
     end for;
 end for;
-*/
+
 
 print "Testing examples from John and Matt's paper...";
 print "Testing low memory version...";
@@ -85,7 +72,7 @@ ratios := [[[timing[i][j][k]/timing2[i][j][k] : k in [1..#timing[i][j]]
 		     | timing2[i][j][k] ne 0] : j in [1..#timing[i]]]
 	      : i in [1..#timing]];
 // print "ratios are: ", ratios;
-print "Testing canonical form  version...";
+// print "Testing canonical form version...";
 // M3, timing3 := AlgebraicModularFormsTests(: NumPrimes := 3, ThetaPrec := -1);
 
 print "testing L series computation for O(5)...";

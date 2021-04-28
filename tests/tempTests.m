@@ -47,17 +47,17 @@ std_reps := AssociativeArray();
 forms := AssociativeArray();
 std_reps[3] := StandardRepresentation(GL(3,QQ));
 std_reps[5] := StandardRepresentation(GL(5,QQ));
-forms[3] := [IdentityMatrix(QQ,3),
+forms[3] := [2*IdentityMatrix(QQ,3),
 	  SymmetricMatrix(QQ, [2,0,2,1,0,6]),
 	  SymmetricMatrix(QQ, [4,-1,4,-1,0,12]) // Alok Shukla's example
 	  ];
 forms[5] := [
-	  IdentityMatrix(QQ,5),
+	  2*IdentityMatrix(QQ,5),
 	  SymmetricMatrix(QQ, [2,0,2,0,0,2,0,0,0,2,1,0,0,0,6]),
 	  SymmetricMatrix(QQ, [2,0,2,0,0,2,0,1,0,2,1,0,0,0,6])
 ];
 // understand which of these examples is suitable to become a test
-/*
+
 for dim in [3,5] do
     for A in forms[dim] do
 	A;
@@ -68,11 +68,11 @@ for dim in [3,5] do
 	    W := SymmetricRepresentation(std_reps[dim],k);
 	    //	M := OrthogonalModularForms(A, W);
 	    M := AlgebraicModularForms(G, W);
-	    inspect(M);
+            _ := inspect(M);
 	end for;
     end for;
 end for;
-*/
+
 
 print "Testing examples from John and Matt's paper...";
 print "Testing low memory version...";

@@ -310,7 +310,7 @@ matrix provided. }
 
   // Assign the specified lattice.
   if Type(F) eq FldRat then
-    lat`Module := Lattice(basis);
+    lat`Module := LatticeWithBasis(basis);
   else
     lat`Module := Module(Rows(basis));
   end if;
@@ -373,7 +373,7 @@ coefficient ideals. }
     // Build the lattice.
     lat`Module := Module(PseudoMatrix(idls, basis));
   else
-    lat`Module := Lattice(basis);
+    lat`Module := LatticeWithBasis(basis);
   end if;
 
   // Takes too much time, compute it only when we need to
@@ -516,7 +516,7 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
   // We no longer make sure of the conditions in the second line.
   try
   //      factor := IsQuadratic(lat) select 1 else 2;
-      phis := [ ChangeRing(2*phi, Integers()) : phi in phis ];
+      phis := [ ChangeRing(phi, Integers()) : phi in phis ];
       // !! TODO : in char. 2 check that we are alternating.
       assert Transpose(phis[1]) in [phis[1], -phis[1]];
       // We are now also using this function for symplectic groups  
@@ -893,10 +893,16 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 
   if not iso then return false, _; end if;
 	
-  // f := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
+  // for some reason this fails when the base field is rational
+  // What did I break... ????
+  if BeCareful then
+    f_lift := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
+    assert Determinant(f) eq Determinant(f_lift);
+  end if;
 
   // Currently, this only works for SO, where det in -1,1
   if Special and Determinant(f) eq -1 then
+//  if Special and Determinant(f_lift) eq -1 then
       // Look at the generators of the automorphism group of the
       //  first lattice.
       gens := Generators(AutomorphismGroup(lat1));
@@ -904,7 +910,9 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
       // If any of the generators have determinant -1, then we can
       //  compose f and g in such a way to produce a proper isometry.
       for g in gens do
+     //	  g_lift := PullUp(Matrix(g), lat1, lat2 : BeCareful := BeCareful);
 	  if Determinant(g) eq -1 then
+	 //if Determinant(g_lift) eq -1 then
 	      return true,
 		     PullUp(Matrix(f*g), lat1, lat2 :
 			    BeCareful := BeCareful);
@@ -914,7 +922,9 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
       // Same as above.
       gens := Generators(AutomorphismGroup(lat2));
       for g in gens do
+   //     g_lift := PullUp(Matrix(g), lat1, lat2 : BeCareful := BeCareful);
 	  if Determinant(g) eq -1 then
+	  // if Determinant(g_lift) eq -1 then
 	      return true,
 		     PullUp(Matrix(g*f), lat1, lat2 :
 			    BeCareful := BeCareful);
@@ -946,8 +956,7 @@ intrinsic AutomorphismGroup(lat::ModDedLat : Special := false) -> SeqEnum
       C2, phi := UnitGroup(Integers());
       vprintf AlgebraicModularForms, 2:
 	"Defining determinant.\n"; 
-// det_gens := [Determinant(x) : x in Generators(aut)];
-      det_gens := [Determinant(aut.i) : i in [1..NumberOfGenerators(aut)]]; 
+      det_gens := [Determinant(aut.i) : i in [1..NumberOfGenerators(aut)]];
       det := hom<aut -> C2 | [x @@ phi : x in det_gens]>;
       vprintf AlgebraicModularForms, 2:
 	"Finding kernel.\n"; 
@@ -1559,78 +1568,16 @@ intrinsic IsMaximalIntegral(L::ModDedLat, p::RngIntElt) -> BoolElt, ModDedLat
   return IsMaximalIntegral(L, ideal<Integers() | p>);
 end intrinsic;
 
-intrinsic IsMaximalIntegral(L::ModDedLat, p::RngInt) -> BoolElt, ModDedLat
-{Checks whether L is p-maximal integral. If not, a minimal integral over-lattice at p is returned}
-  require Order(p) cmpeq BaseRing(L) and IsPrime(p): 
-    "The second argument must be a prime ideal of the base ring of the lattice";
-  require not IsZero(L): "The lattice must be non-zero";
+// This function will be used in the next two intrinsics
+function is_maximal_integral(L,p)
   a := Involution(ReflexiveSpace(L));
   // In this case it is not integral
   if IsIdentity(a) then
-      if Valuation(Norm(L), p) lt 0 then return false, _; end if;
-      if GuessMaxDet(L, p) eq Valuation(Discriminant(L), p)
-	  then return true, _;
+      if Type(p)eq RngInt then
+         norm := ideal< Integers() | Norm(Norm(L))>;
+      else
+         norm := ideal<Order(p)| Norm(L) >;
       end if;
-  end if;
- 
-  k, h:= ResidueClassField(p);
-  BM:= Matrix(LocalBasis(Module(L), p: ModuleType:= "Submodule"));
-  
-  
-  //G:= factor*GramMatrix(L, Rows(BM));
-  // G:= 2*GramMatrix(L, Rows(BM));
-  G := GramMatrix(L, Rows(BM) : Half := IsQuadratic(L));
-
-  if IsIdentity(a) then
-      basis := [BaseRing(L)!1];
-  else
-      basis := Basis(BaseRing(L));
-  end if;
-  // we want Trace(<v.w>) = 0 and Trace(<alpha*v,w>) = 0
-  // for all w, giving the following equations:
-  // actually a basis over F should suffice.
-  // How do we pull that off?
-  Gs := [alpha*G + a(alpha*G) : alpha in basis];
-  row_seqs := [[h(basis[i]*x) : x in Eltseq(Gs[i])] : i in [1..#basis]];
-  mat := Matrix(#basis * Nrows(BM), &cat row_seqs);
-  V:= KernelMatrix(mat);
-  if Nrows(V) eq 0 then return true, _; end if;
-  
-  FF:= BaseRing(BM);
-  val2:= Valuation(BaseRing(L)!2, p);
-  PP:= ProjectiveLineProcess(k, Nrows(V));
-  x:= Next(PP);
-  while not IsZero(x) do
-    e:= Eltseq(x * V) @@ h;
-    v:= Vector(FF, e);
-    valv:= Valuation( ((v*G) * a(Matrix(FF,1,e)))[1], p );
-    // assert valv ge 1;
-    assert valv ge 0;
-    // TODO: Better code depending on whether -1 is a square or not and then take (1,p) or (p,p)
-    // if valv ge val2+2 then
-    if valv ge 2 then
-        pMod := Lattice(Matrix( [WeakApproximation([p], [-1]) *v*BM ] ));
-	lat := Lattice(ReflexiveSpace(L), Module(L) + pMod);
-	assert IsIntegral(lat);
-	return false, lat; 
-    end if;
-    x:= Next(PP);
-  end while;
-  if IsIdentity(a) then
-      assert GuessMaxDet(L, p) eq Valuation(Discriminant(L), p);
-  end if;
-  return true, _;
-end intrinsic;
-
-intrinsic IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
-{Checks whether L is p-maximal integral. If not, a minimal integral over-lattice at p is returned}
-  require Order(p) cmpeq BaseRing(L) and IsPrime(p): 
-    "The second argument must be a prime ideal of the base ring of the lattice";
-  require not IsZero(L): "The lattice must be non-zero";
-  a := Involution(ReflexiveSpace(L));
-  // In this case it is not integral
-  if IsIdentity(a) then
-      norm := ideal<Order(p)| Norm(L) >;
       if Valuation(norm, p) lt 0 then return false, _; end if;
       if GuessMaxDet(L, p) eq Valuation(Discriminant(L), p)
 	  then return true, _;
@@ -1672,8 +1619,22 @@ intrinsic IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
     // TODO: Better code depending on whether -1 is a square or not and then take (1,p) or (p,p)
     // if valv ge val2+2 then
     if valv ge 2 then
-	pMod := Module( [WeakApproximation([p], [-1]) *v*BM ] );
-	lat := Lattice(ReflexiveSpace(L), Module(L) + pMod);
+        if Type(p) eq RngInt then
+	  pMod := LatticeWithBasis(Matrix([WeakApproximation([p], [-1]) *v*BM ] ));
+          // we go through all this trouble because L1 + L2 for integral lattice
+          // encapsulates LLL, which might not keep the sign
+          K := FieldOfFractions(Integers(QNF()));
+          mat := ChangeRing(Matrix(Basis(Module(L))
+				   cat Basis(pMod)), K);
+          h := HermiteForm(PseudoMatrix(mat));
+          idls := CoefficientIdeals(h);
+          sum := Matrix([Norm(idls[i]) * (Matrix(h)[i]) : i in [1..#idls]]);
+          sum := ChangeRing(sum, Rationals());
+          lat := LatticeWithBasis(ReflexiveSpace(L), sum);
+        else
+	  pMod := Module( [WeakApproximation([p], [-1]) *v*BM ] );
+          lat := Lattice(ReflexiveSpace(L), Module(L) + pMod);        
+        end if;
 	assert IsIntegral(lat);
 	return false, lat; 
     end if;
@@ -1683,6 +1644,22 @@ intrinsic IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
       assert GuessMaxDet(L, p) eq Valuation(Discriminant(L), p);
   end if;
   return true, _;
+end function;
+
+intrinsic IsMaximalIntegral(L::ModDedLat, p::RngInt) -> BoolElt, ModDedLat
+{Checks whether L is p-maximal integral. If not, a minimal integral over-lattice at p is returned}
+  require Order(p) cmpeq BaseRing(L) and IsPrime(p): 
+    "The second argument must be a prime ideal of the base ring of the lattice";
+  require not IsZero(L): "The lattice must be non-zero";
+  return is_maximal_integral(L,p);
+end intrinsic;
+
+intrinsic IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
+{Checks whether L is p-maximal integral. If not, a minimal integral over-lattice at p is returned}
+  require Order(p) cmpeq BaseRing(L) and IsPrime(p): 
+    "The second argument must be a prime ideal of the base ring of the lattice";
+  require not IsZero(L): "The lattice must be non-zero";
+  return is_maximal_integral(L,p);
 end intrinsic;
 
 intrinsic BadPrimes(L::ModDedLat) -> []
@@ -1765,7 +1742,10 @@ intrinsic MaximalIntegralLattice(V::RfxSpace) -> ModDedLat
 //  if (Type(N) eq RngIntElt and N ne 1) or (Type(N) ne RngIntElt and N ne 1*R) then
   if N ne 1*R then
     FN:= Factorization(N);
-    d:= &*[ f[1]^(f[2] div 2) : f in Factorization(N) ];
+    if Type(R) eq RngInt then
+      d:= &*[ FractionalIdeal(f[1])^(f[2] div 2) : f in FN ];
+    end if;
+    d:= &*[ f[1]^(f[2] div 2) : f in FN ];
     // For ideals in the ring of integers, inverse is not defined
     if Type(d) eq RngInt then d := Norm(d); end if;
     L:= d^-1*L;

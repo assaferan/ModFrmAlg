@@ -204,14 +204,9 @@ declare attributes GrpRepElt :
 
 /* constructors */
 
-// action_desc is a string description of the action,
-// needed for serializaition, since Map does not really support it
-intrinsic GroupRepresentation(G::Grp, M::CombFreeMod,
-			action_desc::MonStgElt : params := [* *] ) -> GrpRep
-{Constructs a group representation for the group G on the combinatorial free module
-M, such that the action on basis elements G x Basis(M) -> M is described by the map action .}
-
-  V := New(GrpRep);
+// this function will be used in both constructors
+function _grp_rep(G, M, action_desc, params)
+    V := New(GrpRep);
   V`G := G;
   V`M := M;
 
@@ -315,6 +310,22 @@ M, such that the action on basis elements G x Basis(M) -> M is described by the 
   V`known_grps := [sub<V`G|1>];
   V`act_mats[G!1] := IdentityMatrix(BaseRing(V`M), Dimension(V`M));
   return V;
+end function;
+
+// action_desc is a string description of the action,
+// needed for serializaition, since Map does not really support it
+intrinsic GroupRepresentation(G::Grp, M::CombFreeMod,
+			action_desc::MonStgElt : params := [* *] ) -> GrpRep
+{Constructs a group representation for the group G on the combinatorial free module
+M, such that the action on basis elements G x Basis(M) -> M is described by the map action .}
+  return _grp_rep(G, M, action_desc, params);
+end intrinsic;
+
+intrinsic GroupRepresentation(G::GrpRed, M::CombFreeMod,
+			action_desc::MonStgElt : params := [* *] ) -> GrpRep
+{Constructs a group representation for the group G on the combinatorial free module
+M, such that the action on basis elements G x Basis(M) -> M is described by the map action .}
+  return _grp_rep(G, M, action_desc, params);
 end intrinsic;
 
 // At the moment, we assume that the generators are
@@ -381,9 +392,8 @@ intrinsic TrivialRepresentation(G::GrpRed, R::Rng : name := "v") -> GrpRep
   return V;
 end intrinsic;
 
-// Should change that to also support arbitrary reductive group
-intrinsic StandardRepresentation(G::GrpMat : name := "x") -> GrpRep
-{Constructs the standard representation of the matrix group G its ring of definition R, i.e. the representation obtained by considering its given embedding in GL_n acting on R^n by invertible linear transformations.}
+// this function will be used for both the following intrinsics
+function standard_rep(G, name)
   n := Degree(G);
   names := [name cat IntegerToString(i) : i in [1..n]];
   M := CombinatorialFreeModule(BaseRing(G), names);
@@ -396,6 +406,17 @@ intrinsic StandardRepresentation(G::GrpMat : name := "x") -> GrpRep
   return action;
   ");
   return GroupRepresentation(G, M, a : params := [* <"STANDARD", true> *]);
+end function;
+
+// Should change that to also support arbitrary reductive group
+intrinsic StandardRepresentation(G::GrpMat : name := "x") -> GrpRep
+{Constructs the standard representation of the matrix group G its ring of definition R, i.e. the representation obtained by considering its given embedding in GL_n acting on R^n by invertible linear transformations.}
+  return standard_rep(G, name);
+end intrinsic;
+
+intrinsic StandardRepresentation(G::GrpRed : name := "x") -> GrpRep
+{Constructs the standard representation of the matrix group G its ring of definition R, i.e. the representation obtained by considering its given embedding in GL_n acting on R^n by invertible linear transformations.}
+  return standard_rep(G, name);
 end intrinsic;
 
 intrinsic DeterminantRepresentation(G::GrpMat : k := 1, name := "v") -> GrpRep

@@ -51,6 +51,7 @@ Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 				coeff_char := 0,
 				genus := 2,
 				weight := [0,0],
+                                spinor := 1,
 				norm_p := ps_7_2,
 				timing := [],
 				evs := [* eis_7_2, cusp_7_2 *] >;
@@ -70,6 +71,7 @@ Example_7_3 := rec< ExampleRF | name := "[GV2]_7_3",
 				coeff_char := 0,
 				genus := 3,
 				weight := [0,0],
+                                spinor := 1,
 				norm_p := ps_7_2,
 				timing := [],
 				evs := [* eis_7_3, a_7_3, b_7_3 *] >;
@@ -343,4 +345,5 @@ AlgebraicModularFormsExamples := [ Example_7_2,
 				  Example_7_4_W_3_3,
 				  Example_7_4_W_4_0,
 				  Example_7_5,
-				  Example_7_6];
+				  Example_7_6,
+				  Example_31_4_0];

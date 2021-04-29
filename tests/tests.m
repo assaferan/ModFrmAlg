@@ -451,7 +451,7 @@ procedure testLSeries(disc, wts, prec : Orbits := true,
     k,j := Explode(wt);
 // It seems that was wrong
 //    W := HighestWeightRepresentation(G,[k+j-3, k-3]);
-    W := HighestWeightRepresentation(G,[k+j-3, j]);
+    W := HighestWeightRepresentation(G,[k-3+j div 2, j div 2]);
     for d in Divisors(disc) do
         spin := SpinorNormRepresentation(G, d);
         W_spin := TensorProduct(W, spin);

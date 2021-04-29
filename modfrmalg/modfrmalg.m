@@ -254,31 +254,62 @@ end intrinsic;
 
 function normalizeField(R)
     K := AbsoluteField(FieldOfFractions(R));
-//    K := AbsoluteField(NumberField(R));
-/*
-    if Type(K) eq FldRat then
-      K := RationalsAsNumberField();
-    end if;
-*/
+
     return K;
 end function;
 
+intrinsic OrthogonalModularForms(lat::Lat : 
+				 weight := [0],
+				 Special := false) -> ModFrmAlg
+{Create the space of orthogonal modular forms with respect to the lattice lat.}
+  Q := InnerProductMatrix(lat);
+  level := BasisMatrix(lat);
+  if Special then
+    G := SpecialOrthogonalGroup(Q);
+  else
+    G := OrthogonalGroup(Q);
+  end if;
+  W := HighestWeightRepresentation(G, weight);
+  return AlgebraicModularForms(G, W, level);
+end intrinsic;
+
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
-				 weight::GrpRep) -> ModFrmAlg
+				 weight::SeqEnum
+				 : Special := false) -> ModFrmAlg
+{Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
+  K := normalizeField(BaseRing(innerForm));
+  n := Nrows(innerForm);
+  if Special then
+    G := SpecialOrthogonalGroup(ChangeRing(innerForm, K));
+  else
+    G := OrthogonalGroup(ChangeRing(innerForm, K));
+  end if;
+  W := HighestWeightRepresentation(G, weight);
+  return AlgebraicModularForms(G, W);
+end intrinsic;
+
+intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
+				 weight::GrpRep : Special := false) -> ModFrmAlg
 {Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
 
   K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
-  O_n := OrthogonalGroup(ChangeRing(innerForm, K));
-  return AlgebraicModularForms(O_n, weight);
+  if Special then
+    G := SpecialOrthogonalGroup(ChangeRing(innerForm, K));
+  else
+    G := OrthogonalGroup(ChangeRing(innerForm, K));
+  end if;
+  return AlgebraicModularForms(G, weight);
 end intrinsic;
 
-intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng]) -> ModFrmAlg
+intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng] :
+				 Special := false) -> ModFrmAlg
 {.}
   K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
   W := TrivialRepresentation(GL(n,K),K);
-  return OrthogonalModularForms(ChangeRing(innerForm,K), W);
+  return OrthogonalModularForms(ChangeRing(innerForm,K), W :
+				Special := Special);
 end intrinsic;
 
 intrinsic UnitaryModularForms(innerForm::AlgMatElt[Rng],
@@ -380,14 +411,20 @@ intrinsic UnitaryModularForms(F::Fld,
 end intrinsic;
 
 intrinsic OrthogonalModularForms(F::Fld,
-			innerForm::AlgMatElt[Rng],
-			weight::SeqEnum[RngIntElt],
-			char::RngIntElt) -> ModFrmAlg
+				 innerForm::AlgMatElt[Rng],
+				 weight::SeqEnum[RngIntElt],
+				 char::RngIntElt
+				 : Special := false, d := 1) -> ModFrmAlg
 {.}
   F := normalizeField(F);
   n := Degree(Parent(innerForm));
-  G := OrthogonalGroup(ChangeRing(innerForm,F));
+  if Special then
+    G := SpecialOrthogonalGroup(ChangeRing(innerForm,F));
+  else
+    G := OrthogonalGroup(ChangeRing(innerForm,F));
+  end if;
   W := getWeightRep(G, weight, char, F, n);
+  W := TensorProduct(W, SpinorNormRepresentation(G, d));
   return AlgebraicModularForms(G, W);
 end intrinsic;
 // Should also think how to get the isogeny in general,

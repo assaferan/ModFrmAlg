@@ -238,7 +238,12 @@ function testExample(example : NumPrimes := 0, UseExisting := false,
 				     example`weight, example`coeff_char);
 	elif example`group eq "Orthogonal" then
 	    M := OrthogonalModularForms(example`field, example`inner_form,
-					example`weight, example`coeff_char);
+					example`weight, example`coeff_char
+					: d := example`spinor);
+	elif example`group eq "SpecialOrthogonal" then
+	    M := OrthogonalModularForms(example`field, example`inner_form,
+					example`weight, example`coeff_char
+					: Special, d := example`spinor);
 	else
 	    error "The group type %o is currently not supported!";
 	end if;

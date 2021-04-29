@@ -719,7 +719,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
       // we try to do the same
       // Special treatment of the rationals to speed things up
       if (Type(BaseRing(L)) eq RngInt) then
-      /*					 
+      					 
 	// The spacess we'll perform HNF on; they need to be scaled by D*p so
 	//  that HNF will be happy. We'll undo this once we perform HNF.
 	// Here D is the common denominator, which is a power of 2
@@ -727,8 +727,6 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
         denom := L`pMaximal[nProc`pR][3]*BasisDenominator(Module(L));
         diag := nProc`scale;
         function __scale(XX, ZZ, UU, BB, p, denom)
-	//	  diag := DiagonalMatrix(Rationals(), [1 : v in XX] cat [p^2 : v in ZZ]
-	//			 cat [p : v in UU] cat [p^3 : v in BB]);
           ret := denom*diag*Matrix(XX cat ZZ cat UU cat BB);
           return ChangeRing(ret, Integers());
 	end function;
@@ -737,6 +735,8 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
         xzub := __scale(XX, ZZ, UU, BB, p, denom);
 
         H := HermiteForm(xzub);
+
+        H := RowSubmatrix(H, 1, dim);
 
         function __rescale(H, denom, p, dim)
 	  return 1/(denom*p) * ChangeRing(H, Rationals());
@@ -749,7 +749,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	  lll_ZZ := LLL(zlat : Proof := false);
           nLat := LatticeWithBasis(Q,
 				   ChangeRing(BasisMatrix(lll_ZZ), Rationals()));
-      */
+      
           // trying to save time in the next conversion
 /*
           nLat`ZLattice := Lattice(ChangeRing(BasisMatrix(lll_ZZ), Rationals()),
@@ -757,42 +757,13 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
           nLat`ZLattice`basisR := Basis(lll_ZZ);
           nLat`ZLattice`basisZ := ChangeRing(BasisMatrix(lll_ZZ), Rationals());
 */
-/*					 
+					 
           return nLat;
 	end if;
-*/
-/*					 
-	idls := [ FractionalIdeal(nProc`pR)^-1 : i in [1..#XX] ] cat
-		[ FractionalIdeal(alpha(nProc`pR)) : i in [1..#ZZ] ] cat
-		[ FractionalIdeal(1) : i in [1..#UU] ] cat
-		[ FractionalIdeal(nProc`pR * alpha(nProc`pR)) * pb[1] : pb in
-						       PseudoBasis(Module(L)) ];
-*/
-	p := Norm(nProc`pR);
-	for i in [1..#XX] do
-	  MultiplyRow(~bb, 1/p, i);
-        end for;
-        for i in [1..#ZZ] do
-	  MultiplyRow(~bb, p, #XX+i);
-        end for;
-        for i in [1..dim] do
-	  MultiplyRow(~bb, p^2, dim+i);
-        end for;
-
-// This does some crazy things (LLL) and does not keep track of sign!!!
-// lat := Lattice(bb, InnerForm(Q));
-        K := FieldOfFractions(Integers(QNF()));
-        h := HermiteForm(PseudoMatrix(ChangeRing(bb, K)));
-        idls := CoefficientIdeals(h);
-        tmp := Matrix([Norm(idls[i]) * (Matrix(h)[i]) : i in [1..dim]]);
-        tmp := ChangeRing(tmp, Rationals());
-//        lat := LatticeWithBasis(tmp, InnerForm(Q));
-// nLat := LatticeFromLat(lat);
-        nLat := LatticeWithBasis(Q, tmp);
 
 	// Build the neighbor lattice.
-	// nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
-// nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
+
+        nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
 
       else
 	//  order to construct the neighbor lattice.

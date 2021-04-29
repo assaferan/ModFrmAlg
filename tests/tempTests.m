@@ -78,11 +78,12 @@ ratios := [[[timing[i][j][k]/timing2[i][j][k] : k in [1..#timing[i][j]]
 print "testing L series computation for O(5)...";
 print "testing level 61, weights (3,0), (3,2) and (4,0)...";
 // This is quite long, so we reduce the precision
-testLSeries(61, [[3,0],[3,2],[4,0]], 5);
+// testLSeries(61, [[3,0],[3,2],[4,0]], 5);
+ testLSeries(61, [[3,0],[3,2],[4,0]], 2);
 print "testing level 21, weight (3,2)....";
 // This is quite long, so we reduce the precision
-testLSeries(21, [[3,2]], 5);
-// testLSeries(21, [[3,2]], 2);
+// testLSeries(21, [[3,2]], 5);
+testLSeries(21, [[3,2]], 2);
 // This does not seem to work at the moment for some reason!
 // print "testing level 26, weight (3,2)....";
 // testLSeries(26, [[3,2]], 5);

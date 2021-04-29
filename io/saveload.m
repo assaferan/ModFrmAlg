@@ -478,7 +478,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
                           end if;
                         else
 			  assert #data eq 4;
-                          mform`IsCuspidal := data[4];
+                          mform`IsCuspidal := not data[4];
                         end if;
 
                         // Cusp forms are not Eistenstein.

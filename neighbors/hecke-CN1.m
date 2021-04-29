@@ -189,7 +189,11 @@ function createInvsWithPrecision(M, ThetaPrec)
   _<x> := Universe(Keys(invs_orig));
   invs := AssociativeArray();
   for inv in Keys(invs_orig) do
-    invs[inv + O(x^(ThetaPrec+1))] := invs_orig[inv];
+    inv_new := inv + O(x^(ThetaPrec+1));
+    if not IsDefined(invs, inv_new) then
+      invs[inv_new] := [];
+    end if;
+    invs[inv_new] cat:= invs_orig[inv];
   end for;
   return invs;
 end function;

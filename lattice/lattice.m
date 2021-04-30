@@ -935,7 +935,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
       //  lattices are not properly isometric.
       return false, _;
   end if;
-  
+
   return iso, PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
 end intrinsic;
 
@@ -1096,6 +1096,12 @@ end intrinsic;
 intrinsic PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat :
 		 BeCareful := false) -> AlgMatElt
   {Takes an isometry g : Pi -> Lambda and reexpresses it as an L-linear map gV : V -> V.}
+
+  if Type(BaseRing(Lambda)) eq RngInt then
+    return ChangeRing(BasisMatrix(Module(Pi)), Rationals())^(-1)*
+           ChangeRing(g,Rationals())*
+           ChangeRing(BasisMatrix(Module(Lambda)), Rationals());
+  end if;
 
   LambdaZZ := ZLattice(Lambda);
   LambdaZZAuxForms := AuxForms(Lambda);

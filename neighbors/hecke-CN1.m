@@ -144,7 +144,10 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
         found := true;
 	iota := H[space_idx]`embedding;
 	for vec_idx in [1..Dimension(H[space_idx])] do
-	  vec := gg * (iota(H[space_idx].vec_idx));
+	  vec := iota(H[space_idx].vec_idx);
+          if not IsTrivial(W) then
+            vec := gg * vec;
+          end if;
 	  hecke[space_idx][vec_idx][idx] +:= Weight * vec;
 	end for;
 	break;

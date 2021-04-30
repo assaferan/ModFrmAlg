@@ -472,6 +472,8 @@ intrinsic ZLattice(lat::ModDedLat : Standard := false) -> Lat
   return lat`ZLattice;
 end intrinsic;
 
+forward GramMatrixOfBasis;
+
 intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
 { Compute the auxiliary forms associated to this lattice. }
   // Assign the ZLattice attribute if not yet assigned.
@@ -487,6 +489,10 @@ intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
 
   // The base ring.
   R := BaseRing(lat);
+
+  if (Type(R) eq RngInt) then
+    return [ChangeRing(GramMatrixOfBasis(lat : Half := false),R)];
+  end if;
 
   // The reflexive space associated to this lattice.
   V := ReflexiveSpace(lat);
@@ -893,16 +899,14 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
 
   if not iso then return false, _; end if;
 	
-  // for some reason this fails when the base field is rational
-  // What did I break... ????
   if BeCareful then
+    // a trap set to catch SO bugs
     f_lift := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
     assert Determinant(f) eq Determinant(f_lift);
   end if;
 
-  // Currently, this only works for SO, where det in -1,1
+  // Currently, this only works for O and SO, where det in -1,1
   if Special and Determinant(f) eq -1 then
-//  if Special and Determinant(f_lift) eq -1 then
       // Look at the generators of the automorphism group of the
       //  first lattice.
       gens := Generators(AutomorphismGroup(lat1));
@@ -910,9 +914,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
       // If any of the generators have determinant -1, then we can
       //  compose f and g in such a way to produce a proper isometry.
       for g in gens do
-     //	  g_lift := PullUp(Matrix(g), lat1, lat2 : BeCareful := BeCareful);
 	  if Determinant(g) eq -1 then
-	 //if Determinant(g_lift) eq -1 then
 	      return true,
 		     PullUp(Matrix(f*g), lat1, lat2 :
 			    BeCareful := BeCareful);
@@ -922,9 +924,7 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
       // Same as above.
       gens := Generators(AutomorphismGroup(lat2));
       for g in gens do
-   //     g_lift := PullUp(Matrix(g), lat1, lat2 : BeCareful := BeCareful);
 	  if Determinant(g) eq -1 then
-	  // if Determinant(g_lift) eq -1 then
 	      return true,
 		     PullUp(Matrix(g*f), lat1, lat2 :
 			    BeCareful := BeCareful);
@@ -1099,6 +1099,7 @@ intrinsic PullUp(g::AlgMatElt, Lambda::ModDedLat, Pi::ModDedLat :
 
   LambdaZZ := ZLattice(Lambda);
   LambdaZZAuxForms := AuxForms(Lambda);
+  R := BaseRing(Lambda);					  
   PiZZ := ZLattice(Pi);
   PiZZAuxForms := AuxForms(Pi);   
   BL := Matrix([&cat[Eltseq(z) : z in Eltseq(y)] : y in Rows(LambdaZZ`basisZ)]);

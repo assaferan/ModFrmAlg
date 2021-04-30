@@ -137,6 +137,8 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
     // something crashes in orthogonal mass
     // until we figure it out we leave it be
     if UseMass then
+      // If we're doing more than one prime, it could be a bad one
+      bad_modulus := Parent(bad_modulus)!1;
       if SpaceType(V) eq "Hermitian" then
 	K := BaseRing(V);
 	// !!! TODO :
@@ -152,7 +154,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	    upTo +:= 10;
 
 	    // Compute a list of primes which do not divide the
-	    //  discriminant of the lattice.
+	    //  discriminant of the lattice.            
 	    ps := PrimesUpTo(upTo, BaseRing(M) : coprime_to := bad_modulus);
 	until #ps ne 0;
 
@@ -530,8 +532,8 @@ end function;
 function OrthogonalMass(L)
 // Returns the mass of L
     
-    R:= BaseRing(L);
-    K:= NumberField(R);
+  R:= BaseRing(L);
+  K:= NumberField(R);
 
   // TODO:
   D:= Decomposition(R, 2);
@@ -572,7 +574,11 @@ function OrthogonalMass(L)
       mass *:= DedekindZetaExact(E, 1-r : Relative);
       FD:= [ f: f in Factorization(Discriminant(Integers(E))) | Minimum(f[1]) eq 2 ];		// TODO:: Remove odd places.
       mass /:= 2^#FD;
-      Witt diff:= {f[1]: f in FD};
+      for_removal := {f[1]: f in FD};
+      if ExtendedType(for_removal) eq SetEnum[RngIntElt] then
+        for_removal := {ideal<Integers()|x> : x in for_removal};
+      end if;
+      Witt diff:= for_removal;
     end if;
     for p in Witt do
       w:= IsLocalSquare(Disc, p) select -1 else 1;

@@ -32,6 +32,7 @@ ExampleRF := recformat< name : MonStgElt,
 			coeff_char : RngIntElt,
 			genus : RngIntElt,
 			weight : SeqEnum,
+                        spinor : RngIntElt,
 			norm_p : SeqEnum,
 			timing : SeqEnum,
 		        evs : List>;
@@ -50,6 +51,7 @@ Example_7_2 := rec< ExampleRF | name := "[GV2]_7_2",
 				coeff_char := 0,
 				genus := 2,
 				weight := [0,0],
+                                spinor := 1,
 				norm_p := ps_7_2,
 				timing := [],
 				evs := [* eis_7_2, cusp_7_2 *] >;
@@ -69,6 +71,7 @@ Example_7_3 := rec< ExampleRF | name := "[GV2]_7_3",
 				coeff_char := 0,
 				genus := 3,
 				weight := [0,0],
+                                spinor := 1,
 				norm_p := ps_7_2,
 				timing := [],
 				evs := [* eis_7_3, a_7_3, b_7_3 *] >;
@@ -308,6 +311,31 @@ Example_7_6 := rec<ExampleRF | name := "[GV2]_7_6",
 				       [[ -25, 101, 185, -109, 129, 479,
 					-67, 17, 395 ]] *]>;
 
+ps := PrimesUpTo(317);
+evs_1 := [-15, 0, -12, -60, 360, -460, -480, -920, 3180, -6804, -7558, 2660,
+	     8628, -7920, -1140, 8460, -19152, -516, 28240, -3528, -3440,
+	     99636, 1320, 16824, -33660, 35676, 35640, 91200, -131844,
+	     -103020, -292500, -229776, -24660, 189384, 298836, -59336,
+	     538980, 14160, 854940, 667860, -472368, -335348, -542724,
+	     438140, -659340, 444700, -261576, 194020, -437160, 471020,
+	     -1259820, 86076, 272072, -636456, 1057860, 150720, -796908,
+	     342060, -1461420, 841788, 422320, 691260, -1623800, -107784,
+	     890980, 2252820];
+evs_2 := [17, -28, -116, 32, 84, -396, 1980, -7656, -2800, 24004];
+
+Example_31_4_0 := rec<ExampleRF | name := "[Rama]_3_7",
+  group := "SpecialOrthogonal",
+  field := Rationals(),
+  inner_form := QuinaryQuadraticLattices(31)[1][1],
+  coeff_char := 0,
+  genus := 3,
+  weight := [1,0],
+  spinor := 31,
+  norm_p := ps,
+  timing := [],
+  evs := [* [[ ev[i] / ps[i] : i in [1..#ev] ] : ev in [evs_1, evs_2] ] *]
+  >;
+
 AlgebraicModularFormsExamples := [ Example_7_2,
 				  Example_7_3,
 				  Example_7_4,
@@ -317,4 +345,5 @@ AlgebraicModularFormsExamples := [ Example_7_2,
 				  Example_7_4_W_3_3,
 				  Example_7_4_W_4_0,
 				  Example_7_5,
-				  Example_7_6];
+				  Example_7_6,
+				  Example_31_4_0];

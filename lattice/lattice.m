@@ -1573,7 +1573,7 @@ function is_maximal_integral(L,p)
   a := Involution(ReflexiveSpace(L));
   // In this case it is not integral
   if IsIdentity(a) then
-      if Type(p)eq RngInt then
+      if Type(p) eq RngInt then
          norm := ideal< Integers() | Norm(Norm(L))>;
       else
          norm := ideal<Order(p)| Norm(L) >;

@@ -617,7 +617,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
 		      Estimate := true, Orbits := true,
 		      LowMemory := false,
 		      ThetaPrec := 25) -> RngUPolElt
-{Compute the L-polynomial of f at the prime p up to precision x^d.
+{Compute the L-polynomial of f at the prime p.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
     pR := ideal<R | p>;

@@ -424,7 +424,9 @@ intrinsic OrthogonalModularForms(F::Fld,
     G := OrthogonalGroup(ChangeRing(innerForm,F));
   end if;
   W := getWeightRep(G, weight, char, F, n);
-  W := TensorProduct(W, SpinorNormRepresentation(G, d));
+  if (d ne 1) then
+    W := TensorProduct(W, SpinorNormRepresentation(G, d));
+  end if;
   return AlgebraicModularForms(G, W);
 end intrinsic;
 // Should also think how to get the isogeny in general,

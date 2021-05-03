@@ -432,12 +432,17 @@ intrinsic ZLattice(lat::ModDedLat : Standard := false) -> Lat
 
   V := VectorSpace(ReflexiveSpace(lat));
 
-  // Construct an R-basis for the lattice as a Z-module.
-  basisR := &cat[ [ V!(x*pb[2]) : x in Basis(pb[1]) ]
-		: pb in PseudoBasis(Module(lat)) ];
-
-  // Construct a Z-basis for the lattice as a Z-module.
-  basisZ := Matrix([ &cat[ Eltseq(e) : e in Eltseq(b) ] : b in basisR ]);
+  if (Type(BaseRing(lat)) eq RngInt) then
+    basis := ChangeRing(BasisMatrix(Module(lat)), Rationals());
+    basisR := Rows(basis);
+    basisZ := basis;
+  else
+    // Construct an R-basis for the lattice as a Z-module.
+    basisR := &cat[ [ V!(x*pb[2]) : x in Basis(pb[1]) ]
+		    : pb in PseudoBasis(Module(lat)) ];
+    // Construct a Z-basis for the lattice as a Z-module.
+    basisZ := Matrix([ &cat[ Eltseq(e) : e in Eltseq(b) ] : b in basisR ]);
+  end if;
 
   if Standard then
       // Build lattice as a Z-module in a rational quadratic space.
@@ -448,7 +453,12 @@ intrinsic ZLattice(lat::ModDedLat : Standard := false) -> Lat
       lat`ZLattice`basisZ := basisZ;
 
       // Compute the auxiliary forms.
-      auxForms := AuxForms(lat : Standard := Standard);
+      if (Type(BaseRing(lat)) eq RngInt) then
+	gram := ChangeRing(InnerProductMatrix(lat), Integers());
+	auxForms := [gram];
+      else
+        auxForms := AuxForms(lat : Standard := Standard);
+      end if;
       
       // Assign the ambient inner form associated to this lattice.
       gram := auxForms[1];

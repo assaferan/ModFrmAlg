@@ -537,11 +537,16 @@ function OrthogonalMass(L)
 
   // TODO:
   D:= Decomposition(R, 2);
+
   for d in D do
       if not IsMaximalIntegral(L, d[1]) then
-	  // commented out for it not to interfere at the moment.
-	  // error "The lattice must be maximal at primes over 2";
-	  return 0;
+        if Type(R) eq RngInt then
+	  // over the rationals we can cheat
+	  return &+[1/#AutomorphismGroup(r)
+		       : r in Representatives(Genus(ZLattice(L)))];
+        else
+	  error "The lattice must be maximal at primes over 2";
+        end if;
       end if;
   end for;
 

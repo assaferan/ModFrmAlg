@@ -226,11 +226,13 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 LowMemory := false,
 				 ThetaPrec := 25)
     L := reps[idx];
-
-    if ThetaPrec eq -1 then
-      invs := createReducedInvs(Representatives(Genus(M)));
-    else
-      invs := createInvsWithPrecision(M, ThetaPrec);
+    // !! TODO - get this out of here
+    if (not ComputeGenus) then
+      if ThetaPrec eq -1 then
+        invs := createReducedInvs(Representatives(Genus(M)));
+      else
+        invs := createInvsWithPrecision(M, ThetaPrec);
+      end if;
     end if;
 
     Q := ReflexiveSpace(Module(M));
@@ -314,7 +316,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 					  UseLLL := UseLLL,
 					  Weight := w,
 				          Special := IsSpecialOrthogonal(M),
-				          ThetaPrec := ThetaPrec);
+				      ThetaPrec := ThetaPrec,
+				      ComputeGenus := ComputeGenus);
                 // Update nProc in preparation for the next neighbor
                 //  lattice.
 	        GetNextNeighbor(~nProc : BeCareful := BeCareful);
@@ -371,7 +374,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				      UseLLL := UseLLL,
 				      Weight := w,
 				      Special := IsSpecialOrthogonal(M),
-				      ThetaPrec := ThetaPrec);
+				      ThetaPrec := ThetaPrec,
+				      ComputeGenus := ComputeGenus);
 		// Update nProc in preparation for the next neighbor
 		//  lattice.
 		GetNextNeighbor(~nProc
@@ -460,8 +464,7 @@ function HeckeOperatorCN1(M, pR, k
       L := Module(M);
       reps := [L];
       invs := AssociativeArray();
-// invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
-      invs[GreedyReduce(L)] := [<L,1>];
+      invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
       gamma_rep := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
       gamma := sub<M`W`G|
 		[Transpose(PullUp(Matrix(g), L, L :

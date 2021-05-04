@@ -171,13 +171,14 @@ intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 		if f`IsEigenform then
 		     
 		    // Valid dimensions for the eigenvalues
-		    /*
+		    
 		    if not assigned f`Eigenvalues then
-		       f`Eigenvalues := AssociativeArray();
+			   // f`Eigenvalues := AssociativeArray();
+		      dims := [];
+		    else
+		      dims := Keys(f`Eigenvalues);
 	            end if;
-		    */
 		
-		    dims := Keys(f`Eigenvalues);
 		    dims := Sort([x : x in dims]);
 
 		    // The eigenvalues we've computed.

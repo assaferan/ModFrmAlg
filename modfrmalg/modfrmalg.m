@@ -149,7 +149,7 @@ declare attributes ModFrmAlg:
 
 intrinsic AlgebraicModularForms(G::GrpRed,
 			        weight::GrpRep,
-				level::AlgMatElt[Fld] :
+				level::AlgMatElt[Rng] :
 				GramFactor := 2) -> ModFrmAlg
 {Builds the space of algebraic modular forms with respect to the reductive group G, representation weight and level given by the stabilizer of the lattice whose basis consists of the rows of the matrix.
     If GramFactor is 1, we assume that the bilinear pairing on the lattice is given by the inner form of G, namely M[i,i] = Q(e_i).
@@ -270,7 +270,7 @@ intrinsic OrthogonalModularForms(lat::Lat :
     G := OrthogonalGroup(Q);
   end if;
   W := HighestWeightRepresentation(G, weight);
-  return AlgebraicModularForms(G, W, level);
+  return AlgebraicModularForms(G, W, Matrix(level));
 end intrinsic;
 
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],

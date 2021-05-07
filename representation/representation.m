@@ -136,6 +136,7 @@ freeze;
 // HighestWeightRepresentation(G::GrpRed, lambda::SeqEnum) -> GrpRep
 // 
 
+import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../utils/linalg.m" : Restrict;
 
 forward projLocalization;

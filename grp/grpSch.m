@@ -211,12 +211,12 @@ intrinsic BilinearAlgebraicGroup(S::AlgMatElt[Rng]) -> GrpSch
 {Constructs the algebraic group of matrices X s.t. X^t*S*X = S}
   k := BaseRing(S);
   n := Degree(Parent(S));
-  ret := GeneralLinearAlgebraicGroup(n,k);
-  R := Universe(ret`I);
+  gl_n := GeneralLinearAlgebraicGroup(n,k);
+  R := CoordinateRing(Scheme(gl_n));
   var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..n]] : i in [1..n]];
   x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
 		 : j in [1..n]]: i in [1..n]]);
-  ret`I cat:= Eltseq(Transpose(x)*S*x-S);
+  ret := sub<gl_n | Eltseq(Transpose(x)*S*x-S)>;
   ret`name := Sprintf("algebraic group of matrices preserving a bilinear form of rank %o over %o", n, k); 
   return ret;
 end intrinsic;

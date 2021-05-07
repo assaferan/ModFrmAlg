@@ -1899,3 +1899,31 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   V`grp := G;
   return V;
 end intrinsic;
+
+function SinglePrimeSpinorNormRepresentation(p)
+  Q := TernaryQuadraticLattice(p);
+  M := OrthogonalModularForms(Q);
+  L := Module(M);
+  pR := ideal<Integers() | p>;
+  nProc := BuildNeighborProc(L, pR, 1);
+  // we use the fact that in our standard decomposition,
+  // the radical is in the end
+  rad := Transpose(L`Vpp[pR]`V`Basis)[3];
+  assert (rad*L`Vpp[pR]`V`GramMatrix, rad) eq 0;
+  basis := L`pMaximal[pR][2];
+  rad_lift := Vector([Integers()!rad[i] : i in [1..3]]);
+  temp := rad_lift * basis * ChangeRing(Q, Integers());
+  assert &and[temp[i] mod p eq 0 : i in [1..3]];
+  rad := rad * ChangeRing(basis, GF(p));
+  a := Sprintf("
+    function action(g,m,V)
+          rad := %m; 
+          g_%o := Transpose(MatrixAlgebra(GF(%o),3)!g);
+          assert (rad*g_%o eq rad) or (rad*g_%o eq -rad);
+          return (rad*g_%o eq rad) select (V`M).m else (-1)*(V`M).m;
+    end function;
+    return action;
+  ", rad, p, p, p, p, p);
+  M := CombinatorialFreeModule(Rationals(), ["v"]);
+  return GroupRepresentation(GL(3,Rationals()), M, a);
+end function;

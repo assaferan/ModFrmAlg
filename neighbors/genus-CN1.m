@@ -44,7 +44,7 @@ import "inv-CN1.m" : Invariant;
 // functions
 
 procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
-			   : BeCareful := false)
+			    : BeCareful := false, Special := false)
 
     // Compute the neighbor according to the current state
     //  of the neighbor procedure.
@@ -63,7 +63,7 @@ procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
        found := false;
        for i in [1..#array] do
 	 // Check for isometry.
-	 iso := IsIsometric(array[i][1], nLat);
+	 iso := IsIsometric(array[i][1], nLat : Special := Special);
 
          // Skip ahead if an isometry is found.
 	 if iso then
@@ -85,7 +85,8 @@ procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
 end procedure;
 
 function computeGenusRepsAt(p, isoList, invs
-		: BeCareful := true, Force := false)
+			    : BeCareful := true, Force := false,
+			    Special := false)
     // The index of the current isometry class being considered.
     isoIdx := 1;
 
@@ -96,7 +97,9 @@ function computeGenusRepsAt(p, isoList, invs
 
 	while nProc`isoSubspace ne [] do
 	    checkNextNeighbor(nProc, BuildNeighbor,
-			      ~invs, ~isoList : BeCareful := BeCareful);
+			      ~invs, ~isoList :
+			      BeCareful := BeCareful,
+			      Special := Special);
 	    // Move on to the next neighbor lattice.
 	    GetNextNeighbor(~nProc
 			    : BeCareful := BeCareful);
@@ -163,7 +166,9 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	    // Compute genus representatives at a specific prime.
 	    genList, invs := computeGenusRepsAt(
 				     ps[idx], genList, invs
-				     : BeCareful := BeCareful, Force := Force);
+				     : BeCareful := BeCareful,
+				     Force := Force,
+				     Special := IsSpecialOrthogonal(M));
 
 	    // Move to the next prime.
 	    idx +:= 1;

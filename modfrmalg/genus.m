@@ -75,7 +75,8 @@ intrinsic GenusReps(M::ModFrmAlg
         fac := Factorization(disc);
         is_sqrfree := &and[fa[2] eq 1 : fa in fac];
         computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force,
-		    UseMass := not is_sqrfree);
+			    UseMass := (not is_sqrfree) and
+			    (not IsSpecialOrthogonal(M)));
 
 	return M`genus`Representatives;
 end intrinsic;

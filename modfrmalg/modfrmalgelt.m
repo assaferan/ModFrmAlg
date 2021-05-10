@@ -236,8 +236,10 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 			   UseLLL := true, LowMemory := false,
 			   ThetaPrec := 25) -> List, SeqEnum
 { Computes the eigenvalues at various primes associated to this eigenform, for primes up to norm Precision. If Precision = 0, computes the eigenvalues only for precomputed hecke operators }
-	// Check whether this element is an eigenform.
-	if not f`IsEigenform then return []; end if;
+         // !! No reason to do this - if this is an irreducible Hecke eigenspace,
+         // we can still find the eigenvalues
+	 // Check whether this element is an eigenform.
+         // if not f`IsEigenform then return []; end if;
 
 	// Assign an associative array for the eigenvalues if one hasn't
 	//  already been defined.

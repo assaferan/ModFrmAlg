@@ -170,13 +170,19 @@ intrinsic HeckeEigensystems(M::ModFrmAlg, k::RngIntElt) -> List, SeqEnum
 	return list, Ps;
 end intrinsic;
 
-intrinsic DisplayHeckeEigensystem(f::ModFrmAlgElt : Verbose := true)
+intrinsic DisplayHeckeEigensystem(f::ModFrmAlgElt : Verbose := true, Precision := 0)
 { Displays a formatted list of Hecke eigenvalues associated to the eigenform. }
+        // not really necessary
 	// Check whether this element is an eigenform.
-	if not f`IsEigenform then return; end if;
+	// if not f`IsEigenform then return; end if;
 
 	// Retrieve all dimensions at which eigenvalues have been computed
-	keys := Keys(f`Eigenvalues);
+        if IsZero(Precision) then
+	  keys := Keys(f`Eigenvalues);
+        else
+          n := Dimension(Module(f`M));
+          keys := [1..n div 2];
+        end if;
 	keys := Sort([ x : x in keys ]);
 
 	// Print the eigenform.
@@ -184,7 +190,7 @@ intrinsic DisplayHeckeEigensystem(f::ModFrmAlgElt : Verbose := true)
 
 	for dim in keys do
 	    // Retrieve the eigenvalues and associate prime.
-	    Es, Ps := HeckeEigensystem(f, dim);
+	    Es, Ps := HeckeEigensystem(f, dim : Precision := Precision);
 
 	    // Display the pairing of eigenvalues and ideals.
 	    printf "Hecke eigenvalues for T(p%o) operators:\n",

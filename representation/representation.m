@@ -1392,6 +1392,7 @@ function rho(d, sigma, A)
     // assert Transpose(sigma)*A*sigma eq A;
     assert sigma * A * Transpose(sigma) eq A;
     if (Determinant(sigma) eq -1) then
+	assert IsOdd(NumberOfRows(sigma));
 	return rho(d, -sigma, A);
     end if;
     return nu(d, spinor_norm(sigma, A));
@@ -1901,30 +1902,60 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   return V;
 end intrinsic;
 
-function SinglePrimeSpinorNormRepresentation(p)
-  Q := TernaryQuadraticLattice(p);
-  M := OrthogonalModularForms(Q);
-  L := Module(M);
-  pR := ideal<Integers() | p>;
+intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep 
+{new method of constructing the spinor norm representations. }
+  L := StandardLattice(InnerForm(G,1));
+  n := Dimension(L);
+  pR := Factorization(ideal<Integers() | p>)[1][1];
   nProc := BuildNeighborProc(L, pR, 1);
   // we use the fact that in our standard decomposition,
   // the radical is in the end
-  rad := Transpose(L`Vpp[pR]`V`Basis)[3];
+  rad := Transpose(L`Vpp[pR]`V`Basis)[n];
   assert (rad*L`Vpp[pR]`V`GramMatrix, rad) eq 0;
   basis := L`pMaximal[pR][2];
-  rad_lift := Vector([Integers()!rad[i] : i in [1..3]]);
+  rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
+/*
   temp := rad_lift * basis * ChangeRing(Q, Integers());
-  assert &and[temp[i] mod p eq 0 : i in [1..3]];
-  rad := rad * ChangeRing(basis, GF(p));
+  assert &and[temp[i] mod p eq 0 : i in [1..n]];
+*/
+  Fp := ResidueClassField(pR);
+  rad := rad * ChangeRing(basis, Fp);
   a := Sprintf("
     function action(g,m,V)
-          rad := %m; 
-          g_%o := Transpose(MatrixAlgebra(GF(%o),3)!g);
-          assert (rad*g_%o eq rad) or (rad*g_%o eq -rad);
-          return (rad*g_%o eq rad) select (V`M).m else (-1)*(V`M).m;
+          rad := %m;
+          n := %m;
+          Fp := BaseRing(rad);
+          g_p := Transpose(MatrixAlgebra(Fp,n)!g);
+          assert (rad*g_p eq rad) or (rad*g_p eq -rad);
+          return (rad*g_p eq rad) select (V`M).m else (-1)*(V`M).m;
     end function;
     return action;
-  ", rad, p, p, p, p, p);
+  ", rad, n);
   M := CombinatorialFreeModule(Rationals(), ["v"]);
-  return GroupRepresentation(GL(3,Rationals()), M, a);
-end function;
+  return GroupRepresentation(GL(n,Rationals()), M, a);
+end intrinsic;
+
+// Something here is off
+intrinsic SpinorNormRepresentationFast(G::GrpRed, d::RngIntElt) -> GrpRep
+{Constructs the spinor norm representation of the matrix group G.}
+  A := InnerForm(InnerForm(G,1)); 
+  K := BaseRing(A);
+  fac := Factorization(d);
+  // We only care about the discriminant modulo squares in this case
+//  D := &*([ideal<Z_K | 1>] cat [f[1] : f in fac | IsOdd(f[2])]);
+//  require D subset Z_K!!d :
+//		"d should divide the discriminant";
+  primes := [f[1] : f in fac | IsOdd(f[2])];
+  n := NumberOfRows(A);
+  V := TrivialRepresentation(GL(n,K), K);
+  for p in primes do
+    V := TensorProduct(V, SinglePrimeSpinorNormRepresentation(G, p));
+  end for;
+  if d eq 1 then
+    V`trivial := true;
+  else
+    V`trivial := false;
+  end if;
+  V`weight := <d, 0, 0>;
+  return V;
+end intrinsic;

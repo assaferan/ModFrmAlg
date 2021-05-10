@@ -113,7 +113,9 @@ end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, p::RngIntElt) -> SeqEnum
 {Returns a list of all Hecke eigenvalues at the specified prime.}
-     return HeckeEigenvalues(f, BaseRing(Module(f`M))!!p);
+     R := BaseRing(Module(f`M));
+     pR := Type(R) eq RngInt select ideal<R|p> else Factorization(R!!p)[1][1];
+     return HeckeEigenvalues(f, pR);
 end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngInt) -> SeqEnum
@@ -323,10 +325,25 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 	// Display an error if no Hecke matrices have been computed yet.
 	require IsDefined(M`Hecke`Ts, 1): "Compute some Hecke matrices first!";
 */
-        // Decompose the spaceto eigenspaces
-        D := Decomposition(M : Estimate := Estimate,
-			   Orbits := Orbits, LowMemory := LowMemory,
-			   ThetaPrec := ThetaPrec);
+        // if the discriminant is not square-free, we might have old forms
+        // In this case, we have to set a bound.
+        disc := Discriminant(Level(M));
+        // Since we only work with integral lattices, there is no harm in that
+        if Type(disc) eq FldRatElt then
+          disc := Integers()!disc;
+        end if;
+        fac := Factorization(disc);
+        is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+        if is_sqrfree then
+	  // Decompose the spaceto eigenspaces
+          D := Decomposition(M : Estimate := Estimate,
+			     Orbits := Orbits, LowMemory := LowMemory,
+			     ThetaPrec := ThetaPrec);
+	else 
+	  D := Decomposition(M, 10 : Estimate := Estimate,
+			     Orbits := Orbits, LowMemory := LowMemory,
+			     ThetaPrec := ThetaPrec);
+	end if;
 
         // This actually repeats the previous to get also the eigenvectors.
         // Since main computation is Hecke operators, we let it go for now

@@ -223,7 +223,7 @@ function build_orthogonal(quad, special)
   F := BaseRing(quad);
   n := Dimension(quad);
   cartan_type := (n mod 2 eq 1) select "B" else "D";
-  SO_n := GroupOfLieType(StandardRootDatum(cartan_type, n div 2), F);
+  SO_n := GroupOfLieType(cartan_type cat Sprintf("%o", n div 2), F);
   comp := CyclicGroup(special select 1 else 2); 
   return ReductiveGroup(SO_n, comp : InnerForms := [quad]);
 end function;

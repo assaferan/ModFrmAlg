@@ -197,7 +197,11 @@ intrinsic DisplayHeckeEigensystem(f::ModFrmAlgElt : Verbose := true, Precision :
 
 	// Retrieve all dimensions at which eigenvalues have been computed
         if IsZero(Precision) then
-	  keys := Keys(f`Eigenvalues);
+          if assigned f`Eigenvalues then
+	    keys := Keys(f`Eigenvalues);
+          else
+	    keys := [];
+	  end if;
         else
           n := Dimension(Module(f`M));
           keys := [1..n div 2];

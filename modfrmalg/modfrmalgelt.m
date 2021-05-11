@@ -111,6 +111,24 @@ end intrinsic;
 
 // access
 
+intrinsic BaseField(f::ModFrmAlgElt) -> Fld
+{returns the field of definition of the vector representing the eigenform.}
+  return BaseRing(f`vec);
+end intrinsic;
+
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, p::RngIntElt : k := 1) -> SeqEnum
+{Returns the Hecke eigenvalue of T(p^k) at the specified prime.}
+   R := BaseRing(Module(f`M));
+   pR := Type(R) eq RngInt select ideal<R|p> else Factorization(R!!p)[1][1];
+   return HeckeEigenvalue(f, pR : k := k);
+end intrinsic;
+
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, pR::RngInt : k := 1) -> SeqEnum
+{Returns the Hecke eigenvalue of T(p^k) at the specified prime.}
+  vals, _ := HeckeEigensystem(f, k : Precision := [pR]);
+  return vals[1];
+end intrinsic;
+
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, p::RngIntElt) -> SeqEnum
 {Returns a list of all Hecke eigenvalues at the specified prime.}
      R := BaseRing(Module(f`M));
@@ -125,8 +143,9 @@ end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngOrdIdl) -> SeqEnum
 { Returns a list of all Hecke eigenvalues at the specified prime. }
+        // not really needed
 	// Verify that this is an eigenform.
-	if not f`IsEigenform then return []; end if;
+	// if not f`IsEigenform then return []; end if;
 
 	// The largest possible type of Hecke operator to look at.
 	// max := Floor(Dimension(QuadraticSpace(f`M)) / 2);

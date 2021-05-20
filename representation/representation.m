@@ -1407,8 +1407,8 @@ end intrinsic;
 
 forward my_prod;
 
-intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
-				   name := "x") -> GrpRep
+intrinsic SpinorNormRepresentationOld(G::GrpRed, d::RngIntElt :
+				      name := "x") -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);
@@ -1913,7 +1913,7 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   Vpp := L`Vpp[pR]`V;
   rad := Matrix(Transpose(Vpp`Basis)[n-Vpp`RadDim+1..n]);
 //  rad := Transpose(L`Vpp[pR]`V`Basis)[n];
-  assert rad*Vpp`GramMatrix eq 0;
+//  assert rad*Vpp`GramMatrix eq 0;
   basis := L`pMaximal[pR][2];
 /*
   rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
@@ -1928,9 +1928,9 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
           n := %m;
           Fp := BaseRing(rad);
           g_p := Transpose(MatrixAlgebra(Fp,n)!g);
-          return Determinant(Solution(rad,rad*g_p))*(V`M).m; 
-          assert (rad*g_p eq rad) or (rad*g_p eq -rad);
-          return (rad*g_p eq rad) select (V`M).m else (-1)*(V`M).m;
+          scalar := Determinant(Solution(rad,rad*g_p));
+          scalar := (scalar eq 1) select Integers()!1 else -Integers()!1;
+          return scalar*(V`M).m; 
     end function;
     return action;
   ", rad, n);
@@ -1939,7 +1939,7 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
 end intrinsic;
 
 // Something here is off
-intrinsic SpinorNormRepresentationFast(G::GrpRed, d::RngIntElt) -> GrpRep
+intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt) -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);

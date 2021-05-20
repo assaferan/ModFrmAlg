@@ -480,9 +480,8 @@ intrinsic TernaryQuadraticLattice(N::RngIntElt) -> Mtrx
   return Q;
 end intrinsic;
 
-// Still not working - has to make it positive definite
 intrinsic QuinaryQuadraticOfPrimeLevel(p::RngIntElt) -> Mtrx
-{.}
+{returns a positive definite quinary quadratic lattice of prime discriminant p.}
   // For now we assume p is an odd prime
   require IsPrime(p) and IsOdd(p) : "Currently only implemented for odd primes.";
   residues := [3] cat [-Integers()!PrimitiveElement(Integers(p))];

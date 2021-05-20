@@ -1910,8 +1910,10 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   nProc := BuildNeighborProc(L, pR, 1);
   // we use the fact that in our standard decomposition,
   // the radical is in the end
-  rad := Transpose(L`Vpp[pR]`V`Basis)[n];
-  assert (rad*L`Vpp[pR]`V`GramMatrix, rad) eq 0;
+  Vpp := L`Vpp[pR]`V;
+  rad := Matrix(Transpose(Vpp`Basis)[n-Vpp`RadDim+1..n]);
+//  rad := Transpose(L`Vpp[pR]`V`Basis)[n];
+  assert rad*Vpp`GramMatrix eq 0;
   basis := L`pMaximal[pR][2];
 /*
   rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
@@ -1926,6 +1928,7 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
           n := %m;
           Fp := BaseRing(rad);
           g_p := Transpose(MatrixAlgebra(Fp,n)!g);
+          return Determinant(Solution(rad,rad*g_p))*(V`M).m; 
           assert (rad*g_p eq rad) or (rad*g_p eq -rad);
           return (rad*g_p eq rad) select (V`M).m else (-1)*(V`M).m;
     end function;

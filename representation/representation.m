@@ -1913,8 +1913,8 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   rad := Transpose(L`Vpp[pR]`V`Basis)[n];
   assert (rad*L`Vpp[pR]`V`GramMatrix, rad) eq 0;
   basis := L`pMaximal[pR][2];
-  rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
 /*
+  rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
   temp := rad_lift * basis * ChangeRing(Q, Integers());
   assert &and[temp[i] mod p eq 0 : i in [1..n]];
 */

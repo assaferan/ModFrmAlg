@@ -19,3 +19,4 @@ tests/.#unitary-examples.m
 tests/.#unitary-tests.m
 *.amf
 neighbors/*scratch*
+.DS_Store

@@ -1927,8 +1927,8 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
     end function;
     return action;
   ", rad, n);
-  M := CombinatorialFreeModule(Rationals(), ["v"]);
-  return GroupRepresentation(GL(n,Rationals()), M, a);
+  M := CombinatorialFreeModule(BaseRing(G), ["v"]);
+  return GroupRepresentation(GL(n,BaseRing(G)), M, a);
 end intrinsic;
 
 // Something here is off

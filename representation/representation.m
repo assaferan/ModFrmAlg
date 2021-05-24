@@ -1906,20 +1906,13 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
 {new method of constructing the spinor norm representations. }
   L := StandardLattice(InnerForm(G,1));
   n := Dimension(L);
-  pR := Factorization(ideal<Integers() | p>)[1][1];
+  pR := Factorization(ideal<BaseRing(L) | p>)[1][1];
   nProc := BuildNeighborProc(L, pR, 1);
   // we use the fact that in our standard decomposition,
   // the radical is in the end
   Vpp := L`Vpp[pR]`V;
   rad := Matrix(Transpose(Vpp`Basis)[n-Vpp`RadDim+1..n]);
-//  rad := Transpose(L`Vpp[pR]`V`Basis)[n];
-//  assert rad*Vpp`GramMatrix eq 0;
   basis := L`pMaximal[pR][2];
-/*
-  rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
-  temp := rad_lift * basis * ChangeRing(Q, Integers());
-  assert &and[temp[i] mod p eq 0 : i in [1..n]];
-*/
   Fp := ResidueClassField(pR);
   rad := rad * ChangeRing(basis, Fp);
   a := Sprintf("

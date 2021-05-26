@@ -570,15 +570,16 @@ function pMaximalGram(L, pR : BeCareful := false, given_coeffs := [])
     else
 	// If it consists of an empty array, create it.
 	L`pMaximal := AssociativeArray();
-        // If we're over Q, we don't really need a p-maximal basis
-        // for now, we just return the trivial basis, see that it works 
-        if Type(BaseRing(L)) eq RngInt then
-          vecs := Basis(Module(L));
-          gram := GramMatrix(L, vecs);
-          L`pMaximal[pR] := < ChangeRing(gram, BaseRing(L)), Matrix(vecs),
-	                      Denominator(Matrix(vecs))>;
-          return L`pMaximal[pR][1], L`pMaximal[pR][2];
-        end if;
+    end if;
+
+    // If we're over Q, we don't really need a p-maximal basis
+    // for now, we just return the trivial basis, see that it works 
+    if Type(BaseRing(L)) eq RngInt then
+       vecs := Basis(Module(L));
+       gram := GramMatrix(L, vecs);
+       L`pMaximal[pR] := < ChangeRing(gram, BaseRing(L)), Matrix(vecs),
+	                    Denominator(Matrix(vecs))>;
+       return L`pMaximal[pR][1], L`pMaximal[pR][2];
     end if;
 
     // The coefficient ideals for this lattice.

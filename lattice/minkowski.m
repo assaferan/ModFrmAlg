@@ -129,7 +129,7 @@ function PermutationReduction(QF)
     return Q0, U, auts;
 end function;
 
-function SignNormalization(QF)
+function SignNormalization(QF : FindAuts := false)
     // PRE: Takes a symmetric matrix over the Integers().
     // POST: Defines an ordering of the non-diagonal elements 
     // and makes as many as possible positive, with priority 
@@ -143,34 +143,40 @@ function SignNormalization(QF)
     FF2 := FiniteField(2);
     VF2 := VectorSpace(FF2,dim);
 
-    PrioritySet := { };
-    BoundaryBasis := { VF2 | };
+    PrioritySet := [];
+    BoundaryBasis := [ VF2 | ];
     count := 0;
     // Go through the indices in desired order:
     for j in [1..dim-1] do 
 	for k in [1..dim-j] do
-	    WF2 := sub< VF2 | BoundaryBasis, VF2.k - VF2.(k+j) >;
-	    if Rank(WF2) gt count and QF[k,k+j] ne 0 then
-		PrioritySet := PrioritySet join {[k,k+j]};
-		BoundaryBasis := BoundaryBasis join {VF2.k - VF2.(k+j)};
-		count := count + 1;
-	    end if;
+	    if QF[k,k+j] ne 0 then
+	       WF2 := sub< VF2 | BoundaryBasis, VF2.k + VF2.(k+j) >;
+	       if Rank(WF2) gt count then
+		 Append(~PrioritySet, [k,k+j]);
+                 Append(~BoundaryBasis, VF2.k + VF2.(k+j));
+		 count := count + 1;
+	       end if;
+            end if;
 	end for;
     end for;
-    SkewBasis := { VF2 | };
-    for x in PrioritySet do
-	if QF[x[1],x[2]] lt 0 then 
-	    SkewBasis := SkewBasis join {VF2.x[1] + VF2.x[2] + VF2.1};
-	else 
-	    SkewBasis := SkewBasis join {VF2.x[1] + VF2.x[2]};
-	end if;
+
+    pairs := [x : x in PrioritySet];
+    rows := [];
+    vec := Vector(GF(2), [ 0 : x in pairs]);
+    for j in [1..#pairs] do
+      x := pairs[j];
+      if QF[x[1],x[2]] lt 0 then
+        vec[j] := 1;
+      end if;
+      Append(~rows, VF2.x[1] + VF2.x[2]);
     end for;
-    WF2 := sub< VF2 | SkewBasis >;
-    UF2 := VectorSpace(FiniteField(2),Dimension(WF2));
-    HF2 := Hom(UF2,VF2);
-    
-// w := Kernel(Transpose(HF2![WF2.i : i in [1..Dimension(WF2)]])).1;
-    for w in Basis(Kernel(Transpose(HF2![WF2.i : i in [1..Dimension(WF2)]]))) do
+
+    mat := Transpose(Matrix(rows));
+    ker := Kernel(mat);
+    sol := Solution(mat, vec);
+
+   for b in Basis(ker) do
+      w := sol + b;
     // Now do the sign changes.
       P := Identity(Parent(QF));
       for i in [1..dim] do
@@ -179,9 +185,12 @@ function SignNormalization(QF)
 	end if;
       end for;
       if P*QF*P eq QF then
-        Append(~auts, P);
+        if FindAuts then
+          Append(~auts, P);
+        end if;
         P := I;
       end if;
+      if not FindAuts then break; end if;
     end for;
     return P*QF*P, P, auts;
 end function;
@@ -254,12 +263,14 @@ function NeighborReduction(QF)
 	inds := [ i : i in [1..dim] | QF[i,i] eq n ];
 	X := &join[ LocalNeighbors[i] : i in inds ];
 	for i in inds do
-	    LocalNeighbors[i] := X;
+	  LocalNeighbors[i] := X;
 	end for; 
     end for;
 
     vprint Minkowski, 2 : "Original NeighborSpace size:", 
     &*[ #S : S in LocalNeighbors ];
+
+    LocalNeighbors := [Sort([x : x in X]) : X in LocalNeighbors];
 
     NeighborSpace := [ [ x ] : x in LocalNeighbors[1] ];
     for i in [2..dim] do

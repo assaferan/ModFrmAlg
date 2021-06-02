@@ -1332,7 +1332,7 @@ function generate_orbit(QF)
     num := #qs;
     qs := &join[PermutationOrbit(q) : q in qs];
     qs := &join[SignOrbit(q) : q in qs];
-    qs := &join[NeighborOrbit(q) : q in qs];
+//   qs := &join[NeighborOrbit(q) : q in qs];
   end while;
   return qs;
 end function;

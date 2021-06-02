@@ -245,15 +245,6 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 ThetaPrec := 25)
     L := reps[idx];
     // !! TODO - get this out of here
-    if (not ComputeGenus) then
-      if ThetaPrec eq -1 then
-        invs := createReducedInvs(Representatives(Genus(M)));
-      elif ThetaPrec eq -2 then
-        invs := createReducedInvs2(Representatives(Genus(M)));
-      else
-        invs := createInvsWithPrecision(M, ThetaPrec);
-      end if;
-    end if;
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
@@ -500,13 +491,7 @@ function HeckeOperatorCN1(M, pR, k
       //  tests by filtering out those isometry classes whose invariant
       //  differs from the one specified.
       // invs := M`genus`RepresentativesAssoc;
-      if ThetaPrec eq -1 then
-        invs := createReducedInvs(reps);
-      elif ThetaPrec eq -2 then
-        invs := createReducedInvs2(reps);
-      else
-        invs := createInvsWithPrecision(M, ThetaPrec);
-      end if;
+      invs := HeckeInitializeInvs(M, ThetaPrec);
     end if;
 
     hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
@@ -546,7 +531,7 @@ function HeckeOperatorCN1(M, pR, k
 end function;
 
 // compute T_p(e_{i,j}) where i = space_idx, j = vec_idx
-function HeckeOperatorCN1SparseBasis(M, pR, k, idx
+function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				     : BeCareful := false,
 				       UseLLL := false,
 				       Estimate := true,
@@ -571,6 +556,13 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
     elapsed := 0;
     start := Realtime();
 
+/*
+    // moving it outside to hecke.m
+    // initialize the invariants
+    
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    
+*/
     HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			     start, ~count, ~elapsed, fullCount :
 			     BeCareful := BeCareful,
@@ -583,7 +575,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
     return finalizeHecke(M, hecke, [idx]);
 end function;
 
-function HeckeOperatorCN1Sparse(M, pR, k, s
+function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 				: BeCareful := false,
 				  UseLLL := false,
 				  Estimate := true,
@@ -597,7 +589,7 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
 	space_idx := tup[2];
        
 	hecke := scalar *
-		 HeckeOperatorCN1SparseBasis(M, pR, k, space_idx
+	  HeckeOperatorCN1SparseBasis(M, pR, k, space_idx, invs
 					     : BeCareful := BeCareful,
 					       UseLLL := UseLLL,
 					       Estimate := Estimate,
@@ -608,3 +600,15 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
     end for;
     return ret;
 end function;
+
+intrinsic HeckeInitializeInvs(M::ModFrmAlg, ThetaPrec::RngIntElt) -> Assoc
+{.}
+  if ThetaPrec eq -1 then
+    invs := createReducedInvs(Representatives(Genus(M)));
+  elif ThetaPrec eq -2 then
+    invs := createReducedInvs2(Representatives(Genus(M)));
+  else
+    invs := createInvsWithPrecision(M, ThetaPrec);
+  end if;
+  return invs;
+end intrinsic;

@@ -51,6 +51,7 @@ freeze;
 
 // imports
 
+import "../lattice/minkowski.m" : generate_orbit; 
 import "../utils/helper.m" : printEstimate;
 
 import "inv-CN1.m" : Invariant;
@@ -84,6 +85,8 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   // Compute the invariant of the neighbor lattice.
   if ThetaPrec eq -1 then
     inv := GreedyReduce(nLat);
+  elif ThetaPrec eq -2 then
+    inv := GreedyReduce2(nLat);
   else
     inv := Invariant(nLat : Precision := ThetaPrec);
   end if;
@@ -214,6 +217,21 @@ function createReducedInvs(reps)
   return invs;
 end function;
 
+function createReducedInvs2(reps)
+  invs := AssociativeArray();
+  for i in [1..#reps] do
+    r := reps[i];
+    reds := generate_orbit(GreedyReduce2(r));
+    for red in reds do
+      if not IsDefined(invs, red) then
+        invs[red] := [];
+      end if;
+      Append(~invs[red], <r, i>);
+    end for;
+  end for;
+  return invs;
+end function;
+
 // This procedure updates the matrix of the Hecke operator at
 // column idx.
 procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
@@ -230,6 +248,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
     if (not ComputeGenus) then
       if ThetaPrec eq -1 then
         invs := createReducedInvs(Representatives(Genus(M)));
+      elif ThetaPrec eq -2 then
+        invs := createReducedInvs2(Representatives(Genus(M)));
       else
         invs := createInvsWithPrecision(M, ThetaPrec);
       end if;
@@ -482,6 +502,8 @@ function HeckeOperatorCN1(M, pR, k
       // invs := M`genus`RepresentativesAssoc;
       if ThetaPrec eq -1 then
         invs := createReducedInvs(reps);
+      elif ThetaPrec eq -2 then
+        invs := createReducedInvs2(reps);
       else
         invs := createInvsWithPrecision(M, ThetaPrec);
       end if;

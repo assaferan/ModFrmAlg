@@ -51,6 +51,7 @@ freeze;
 
 // imports
 
+import "../lattice/minkowski.m" : generate_orbit; 
 import "../utils/helper.m" : printEstimate;
 
 import "inv-CN1.m" : Invariant;
@@ -84,6 +85,8 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   // Compute the invariant of the neighbor lattice.
   if ThetaPrec eq -1 then
     inv := GreedyReduce(nLat);
+  elif ThetaPrec eq -2 then
+    inv := GreedyReduce2(nLat);
   else
     inv := Invariant(nLat : Precision := ThetaPrec);
   end if;
@@ -214,6 +217,21 @@ function createReducedInvs(reps)
   return invs;
 end function;
 
+function createReducedInvs2(reps)
+  invs := AssociativeArray();
+  for i in [1..#reps] do
+    r := reps[i];
+    reds := generate_orbit(GreedyReduce2(r));
+    for red in reds do
+      if not IsDefined(invs, red) then
+        invs[red] := [];
+      end if;
+      Append(~invs[red], <r, i>);
+    end for;
+  end for;
+  return invs;
+end function;
+
 // This procedure updates the matrix of the Hecke operator at
 // column idx.
 procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
@@ -227,13 +245,6 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 ThetaPrec := 25)
     L := reps[idx];
     // !! TODO - get this out of here
-    if (not ComputeGenus) then
-      if ThetaPrec eq -1 then
-        invs := createReducedInvs(Representatives(Genus(M)));
-      else
-        invs := createInvsWithPrecision(M, ThetaPrec);
-      end if;
-    end if;
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
@@ -480,11 +491,7 @@ function HeckeOperatorCN1(M, pR, k
       //  tests by filtering out those isometry classes whose invariant
       //  differs from the one specified.
       // invs := M`genus`RepresentativesAssoc;
-      if ThetaPrec eq -1 then
-        invs := createReducedInvs(reps);
-      else
-        invs := createInvsWithPrecision(M, ThetaPrec);
-      end if;
+      invs := HeckeInitializeInvs(M, ThetaPrec);
     end if;
 
     hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
@@ -524,7 +531,7 @@ function HeckeOperatorCN1(M, pR, k
 end function;
 
 // compute T_p(e_{i,j}) where i = space_idx, j = vec_idx
-function HeckeOperatorCN1SparseBasis(M, pR, k, idx
+function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				     : BeCareful := false,
 				       UseLLL := false,
 				       Estimate := true,
@@ -549,6 +556,13 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
     elapsed := 0;
     start := Realtime();
 
+/*
+    // moving it outside to hecke.m
+    // initialize the invariants
+    
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    
+*/
     HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			     start, ~count, ~elapsed, fullCount :
 			     BeCareful := BeCareful,
@@ -561,7 +575,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx
     return finalizeHecke(M, hecke, [idx]);
 end function;
 
-function HeckeOperatorCN1Sparse(M, pR, k, s
+function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 				: BeCareful := false,
 				  UseLLL := false,
 				  Estimate := true,
@@ -575,7 +589,7 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
 	space_idx := tup[2];
        
 	hecke := scalar *
-		 HeckeOperatorCN1SparseBasis(M, pR, k, space_idx
+	  HeckeOperatorCN1SparseBasis(M, pR, k, space_idx, invs
 					     : BeCareful := BeCareful,
 					       UseLLL := UseLLL,
 					       Estimate := Estimate,
@@ -586,3 +600,15 @@ function HeckeOperatorCN1Sparse(M, pR, k, s
     end for;
     return ret;
 end function;
+
+intrinsic HeckeInitializeInvs(M::ModFrmAlg, ThetaPrec::RngIntElt) -> Assoc
+{.}
+  if ThetaPrec eq -1 then
+    invs := createReducedInvs(Representatives(Genus(M)));
+  elif ThetaPrec eq -2 then
+    invs := createReducedInvs2(Representatives(Genus(M)));
+  else
+    invs := createInvsWithPrecision(M, ThetaPrec);
+  end if;
+  return invs;
+end intrinsic;

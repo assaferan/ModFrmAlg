@@ -420,8 +420,14 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
    end if;
    // generate more images..
    new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
+
+   // initialize the invariants
+    
+   invs := HeckeInitializeInvs(M, ThetaPrec);
+
    for p in new_ps do
-       sp_hec := HeckeOperatorCN1Sparse(M, p, k, s : BeCareful := BeCareful,
+	 sp_hec := HeckeOperatorCN1Sparse(M, p, k, s, invs :
+					  BeCareful := BeCareful,
 						     Estimate := Estimate,
 						     Orbits := Orbits,
 					             UseLLL := UseLLL,

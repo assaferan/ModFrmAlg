@@ -889,6 +889,17 @@ intrinsic GreedyReduce(L::ModDedLat) -> AlgMatElt
   return magmaKohelReduction(gram_b);
 end intrinsic;
 
+intrinsic GreedyReduce2(L::ModDedLat) -> AlgMatElt
+{Reduce L using the Greedy algorithm of Nguyen and Stehle.}
+  lat := ZLattice(L);
+  b := Basis(lat);
+  gram := InnerProductMatrix(lat);
+  b := [ChangeRing(Vector(Eltseq(x)), Rationals()) : x in b];
+  gram_b := Matrix(b)*gram*Transpose(Matrix(b));
+  _,_,gram_red := GreedyReductionSimple(b, gram_b);
+  return gram_red;
+end intrinsic;
+
 primeSymbol := recformat <
         p  : RngIntElt, // prime
         power : RngIntElt,   // exponent
@@ -1192,4 +1203,136 @@ function get_quad_form(input)
     assert HilbertSymbol(-x, -disc, symb`p) eq sign;
   end for;
   return 2*b_q;
+end function;
+
+function PermutationOrbit(QF)
+    // PRE: QF is a Gram matrix.
+    // POST: Returns all the Minkowski reduced Gram matrices equivalent to
+    // QF by a permutation
+  
+    RMat := Parent(QF);
+    dim := Degree(RMat);  
+    U := Identity(RMat);
+    orbit := {};
+ 
+    // Pick the smallest form from the permutations 
+    // stabilizing the norms.
+
+    Q0 := QF;
+    G := CoordinatePermutationGroup([ QF[i,i] : i in [1..dim] ]);
+    for g in G do 
+	P := PermutationMatrix(g);
+        _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+        Include(~orbit, Q1);
+    end for;
+    return orbit;
+end function;
+
+function SignOrbit(QF)
+
+  RMat := Parent(QF);
+  dim := Degree(RMat);  
+  U := Identity(RMat);
+  P := Identity(RMat);
+  orbit := {};
+  
+  for signs in CartesianPower({-1,1},dim) do
+    for i in [1..dim] do
+      P[i,i] := signs[i];
+    end for;
+    _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+    Include(~orbit, Q1);
+  end for;
+  return orbit;
+
+end function;
+
+function NeighborOrbit(QF)
+    // Returns all Minkowski reduced in the neighborhood 
+    // of QF.
+
+    RMat := Parent(QF);
+    I := Identity(RMat);
+    M := BaseModule(RMat);
+    dim := Degree(RMat);
+    orbit := {};
+
+    // Neighbor search variables.
+    LocalNeighbors := [ { M | [ 1 ] cat [ 0 : i in [2..dim] ] } ];
+    for i in [2..dim] do
+	NearZero := {-1,0,1};
+	Zeros := [ 0 : j in [i+1..dim] ];
+	FreeHood := { M | [ x[k] : k in [1..i-1] ] cat [1] cat Zeros 
+	: x in CartesianPower(NearZero,i-1) };
+	for x in FreeHood do
+	    n := InnerProduct(x*QF,x);
+	    if n gt QF[i,i] then
+		// Neighbor larger, exclude.
+		Exclude(~FreeHood,x);
+	    end if;
+	end for;
+	// Freehood now consists only of coordinates of neighbors 
+	// which are ith successive minima.
+	Append(~LocalNeighbors,FreeHood);
+    end for;
+
+    norms := { QF[i,i] : i in [1..dim] };
+    for n in norms do
+	inds := [ i : i in [1..dim] | QF[i,i] eq n ];
+	X := &join[ LocalNeighbors[i] : i in inds ];
+	for i in inds do
+	  LocalNeighbors[i] := X;
+	end for; 
+    end for;
+
+    vprint Minkowski, 2 : "Original NeighborSpace size:", 
+    &*[ #S : S in LocalNeighbors ];
+
+    LocalNeighbors := [Sort([x : x in X]) : X in LocalNeighbors];
+
+    NeighborSpace := [ [ x ] : x in LocalNeighbors[1] ];
+    for i in [2..dim] do
+	NS1 := [ ]; 
+	n := QF[i,i];
+	inds := [ j : j in [1..i-1] | QF[j,j] eq n ];
+	for y in LocalNeighbors[i] do
+	    for C in NeighborSpace do
+		// Exclude (C,y) if C[j] = y for some y, or if inner 
+		// product with neighboring vector is not maximal.
+		if &and[ Booleans() | C[j] ne y : j in inds ] and 
+		    Abs(InnerProduct(C[i-1]*QF,y)) ge Abs(QF[i,i-1]) then
+		    Append(~NS1,C cat [y]);
+		elif &or[ Booleans() | 
+		    Abs(InnerProduct(C[j-1]*QF,C[j])) gt 
+		    Abs(QF[j,j-1]) : j in [2..i-1] ] then
+		    Append(~NS1,C cat [y]);
+		end if;
+	    end for;
+	end for;
+	NeighborSpace := NS1;
+    end for;
+
+    vprint Minkowski, 2 : 
+    "Reduced to NeighborSpace of size:", #NeighborSpace;
+
+    for C in NeighborSpace do
+	B0 := Matrix(C); 
+	if Abs(Determinant(B0)) eq 1 then
+	  _, _, Q := GreedyReductionSimple(Rows(I), B0*QF*Transpose(B0));
+          Include(~orbit, Q); 
+	end if;
+    end for;
+    return orbit;
+end function;
+
+function generate_orbit(QF)
+  num := 0;
+  qs := {QF};
+  while num lt #qs do
+    num := #qs;
+    qs := &join[PermutationOrbit(q) : q in qs];
+    qs := &join[SignOrbit(q) : q in qs];
+//   qs := &join[NeighborOrbit(q) : q in qs];
+  end while;
+  return qs;
 end function;

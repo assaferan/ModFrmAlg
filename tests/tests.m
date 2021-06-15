@@ -653,7 +653,7 @@ procedure testRank8Root3Disc1(: Orbits := true, LowMemory := false,
 end procedure;
 
 procedure testQuinaryLattice()
-  // These ones are at the end of their fiel and appeared to be problematic
+  // These ones are at the end of their file and appeared to be problematic
   Q := QuinaryQuadraticLattices(256);
   Q := QuinaryQuadraticLattices(300);
 end procedure;

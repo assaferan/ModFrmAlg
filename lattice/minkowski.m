@@ -749,7 +749,7 @@ function closestLatticeVectorMinkowskiReduced(b, t, gram)
   return min_x_t*Matrix(b), min_g;
 end function;
 
-function magmaKohelReduction(M)
+function magmaKohelReduction(M : FindAuts := false)
     auts := [];
     deg := Degree(Parent(M));
     ZMat := MatrixAlgebra(Integers(),deg);
@@ -813,18 +813,17 @@ function magmaKohelReduction(M)
     end if;
     repeat
         M0, T1, aut1 := PermutationReduction(M0);
-        M0, T2, aut2 := SignNormalization(M0);
-        M0, T3, aut3 := NeighborReduction(M0);
-        auts cat:= [T^(-1)*g*T : g in aut1];
-// print "Permutations";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-        auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
-//     print "Signs";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-        auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
-//      print "Neighbors";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-	T1 := T3*T2*T1; 
+        M0, T2, aut2 := SignNormalization(M0 : FindAuts);
+        if FindAuts then
+	  M0, T3, aut3 := NeighborReduction(M0);
+	  auts cat:= [T^(-1)*g*T : g in aut1];
+          auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
+          auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
+          assert &and[g*M*Transpose(g) eq M : g in auts];
+          T1 := T3*T2*T1;
+        else
+	  T1 := T2*T1;
+        end if;
 	T := T1*T;
     until T1 eq I;
     return Parent(M) ! (c * M0), T, auts;

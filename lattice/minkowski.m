@@ -814,16 +814,14 @@ function magmaKohelReduction(M : FindAuts := false)
     repeat
         M0, T1, aut1 := PermutationReduction(M0);
         M0, T2, aut2 := SignNormalization(M0 : FindAuts);
+        M0, T3, aut3 := NeighborReduction(M0);
         if FindAuts then
-	  M0, T3, aut3 := NeighborReduction(M0);
 	  auts cat:= [T^(-1)*g*T : g in aut1];
           auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
           auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
           assert &and[g*M*Transpose(g) eq M : g in auts];
-          T1 := T3*T2*T1;
-        else
-	  T1 := T2*T1;
         end if;
+        T1 := T3*T2*T1;
 	T := T1*T;
     until T1 eq I;
     return Parent(M) ! (c * M0), T, auts;
@@ -1221,7 +1219,8 @@ function PermutationOrbit(QF)
     G := CoordinatePermutationGroup([ QF[i,i] : i in [1..dim] ]);
     for g in G do 
 	P := PermutationMatrix(g);
-        _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+// _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+        Q1 := P*QF*Transpose(P);
         Include(~orbit, Q1);
     end for;
     return orbit;
@@ -1239,7 +1238,8 @@ function SignOrbit(QF)
     for i in [1..dim] do
       P[i,i] := signs[i];
     end for;
-    _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+//_,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+    Q1 := P*QF*Transpose(P);
     Include(~orbit, Q1);
   end for;
   return orbit;
@@ -1317,21 +1317,28 @@ function NeighborOrbit(QF)
     for C in NeighborSpace do
 	B0 := Matrix(C); 
 	if Abs(Determinant(B0)) eq 1 then
-	  _, _, Q := GreedyReductionSimple(Rows(I), B0*QF*Transpose(B0));
-          Include(~orbit, Q); 
+	  // _, _, Q := GreedyReductionSimple(Rows(I), B0*QF*Transpose(B0));
+          Q := B0*QF*Transpose(B0);
+// Include(~orbit, Q);
+          orbit join:= SignOrbit(Q);
 	end if;
     end for;
     return orbit;
 end function;
 
-function generate_orbit(QF)
+function GenerateOrbit(QF)
   num := 0;
   qs := {QF};
   while num lt #qs do
     num := #qs;
     qs := &join[PermutationOrbit(q) : q in qs];
     qs := &join[SignOrbit(q) : q in qs];
-//   qs := &join[NeighborOrbit(q) : q in qs];
+    qs := &join[NeighborOrbit(q) : q in qs];
   end while;
-  return qs;
+  orbit := {};
+  for q in qs do
+    _,_,q_red := GreedyReductionSimple(Rows(MatrixAlgebra(Rationals(),5)!1),q);
+    Include(~orbit, q_red);
+  end for;
+  return orbit;
 end function;

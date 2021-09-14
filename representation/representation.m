@@ -1771,8 +1771,9 @@ function get_hw_basis_so(lambda, Q)
   F := BaseRing(Q);
   n := Degree(Parent(Q));
   B, x := get_hw_basis_gl(lambda, F, n);
-  laplacians := [[&+[Q[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
-			: i,j in [1..n]] : f in B] : p,q in [1..n]];
+  Q_inv := Q^(-1);
+  laplacians := [[&+[Q_inv[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
+		     : i,j in [1..n]] : f in B] : p,q in [1..n]];
   kers := [get_lap_kernel(lap) : lap in laplacians];
   ker := &meet kers;
   return [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
@@ -1801,9 +1802,9 @@ function get_hw_rep_poly(lambda, B, n)
                       gens := GeneratorsSequence(R);
                       x := Matrix([[gens[n*i+j+1] 
                             : j in [0..n-1]] : i in [0..n-1]]);
-                      g_R := ChangeRing(g, R);
+                      g_R := ChangeRing(g^(-1), R);
                       f := B[m];
-                      f_g := Evaluate(f, Eltseq(Transpose(g_R)*x));
+                      f_g := Evaluate(f, Eltseq(g_R*x));
                       deg_rev := V`hw_vdw_rev;
                       F := BaseRing(R);
                       mon_vs := VectorSpace(F, #deg_rev);

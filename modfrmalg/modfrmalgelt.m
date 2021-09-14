@@ -1137,3 +1137,169 @@ intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt
   invs := [R | Invariant(r : Precision := Precision) : r in reps];
   return &+[aut[i]^-1*v[i]*invs[i] : i in [1..#reps]];
 end intrinsic;
+
+// This one is to make sure we got it all correctly
+intrinsic ShimuraLift(f::RngSerPowElt, k::RngIntElt,
+					  N::RngIntElt : Precision := 25) -> RngSerPowElt
+	  {return the Shimura Lift of f in the space M_k(N) with precision q^prec.}
+    keys := PrimesUpTo(Precision-1);
+    eigenvalues := AssociativeArray(keys);
+    for p in keys do
+	chi1 := p eq 2 select 0 else (-1)^(((p-1) div 2)*(k div 2));
+	eigenvalues[p] := Coefficient(f, p^2)+ chi1 * p^(k div 2 - 1);
+    end for;
+    R<q> := Parent(f);
+    a := [BaseRing(R) | 1 : n in [1..Precision-1]];
+    for n in [2..Precision-1] do
+	if IsPrime(n) then
+	    a[n] := eigenvalues[n];
+	else
+	    is_prime_power, p, e := IsPrimePower(n);
+	    if is_prime_power then
+		// Is n div p or p^(e-1) faster?
+		a[n] := a[p]*a[p^(e-1)];
+		if (N mod p ne 0) then
+		    a[n] -:= p^(k-1) * a[p^(e-2)];
+		end if;
+	    else
+		// Enough to find one divisor, is there a function to that?
+		fac := Factorization(n);
+		p_e := fac[1][1]^fac[1][2];
+		m := n div p_e;
+		a[n] := a[m]*a[p_e];
+	    end if;
+	end if;
+    end for;
+    lift := &+[a[n]*q^n : n in [1..Precision-1]] + O(q^Precision);
+    return lift;
+end intrinsic;
+
+// This is a temporary fix that only works for spherical polynomial representations,
+// namely for weights of the form [k,0]
+function embed_v_in_rep(v)
+    return &cat[[v[i]] cat [0 : j in [1..Degree(v)-1]] : i in [1..Degree(v)]];
+end function;
+
+function MatrixSquareRoot(Q)
+    f_Q<x> := CharacteristicPolynomial(Q);
+    K<a> := SplittingField(Evaluate(f_Q, x^2));
+    Q_K := ChangeRing(Q,K);
+    evs := [x[1] : x in Eigenvalues(Q_K)];
+    V := Matrix(&cat[Basis(Eigenspace(Q_K,ev)) : ev in evs]);
+    D := V*Q*V^(-1);
+    sqrt_D := DiagonalMatrix([Sqrt(x) : x in Diagonal(D)]);
+    sqrt_Q := V^(-1)*sqrt_D*V;
+    assert sqrt_Q^2 eq Q;
+    return sqrt_Q;
+end function;
+
+// This does not include the constant coefficient, coming from the 0 vector
+intrinsic Theta1(f::ModFrmAlgElt : Precision := 25) -> RngSerPowElt
+	  {Return the theta lift of f of genus 1 - we return the normalized cuspform for GL2.}
+    v := f`vec;
+    h_dims := [Dimension(h) : h in f`M`H];
+    h_dimsum := [&+h_dims[1..i] : i in [0..#h_dims]];
+    v_h := [Eltseq(v)[h_dimsum[i]+1..h_dimsum[i+1]] : i in [1..#f`M`H]];
+    H := [ChangeRing(h, FieldOfFractions(BaseRing(v))) : h in f`M`H];
+    vecs := [* &+[v_h[j][i]*H[j]`embedding(H[j].i) : i in [1..Dimension(H[j])]]
+	     : j in [1..#H] *];
+    if IsTrivial(f`M`W) then
+	n := Rank(InnerForm(f`M));
+	all_polys := [* [PolynomialRing(BaseRing(v),n^2)!1] : vec in vecs *];
+    else
+	all_polys := [* Names(Parent(vec)`M) : vec in vecs *];
+    end if;
+    vecvec := [* vec`m`vec : vec in vecs *];
+    polys := [*&+[vecvec[j][i]*all_polys[j][i] : i in [1..#all_polys[j]]]
+	      : j in [1..#all_polys]*];
+    _<q> := PowerSeriesRing(BaseRing(v));
+    reps := Representatives(Genus(f`M));
+    aut := [#AutomorphismGroup(r) : r in reps];
+    fs := [];
+    assert #reps eq #H;
+    for i in [1..#reps] do
+	r := reps[i];
+	shortvecs := ShortVectors(ZLattice(r), 2*(Precision-1));
+	shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
+	// Here we divide by 2 to obtain the actual modular form
+	// (which could be of half integral weight, when the rank is odd)
+	f_r := &+[Evaluate(polys[i], embed_v_in_rep(v[1]))*q^(Integers()!v[2] div 2)
+		  : v in shortvecs];
+	Append(~fs, f_r);
+    end for;
+    theta := &+[aut[i]^-1*fs[i] : i in [1..#reps]] + O(q^Precision);
+    // We return a normalized eigenform
+    nonzero := exists(pivot){i : i in [1..Precision-1] | Coefficient(theta,i) ne 0};
+    if nonzero then
+	theta := Coefficient(theta,pivot)^(-1)*theta;
+    end if;
+    return theta;
+end intrinsic;
+
+// Here there is a question by what do we bound the vectors,
+// as we do not have control on all entries of the Gram matrix
+// (maybe we can do this, but requires adaptation of LLL)
+// For now we bound the norm of both vectors (and not bound their inner product)
+intrinsic Theta2(f::ModFrmAlgElt : Precision := 25) -> Assoc
+{return the theta lift of f to GSp(4). Result is returned as an associative array
+	with exponents of the variables as keys, and coefficients as values.}
+    v := f`vec;
+    // we no longer use the power series ring, because we have negative powers,
+    // and this forces some cumbersome operations.
+    // Instead we use a hash table mapping the exponents to the coefficient
+    coeffs := AssociativeArray();
+    reps := Representatives(Genus(f`M));
+    for i in [1..#reps] do
+	r := reps[i];
+	shortvecs := ShortVectors(ZLattice(r), Precision);
+	shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
+	num_auts := #AutomorphismGroup(r);
+	wt := num_auts^-1*v[i];
+	for v1,v2 in shortvecs do
+	    if (v1[1] eq v2[1]) or (v1[1] eq -v2[1]) then
+		continue;
+	    end if;
+	    key := <v1[2], (v1[1], v2[1]), v2[2]>;
+	    if not IsDefined(coeffs, key) then
+		coeffs[key] := 0;
+	    end if;
+	    coeffs[key] +:= wt;
+	end for;
+    end for;
+    return coeffs;
+end intrinsic;
+
+// This is the general theta series.
+// For g = 1,2 it is slower than the implementations above
+intrinsic ThetaSiegel(f::ModFrmAlgElt, g::RngIntElt : Precision := 25) -> Assoc
+{return the theta lift of f to GSp(4). Result is returned as an associative array
+        with exponents of the variables as keys, and coefficients as values.}
+    v := f`vec;
+    // we no longer use the power series ring, because we have negative powers,                
+    // and this forces some cumbersome operations in magma                                     
+    // Instead we use a hash table mapping the exponents to the coefficient
+    coeffs := AssociativeArray();
+    reps := Representatives(Genus(f`M));
+    for i in [1..#reps] do
+        r := reps[i];
+        shortvecs := ShortVectors(ZLattice(r), Precision);
+        shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
+	num_auts := #AutomorphismGroup(r);
+        wt := num_auts^-1*v[i];
+	subseqs := Subsequences(Set(shortvecs), g);
+	for xs in subseqs do
+	    vecs := [x[1] : x in xs];
+	    mat := Matrix(vecs);
+            if (Rank(mat) ne g) then
+                continue;
+            end if;
+            key := &cat[[(vecs[i], vecs[j]) : j in [1..i]] : i in [1..g]];
+            if not IsDefined(coeffs, key) then
+                coeffs[key] := 0;
+            end if;
+            coeffs[key] +:= wt;
+        end for;
+    end for;
+    return coeffs;
+end intrinsic;
+

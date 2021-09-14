@@ -20,3 +20,9 @@ tests/.#unitary-tests.m
 *.amf
 neighbors/*scratch*
 .DS_Store
+neighbors/.#inv-CN1.m
+*.el
+*.el
+*.el
+*.el
+modfrmalg/.magma-scan/modfrmalgelt.m.el

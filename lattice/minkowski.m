@@ -393,7 +393,7 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
       end for;
     end for;
    end for;
-   printf "Checked %o forms.\n", cnt;
+   vprintf AlgebraicModularForms, 1 : "Checked %o forms.\n", cnt;
    return forms;
 end intrinsic;
 

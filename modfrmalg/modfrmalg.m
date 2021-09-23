@@ -345,9 +345,9 @@ end intrinsic;
 
 function getWeightRep(G, weight, char, F, n)
 //    F := AbsoluteField(F);
-    if Type(F) eq FldRat then
-	F := RationalsAsNumberField();
-    end if;
+  //  if Type(F) eq FldRat then
+	//F := RationalsAsNumberField();
+   // end if;
     // !!! TODO - change the positive characteristic to support also orthogonal
     if char ne 0 then
       pR := Factorization(ideal<Integers(F)|char>)[1][1];

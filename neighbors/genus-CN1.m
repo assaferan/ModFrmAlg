@@ -148,7 +148,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	// replace with the calculation of mass relative to this lattice
 	total_mass := UnitaryMass(K, Dimension(Module(M)));
       else
-	total_mass := OrthogonalMass(Module(M));
+	total_mass := OrthogonalMass(Module(M) : Special := IsSpecialOrthogonal(M));
       end if;
     end if;
     repeat
@@ -534,19 +534,20 @@ function Combine(L, p)
   return LocalFactor( DiagonalJoin(< g: g in G >), p) / (2^(#G-1) * f * q^e);
 end function;
 
-function OrthogonalMass(L)
+function OrthogonalMass(L : Special := false)
 // Returns the mass of L
     
   R:= BaseRing(L);
   K:= NumberField(R);
 
-  // TODO:
+  // TODO: Handle not maximal at 2 and special genus
   D:= Decomposition(R, 2);
 
   for d in D do
       if not IsMaximalIntegral(L, d[1]) then
         if Type(R) eq RngInt then
 	  // over the rationals we can cheat
+	  genus_cmd := Special select SpinorGenus else Genus;   
 	  return &+[1/#AutomorphismGroup(r)
 		       : r in Representatives(Genus(ZLattice(L)))];
         else
@@ -591,7 +592,8 @@ function OrthogonalMass(L)
       Witt diff:= for_removal;
     end if;
     for p in Witt do
-      w:= IsLocalSquare(Disc, p) select -1 else 1;
+      P := Type(p) eq RngInt select Norm(p) else p;
+      w:= IsLocalSquare(Disc, P) select -1 else 1;
       mass *:= (q^(r-1)+w)*(q^r+w)/(2*(q+1)) where q:= Norm(p);
     end for;
   end if;

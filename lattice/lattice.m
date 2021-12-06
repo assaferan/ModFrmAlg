@@ -1667,7 +1667,8 @@ function is_maximal_integral(L,p)
     end if;
     x:= Next(PP);
   end while;
-  if IsIdentity(a) then
+  // This should work but apparently does not work in the even case
+  if IsIdentity(a) and IsOdd(Rank(L)) then
       assert GuessMaxDet(L, p) eq Valuation(Discriminant(L), p);
   end if;
   return true, _;

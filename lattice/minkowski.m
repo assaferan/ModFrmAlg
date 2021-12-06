@@ -393,7 +393,7 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
       end for;
     end for;
    end for;
-   printf "Checked %o forms.\n", cnt;
+   vprintf AlgebraicModularForms, 1 : "Checked %o forms.\n", cnt;
    return forms;
 end intrinsic;
 
@@ -670,6 +670,22 @@ function isReduced(vec, constraints)
   end for;
   return true, _;
 end function;
+
+function QuaternaryLatticeOfPrimeDiscriminant(p)
+    K<sqrtp> := QuadraticField(p);
+    sigma := Automorphisms(K)[2];
+    D := QuaternionAlgebra(K, -1, -1);
+    R := MaximalOrder(D);
+    Z_K<omega> := Integers(K);
+    basis_R := Basis(R) cat [omega*b : b in Basis(R)];
+    tmp := [Eltseq(R!(D![sigma(x) : x in Eltseq(b)] - Conjugate(b))) : b in basis_R];
+    M := Matrix([&cat[Eltseq(x) : x in tmp[i]] : i in [1..8]]);
+    ker := Kernel(M);
+    basis_ker := [&+[b[i]*basis_R[i] : i in [1..8]] : b in Basis(ker)];
+    Q := Matrix([[Norm(x+y)-Norm(x)-Norm(y) : x in basis_ker] : y in basis_ker]);
+    return Q;
+end function;
+
 /*
 function MinkowskiReduction(A)
   assert IsPositiveDefinite(A);

@@ -12,7 +12,7 @@ function RationalEvenClifford(M)
   // we construct the even and odd (rational) clifford algebras.
   basis_C_0 := &cat [C_Q_gr[1 + 2*k] : k in [0..dim div 2]];
   C_0_Q := sub<C_Q | basis_C_0>;
-  return C_0_Q;
+  return C_0_Q, emb_Q;
 end function;
 
 // Currently this only works for primitive lattices
@@ -40,8 +40,6 @@ intrinsic EvenClifford(M::AlgMatElt[RngInt]) ->
   omega_images := [&+[y[i]*basis_rev[i] : i in [1..2^dim]]
 		   where y := Solution(Matrix(basis_C_Q),V_C_Q.j) : j in [1..2^dim]];
   omega_Q_V := hom<V_C_Q -> V_C_Q | omega_images>;
-//  omega_Q_V := hom< V_C_Q -> V_C_Q |
-//		  [basis_rev[Index(basis_C_Q, C_Q.i)] : i in [1..#basis_C_Q]]>;
   omega_Q := map<C_Q -> C_Q | x :-> (omega_Q_V(vec_Q(x)))@@vec_Q>;
   V_C := ChangeRing(V_C_Q, Integers());
   C_0_Q := sub<C_Q | basis_C_0>;
@@ -61,49 +59,43 @@ intrinsic EvenClifford(M::AlgMatElt[RngInt]) ->
   B := Floor(Determinant(M)^(1/8));
   enum_set := [0] cat &cat[[i,-i] : i in [1..B]];
   a_vals := CartesianPower(enum_set,#a);
-  
-  for a_val in a_vals do
-      if Abs(Evaluate(det, a_val)) eq 1 then
-	  x := &+[a_val[i]*basis_C_1[i] : i in [1..#a_val]];
-	  //  x := basis_C_1[1];
-	  C_0_Q_x := sub<V_C_Q | [vec_Q(b * x) : b in basis_C_0] >;
-	  x_C_0_Q := sub<V_C_Q | [vec_Q(x * b) : b in basis_C_0] >;
-	  assert (C_0_Q_x eq C_1_Q) and (x_C_0_Q eq C_1_Q);
-	  C_0_x := sub<V_C | [ChangeRing(Solution(Matrix(basis_C_Q),vec_Q(b * x)),
-					 Integers()) : b in basis_C_0] >;
-	  basis_x_C_0 := [ChangeRing(Solution(Matrix(basis_C_Q), vec_Q(x * b)),
-				     Integers()) : b in basis_C_0];
-	  x_C_0 := sub<V_C | basis_x_C_0 >;
-	  assert (C_0_x eq C_1) and (x_C_0 eq C_1);
-	  // We find the descent data iota
-	  iota_vecs := [Solution(Matrix(basis_x_C_0),
+
+  assert exists(a_val){a_val : a_val in a_vals | Abs(Evaluate(det, a_val)) eq 1};
+  x := &+[a_val[i]*basis_C_1[i] : i in [1..#a_val]];
+  C_0_Q_x := sub<V_C_Q | [vec_Q(b * x) : b in basis_C_0] >;
+  x_C_0_Q := sub<V_C_Q | [vec_Q(x * b) : b in basis_C_0] >;
+  assert (C_0_Q_x eq C_1_Q) and (x_C_0_Q eq C_1_Q);
+  C_0_x := sub<V_C | [ChangeRing(Solution(Matrix(basis_C_Q),vec_Q(b * x)),
+				 Integers()) : b in basis_C_0] >;
+  basis_x_C_0 := [ChangeRing(Solution(Matrix(basis_C_Q), vec_Q(x * b)),
+			     Integers()) : b in basis_C_0];
+  x_C_0 := sub<V_C | basis_x_C_0 >;
+  assert (C_0_x eq C_1) and (x_C_0 eq C_1);
+  // We find the descent data iota
+  basis_mat := ChangeRing(Matrix(basis_C_Q), Integers());
+  iota_vecs := [Solution(Matrix(basis_x_C_0)*basis_mat,
 			 ChangeRing(vec_Q(omega_Q(a)*x), Integers()))
-			 : a in basis_C_0];
-	  iota_vals := [&+[v[i] * (C_0_Q!(basis_C_0[i])) : i in [1..#basis_C_0]]
-			: v in iota_vecs];
-	  // This making iota into an isomorphism (rather than an involution)
-	  iota_vals := [C_0_Q!(omega_Q(C_0_Q!i_val)) : i_val in iota_vals];
-	  iota_mat := Matrix(iota_vals);
-	  //assert &and[omega_Q(basis_C_0[i])*x eq x*iota_vals[i] : i in [1..#basis_C_0]];   
-	  assert &and[omega_Q(basis_C_0[i])*x eq x*omega_Q(iota_vals[i]) : i in [1..#basis_C_0]];
-	  B := Matrix([C_0_Q!x : x in basis_C_0]);
-	  iota_Q := hom<C_0_Q -> C_0_Q | Rows(B^(-1)*Matrix(iota_vals))>;
-//	  assert &and[omega_Q(a)*x eq x*iota_Q(a) : a in Basis(C_0_Q)];                    
-	  assert &and[omega_Q(a)*x eq x*omega_Q(iota_Q(a)) : a in Basis(C_0_Q)];
-	  // we abbreviate for the next line                                                   
-	  b := Basis(C_0_Q);
-	  mult_table := &cat&cat[[ Eltseq(Solution(Matrix(b), b[i]*b[j]))
-				   : j in [1..#b]] : i in [1..#b]];
-	  C_0 := Algebra<Integers(), #b | mult_table>;
-	  iota := hom<C_0 -> C_0 | Rows(B^(-1)*Matrix(iota_vals))>;
-	  iota_mat := Matrix([iota(C_0.i) : i in [1..Dimension(C_0)]]);
-	  omega_mat := Matrix([[Integers() | x : x in Eltseq(C_0_Q!omega_Q(C_Q!(C_0_Q.i)))]
-			       : i in [1..Dimension(C_0_Q)]]);
-	  if (Rank(iota_mat-omega_mat) eq (Dimension(C_0) div 2)) then
-	      break;
-	  end if;
-      end if;
-  end for;
+		: a in basis_C_0];
+  iota_vals := [&+[v[i] * (C_0_Q!(basis_C_0[i])) : i in [1..#basis_C_0]]
+		: v in iota_vecs];
+  // This making iota into an isomorphism (rather than an involution)
+  iota_vals := [C_0_Q!(omega_Q(C_0_Q!i_val)) : i_val in iota_vals];
+  iota_mat := Matrix(iota_vals);
+  assert &and[omega_Q(basis_C_0[i])*x eq x*omega_Q(iota_vals[i]) : i in [1..#basis_C_0]];
+  B := Matrix([C_0_Q!x : x in basis_C_0]);
+  iota_Q := hom<C_0_Q -> C_0_Q | Rows(B^(-1)*Matrix(iota_vals))>;
+  assert &and[omega_Q(a)*x eq x*omega_Q(iota_Q(a)) : a in Basis(C_0_Q)];
+  // we abbreviate for the next line                                                   
+  b := Basis(C_0_Q);
+  mult_table := &cat&cat[[ Eltseq(Solution(Matrix(b), b[i]*b[j]))
+			   : j in [1..#b]] : i in [1..#b]];
+  C_0 := Algebra<Integers(), #b | mult_table>;
+  iota := hom<C_0 -> C_0 | Rows(B^(-1)*Matrix(iota_vals))>;
+  iota_mat := Matrix([iota(C_0.i) : i in [1..Dimension(C_0)]]);
+  omega_mat := Matrix([[Integers() | x : x in Eltseq(C_0_Q!omega_Q(C_Q!(C_0_Q.i)))]
+		       : i in [1..Dimension(C_0_Q)]]);
+  assert Rank(iota_mat-omega_mat) eq (Dimension(C_0) div 2);
+
   V_C_0 := Module(C_0);
   omega_V := hom<V_C_0 -> V_C_0 | Rows(omega_mat)>;
   omega := map<C_0 -> C_0 | x :-> C_0!(omega_V(V_C_0!x))>;
@@ -115,24 +107,29 @@ intrinsic EvenClifford(M::AlgMatElt[RngInt]) ->
   return C_0, nm, iota*omega;
 end intrinsic;
 
+// a_lattice is a function for debugging purposes
+// TODO : use it to make the code more modular
+
 function a_lattice(a_val, det, basis_C_1, basis_C_0, vec_Q, V_C_Q, C_0_Q, C_1_Q, C_1,
-		   C_Q, V_C, omega_Q)
+		   C_Q, V_C, omega_Q, basis_C_Q)
     assert Abs(Evaluate(det, a_val)) eq 1;
     x := &+[a_val[i]*basis_C_1[i] : i in [1..#a_val]];
     C_0_Q_x := sub<V_C_Q | [vec_Q(b * x) : b in basis_C_0] >;
     x_C_0_Q := sub<V_C_Q | [vec_Q(x * b) : b in basis_C_0] >;
     assert (C_0_Q_x eq C_1_Q) and (x_C_0_Q eq C_1_Q);
-    C_0_x := sub<V_C | [ChangeRing(vec_Q(b * x), Integers()) : b in basis_C_0] >;
-    basis_x_C_0 := [ChangeRing(vec_Q(x * b), Integers()) : b in basis_C_0];
+    C_0_x := sub<V_C | [ChangeRing(Solution(Matrix(basis_C_Q),vec_Q(b * x)),
+				   Integers()) : b in basis_C_0] >;
+    basis_x_C_0 := [ChangeRing(Solution(Matrix(basis_C_Q), vec_Q(x * b)),
+			       Integers()) : b in basis_C_0];
     x_C_0 := sub<V_C | basis_x_C_0 >;
     assert (C_0_x eq C_1) and (x_C_0 eq C_1);
-    iota_vecs := [Solution(Matrix(basis_x_C_0),
-                           ChangeRing(vec_Q(omega_Q(a)*x), Integers()))
-                  : a in basis_C_0];
+    basis_mat := ChangeRing(Matrix(basis_C_Q), Integers());
+    iota_vecs := [Solution(Matrix(basis_x_C_0)*basis_mat,
+			   ChangeRing(vec_Q(omega_Q(a)*x), Integers()))
+		  : a in basis_C_0];
     iota_vals := [&+[v[i] * (C_0_Q!(basis_C_0[i])) : i in [1..#basis_C_0]]
                   : v in iota_vecs];
     // making iota into an isomorphism (rather than an involution)                        
-//     iota_vals := [C_0_Q!(omega_Q(C_0_Q!i_val)) : i_val in iota_vals];
     iota_mat := Matrix(iota_vals);
     assert &and[omega_Q(basis_C_0[i])*x eq x*iota_vals[i] : i in [1..#basis_C_0]];
     B := Matrix([C_0_Q!x : x in basis_C_0]);
@@ -168,13 +165,14 @@ intrinsic InverseEvenClifford(C_0::AlgGen[RngInt],
 		  : x in C_0_inv] : y in C_0_inv]);
 end intrinsic;
 
-// TODO : migth be we could do that with only the integral data
+// TODO : might be we could do that with only the integral data
+// Currently needs K to be a field.
 function makeZ_K_Order(C_0_Q, iota_Q, omega_Q, delta)
     Z_C_0_Q := Center(C_0_Q);
     delta_Q := C_0_Q!Z_C_0_Q.2;
     K<delta_K> := ext< Rationals() | MinimalPolynomial(delta_Q)>;
     delta_mat := Matrix([delta_Q * C_0_Q.i : i in [1..8]]);
-    basisker := Basis(Kernel(Matrix([iota_Q(C_0_Q.i) : i in [1..Dimension(C_0_Q)]])-1));
+    basisker := Basis(Kernel(Matrix([iota_Q(omega_Q(C_0_Q.i)) : i in [1..Dimension(C_0_Q)]])-1));
     C_0_Q_inv := [C_0_Q!x : x in basisker];
     X := Matrix(C_0_Q_inv);
     X_tmp := VerticalJoin(X, X * delta_mat);
@@ -211,4 +209,160 @@ function makeZ_K_Order(C_0_Q, iota_Q, omega_Q, delta)
 		     : x in Basis(A_S)] : y in Basis(A_S)]);
     assert Determinant(gram) eq 1;
     return A_S, nm_A_S;
+end function;
+
+// We start by doing it in the split case
+function get_quaternion_orders(M : Isometry := 1)
+    C_0_Q, emb_Q := RationalEvenClifford(M);
+    _, T := Diagonalization(M);
+    v_orth := [emb_Q(r) : r in Rows(T)];
+    i := v_orth[1]*v_orth[2];
+    j := v_orth[2]*v_orth[3];
+    B, quat_emb := sub<C_0_Q | i, j>;
+    _, BB, isom := IsQuaternionAlgebra(B);
+    delta_Q := C_0_Q!(Center(C_0_Q).2);
+    delta_Q := delta_Q * Denominator(delta_Q);
+    delta_bar := Trace(delta_Q)/4 - delta_Q;
+    my_basis := [1, i, j, i*j];
+    my_basis := my_basis cat [delta_Q * x : x in my_basis];
+    my_basis := [C_0_Q!x : x in my_basis];
+    my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
+    images := [Solution(Matrix(my_basis), C_0_Q.i) * Matrix(my_images)
+	       : i in [1..8]];
+    iota_Q := hom<C_0_Q -> C_0_Q | [C_0_Q!Eltseq(x) : x in images]>;
+    f<x> := MinimalPolynomial(delta_Q);
+    K<delta_K> := quo<Parent(f) | f>;
+    KK, roots := SplittingField(f);
+    BB_KK, BB_KK_emb := ChangeRing(BB, KK);
+//    roots := [x[1] : x in Roots(f)];
+    //delta_homs := [hom<K -> Rationals() | r> : r in roots];
+    delta_homs := [hom<K -> KK | r> : r in roots];
+    delta_mat := Matrix([delta_Q * C_0_Q.i : i in [1..8]]);
+    X := Matrix(my_basis[1..4]);
+    X_tmp := VerticalJoin(X, X * delta_mat);
+    X_tmp_inv := X_tmp^(-1);
+    if (Isometry eq 1) then Isometry := IdentityMatrix(Rationals(), 4); end if;
+    X_tmp_inv := DirectSum(Isometry,Isometry)*X_tmp_inv;
+    nfl_basis := [Vector([X_tmp_inv[i,j] + delta_K * X_tmp_inv[i,j+4]
+			  : j in [1..4]]) : i in [1..8]];
+    mats := [Matrix([[h(x) : x in Eltseq(b)] : b in nfl_basis]) : h in delta_homs];
+    if (Type(KK) eq FldRat) then
+	denoms := [Denominator(mat) : mat in mats];
+	int_mats := [ChangeRing(denoms[i]*mats[i], Integers()) : i in [1,2]];
+	hnfs := [HermiteForm(mat) : mat in int_mats];
+	rat_hnfs := [1/denoms[i] * ChangeRing(hnfs[i], Rationals()) : i in [1,2]];
+	elts := [[isom(v[1] + v[2]*i + v[3]*j + v[4]*i*j) : v in Rows(hnf)] : hnf in rat_hnfs];
+	orders := [QuaternionOrder(elt_seq) : elt_seq in elts];
+    else
+	idls := [ideal<Integers(KK) | 1> : i in [1..8]];
+	pmat := PseudoMatrix(idls, mats[1]);
+	hnf := HermiteForm(pmat);
+	idls := CoefficientIdeals(hnf);
+	bb := Basis(hnf);
+	ideal_gens := [Generators(idl) : idl in idls];
+	gen_vecs := &cat[[[g*b : b in bb[idx]] : g in ideal_gens[idx]]
+			 : idx in [1..#ideal_gens]];
+	gen_vecs_eltseq := [[Eltseq(x) : x in v] : v in gen_vecs];
+	s := [1, i, j, i*j];
+	gen_vecs_parts := [[isom(&+[v[idx][j]*s[idx] : idx in [1..4]]) :
+			    j in [1..2]] : v in gen_vecs_eltseq];
+	delta_KK := KK.1;
+	elts := [BB_KK_emb(v[1]) + delta_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
+	orders := [Order(elts)];
+    end if;
+    return orders;
+end function;
+
+function get_genus_orders(M)
+    genus := [GramMatrix(lat) : lat in Representatives(Genus(LatticeWithGram(M)))];
+    all_orders := [get_quaternion_orders(L) : L in genus];
+    // quat_alg := [QuaternionAlgebra(o[1]) : o in all_orders];
+    quat_alg := [Algebra(o[1]) : o in all_orders];
+    fields := [BaseRing(quat) : quat in quat_alg];
+    B := quat_alg[1];
+    F := fields[1];
+    orders_B := [all_orders[1]];
+    for idx in [2..#quat_alg] do
+	B_prime := quat_alg[idx];
+	F_prime := fields[idx];
+	assert IsIsomorphic(F_prime, F);
+	if (Type(F) ne FldRat) then 
+	    B_prime, emb_F := ChangeRing(B_prime, F);
+	    _, isom := IsIsomorphic(B_prime, B : Isomorphism);
+	    order_B := [Order([isom(emb_F(x)) : x in Basis(O)]) : O in all_orders[idx]];
+	else
+	    _, isom := IsIsomorphic(B_prime, B : Isomorphism);
+	    order_B := [QuaternionOrder([isom(x) : x in Basis(O)]) : O in all_orders[idx]];
+	end if;
+	Append(~orders_B, order_B);
+    end for;
+    return orders_B;
+end function;
+
+function find_local_isom(M1, M2, p)
+    L1 := LatticeFromLat(LatticeWithGram(M1));
+    L2 := LatticeFromLat(LatticeWithGram(M2));
+    pR := ideal<Integers() | p>;
+    nProc := BuildNeighborProc(L1, pR, 1);
+    is_isom := false;
+    while (not is_isom) do
+	L_prime := BuildNeighbor(nProc);
+	is_isom, s := IsIsometric(ZLattice(L_prime), ZLattice(L2));
+	GetNextNeighbor(~nProc);
+    end while;
+    isom_nbr := Matrix([x[2] : x in PseudoBasis(L_prime)]);
+    assert s * isom_nbr * M1 * Transpose(s*isom_nbr) eq M2;
+    return s * isom_nbr;
+end function;
+
+function PonomarevClassNumberFormula(Delta)
+    K := QuadraticField(Delta);
+    Delta_K := Discriminant(K);
+    delta := Integers()!(SquareRoot(Delta div Delta_K));
+    D, _ := SquareFreeFactorization(Delta);
+    assert IsOdd(D) and Delta gt 5;
+    primes := PrimeDivisors(delta);
+    e := #primes;
+    num := &*[p^2 + 1 : p in primes];
+    denom := 3*2^(e+3) * (KroneckerSymbol(D,2)-4);
+    M := num * &+([0] cat [KroneckerSymbol(D,m)*m : m in [1..(D-1) div 2]]) / denom;
+    function h(m)
+	return ClassNumber(QuadraticField(m));
+    end function;
+    c1 := IsEven(delta) select 3/16 else 1/8;
+    c3 := (delta mod 3 eq 0) select ((D mod 8 eq 1) select 5/6 else 1/3) else 1/6;
+    function sigma(m)
+	if D mod 8 eq 1 then
+	    if m mod 8 eq 3 then return -2; end if;
+	    if m mod 8 eq 7 then return 0; end if;
+	    return 2;
+	else
+	    if m mod 4 eq 3 then return 0; end if;
+	    if m mod 4 eq 1 then return IsOdd(delta) select 2 else 3; end if;
+	    return 2;
+	end if;
+    end function;
+    function lambda(m)
+	return #PrimeDivisors(m);
+    end function;
+    H := 2*M + c1 * h(-D) + c3 * h(-3*D);
+    H +:= &+([0] cat [2^(-lambda(n) - sigma(n*d)) * h(-n*d) * h(-n*D/d)
+	     : n in Divisors(delta), d in Divisors(D) | n*d notin [1,3] and d^2 lt D ]);
+    return H;
+end function;
+
+function typeNumberPrimeSquare(p)
+    h_p := (p+7) div 12;
+    if p mod 12 eq 11 then h_p +:= 1; end if;
+    f_p := (p mod 4 eq 1) select -1 else (p mod 8 eq 3) select 1 else 0;
+    h_m_p := ClassNumber(QuadraticField(-p));
+    return (h_p + 2^f_p *h_m_p) / 2;
+end function;
+
+function orthClassNumberPrimeSquare(p)
+    h_p := (p+7) div 12;
+    if p mod 12 eq 11 then h_p +:= 1; end if;
+    f_p := (p mod 4 eq 1) select -1 else (p mod 8 eq 3) select 1 else 0;
+    h_m_p := ClassNumber(QuadraticField(-p));
+    return (h_p^2 + 4^f_p * h_m_p^2) / 2;
 end function;

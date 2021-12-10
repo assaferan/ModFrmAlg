@@ -364,9 +364,13 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
           disc := Integers()!disc;
         end if;
         fac := Factorization(disc);
-        is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+	if IsEven(Rank(Level(M))) then
+	    is_sqrfree := &and[ fa[2] le 3 : fa in fac];
+	else
+            is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+	end if;
         if is_sqrfree then
-	  // Decompose the spaceto eigenspaces
+	  // Decompose the space to eigenspaces
           D := Decomposition(M : Estimate := Estimate,
 			     Orbits := Orbits, LowMemory := LowMemory,
 			     ThetaPrec := ThetaPrec);

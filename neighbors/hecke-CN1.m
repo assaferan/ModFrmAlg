@@ -794,7 +794,7 @@ function fillHeckeFromRelations(M, column, indices, ind)
             row in Rows(mat) | not IsZero(row) ]);
 
         if #Rows(mat) eq freevars then
-            print "Success!";
+            // print "Success!";
             // The values of the free variables.
             evs := Rows(Transpose(mat))[freevars+1];
             return true, ChangeRing(Evaluate(hecke, Eltseq(evs)),
@@ -803,4 +803,6 @@ function fillHeckeFromRelations(M, column, indices, ind)
             return false,_;
         end if;
     end if;
+
+    return false, _;
 end function;

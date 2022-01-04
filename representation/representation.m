@@ -1917,18 +1917,26 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   basis := L`pMaximal[pR][2];
   Fp := ResidueClassField(pR);
   rad := rad * ChangeRing(basis, Fp);
+  pRdata := [Eltseq(x) : x in Generators(pR)];
   a := Sprintf("
     function action(g,m,V)
           rad := %m;
           n := %m;
           Fp := BaseRing(rad);
-          g_p := Transpose(MatrixAlgebra(Fp,n)!g);
+          ZF := Integers(BaseRing(g));
+          pRdata := %m;
+          pR := ideal<ZF | [ZF!x : x in pRdata]>;
+          dummy, redp := ResidueClassField(pR);
+          assert Fp eq dummy;
+          redp_mat := hom<MatrixAlgebra(ZF, n) -> MatrixAlgebra(Fp,n) | redp>;
+          // g_p := Transpose(MatrixAlgebra(Fp,n)!g);
+          g_p := Transpose(redp_mat(g));
           scalar := Determinant(Solution(rad,rad*g_p));
           scalar := (scalar eq 1) select Integers()!1 else -Integers()!1;
           return scalar*(V`M).m; 
     end function;
     return action;
-  ", rad, n);
+  ", rad, n, pRdata);
   M := CombinatorialFreeModule(BaseRing(G), ["v"]);
   return GroupRepresentation(GL(n,BaseRing(G)), M, a);
 end intrinsic;

@@ -560,7 +560,8 @@ function OrthogonalMass(L : Special := false)
   Form:= GramMatrixOfBasis(L);
   r:= m div 2;
   Det, Hasse:= QuadraticFormInvariants(Form : Minimize:= false);
-  Witt:= WittToHasse(m, Det, Hasse);
+  // Witt:= WittToHasse(m, Det, Hasse);
+  Witt := {p[1] : p in Hasse | p[2] ne 1};
 
   B:= { p: p in BadPrimes(L) } join Witt;
   B:= { p: p in B | Minimum(p) ne 2 };
@@ -583,7 +584,7 @@ function OrthogonalMass(L : Special := false)
     else
       E:= ext< K | Polynomial([-Disc,0,1]) >;
       mass *:= DedekindZetaExact(E, 1-r : Relative);
-      FD:= [ f: f in Factorization(Discriminant(Integers(E))) | Minimum(f[1]) eq 2 ];		// TODO:: Remove odd places.
+      FD:= [ f: f in Factorization(Discriminant(Integers(E))) | Minimum(f[1]) eq 2 ];
       mass /:= 2^#FD;
       for_removal := {f[1]: f in FD};
       if ExtendedType(for_removal) eq SetEnum[RngIntElt] then

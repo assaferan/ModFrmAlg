@@ -553,14 +553,14 @@ procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
 
     if not assigned M`H then
 
-	if GetVerbose("AlgebraicModularForms") ge 2 then
+	if GetVerbose("AlgebraicModularForms") ge 1 then
 	    print "Computing genus representatives...";
 	end if;
 
         reps := Representatives(Genus(M : BeCareful := BeCareful,
 				      Orbits := Orbits));
 
-	if GetVerbose("AlgebraicModularForms") ge 2 then
+	if GetVerbose("AlgebraicModularForms") ge 1 then
 	    printf "Found %o genus representatives.\n", #reps;
 	    print "Calculating the automorphism groups Gamma_i...";
 	end if;

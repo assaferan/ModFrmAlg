@@ -1291,7 +1291,7 @@ intrinsic ThetaSiegel(f::ModFrmAlgElt, g::RngIntElt : Precision := 25) -> Assoc
         r := reps[i];
         shortvecs := ShortVectors(ZLattice(r), Precision);
         shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
-	num_auts := #AutomorphismGroup(r : IsSpecialOrthogonal(f`M));
+	num_auts := #AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M));
         wt := num_auts^-1*v[i];
 	subseqs := Subsequences(Set(shortvecs), g);
 	for xs in subseqs do

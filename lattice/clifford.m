@@ -1,6 +1,10 @@
 freeze;
 // In this file we implement various methods related to the even clifford functor
 
+import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
+import "../neighbors/neighbor-CN1.m" : BuildNeighbor;
+import "../neighbors/neighbor-CN1.m" : GetNextNeighbor;
+
 // This was constructed only for quaternary lattices, change later
 
 function RationalEvenClifford(M)

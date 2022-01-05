@@ -365,12 +365,14 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 
    is_complete := true;
    for fac in FAC do
-      f,a := Explode(fac);
-      if Characteristic(BaseRing(M)) eq 0 then
-         fa := f;
-      else
-         fa := f^a;
-      end if;
+       f,a := Explode(fac);
+       // This is because in char 0 the Hecke operators are semisimple
+       if Characteristic(BaseRing(M)) eq 0 then
+           fa := f;
+       else
+           fa := f^a;
+       end if;
+     
       vprintf AlgebraicModularForms, 2: "Cutting out subspace using f(T_%o), where f=%o.\n",Norm(pR), f;
       fT  := Evaluate(fa,T);
       W   := KernelOn(fT,V);

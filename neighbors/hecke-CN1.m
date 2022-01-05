@@ -659,7 +659,8 @@ function fillHeckeFromRelations(M, column, indices, ind)
     freevars := Binomial(dim - ind + 1, 2) - (dim - ind);
 
     // The sizes of the automorphism groups.
-    aut := [ #AutomorphismGroup(L) : L in M`genus`Representatives ];
+    aut := [ #AutomorphismGroup(L : Special := IsSpecialOrthogonal(M))
+	     : L in M`genus`Representatives ];
 
     // add free variables in nonzero characteristic
     for j in [1..dim] do

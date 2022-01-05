@@ -173,7 +173,8 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	    // Move to the next prime.
 	    idx +:= 1;
             if UseMass then
-              acc_mass := &+[#AutomorphismGroup(rep)^(-1) : rep in genList];
+		acc_mass := &+[#AutomorphismGroup(rep :
+						  Special := IsSpecialOrthogonal(M))^(-1) : rep in genList];
             end if;
             inner_stop_cond := UseMass select
 	      ((idx gt #ps)  or (acc_mass eq total_mass)) else true;
@@ -534,6 +535,25 @@ function Combine(L, p)
   return LocalFactor( DiagonalJoin(< g: g in G >), p) / (2^(#G-1) * f * q^e);
 end function;
 
+function WittToHasse2(L, Hasse)
+    Witt := {};
+    for p in Hasse do
+	pR := p[1];
+	nProc := BuildNeighborProc(L, pR, 1);
+	Vp := L`Vpp[pR]`V;
+	if Vp`AnisoDim ne 0 then
+	    // the space is not split hyperbolic
+	    Include(~Witt, pR);
+	end if;
+    end for;
+    return Witt;
+end function;
+
+// !!! Something here is broken, see e.g.
+// Q := QuaternaryQuadraticLattices(20)[3][1];
+// It gives the same result as Gan-Hanke-Yu,
+// but these do not match the actual mass.
+
 function OrthogonalMass(L : Special := false)
 // Returns the mass of L
     
@@ -548,7 +568,7 @@ function OrthogonalMass(L : Special := false)
         if Type(R) eq RngInt then
 	  // over the rationals we can cheat
 	  genus_cmd := Special select SpinorGenus else Genus;   
-	  return &+[1/#AutomorphismGroup(r)
+	  return &+[1/#AutomorphismGroup(r : Special := Special)
 		       : r in Representatives(Genus(ZLattice(L)))];
         else
 	  error "The lattice must be maximal at primes over 2";
@@ -560,11 +580,17 @@ function OrthogonalMass(L : Special := false)
   Form:= GramMatrixOfBasis(L);
   r:= m div 2;
   Det, Hasse:= QuadraticFormInvariants(Form : Minimize:= false);
+  // something is wrong with this WittToHasse using the invariants.
+  // We check manually the WittIndex at each of these instead
   // Witt:= WittToHasse(m, Det, Hasse);
-  Witt := {p[1] : p in Hasse | p[2] ne 1};
+  // primes where the Witt-Invariant is not 1
+  // Witt := {p[1] : p in Hasse | p[2] ne 1};
+  Witt:= WittToHasse2(L, Hasse);
 
-  B:= { p: p in BadPrimes(L) } join Witt;
-  B:= { p: p in B | Minimum(p) ne 2 };
+  // B:= { p: p in BadPrimes(L) } join Witt;
+  Witt:= { p: p in BadPrimes(L) } join Witt;
+  // B:= { p: p in B | Minimum(p) ne 2 };
+  B:= { p: p in Witt | Minimum(p) ne 2 };
   Witt diff:= B;
 
   // Mass from infinity and even places.
@@ -585,6 +611,7 @@ function OrthogonalMass(L : Special := false)
       E:= ext< K | Polynomial([-Disc,0,1]) >;
       mass *:= DedekindZetaExact(E, 1-r : Relative);
       FD:= [ f: f in Factorization(Discriminant(Integers(E))) | Minimum(f[1]) eq 2 ];
+      // for the odd primes, their contribution will be done using Combine
       mass /:= 2^#FD;
       for_removal := {f[1]: f in FD};
       if ExtendedType(for_removal) eq SetEnum[RngIntElt] then
@@ -597,6 +624,7 @@ function OrthogonalMass(L : Special := false)
       w:= IsLocalSquare(Disc, P) select -1 else 1;
       mass *:= (q^(r-1)+w)*(q^r+w)/(2*(q+1)) where q:= Norm(p);
     end for;
+    if Special then mass *:= 2; end if;
   end if;
 
   // Fix odd places which are not unimodular or have Witt invariant -1.

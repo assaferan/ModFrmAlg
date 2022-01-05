@@ -1691,9 +1691,11 @@ intrinsic IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
 end intrinsic;
 
 intrinsic BadPrimes(L::ModDedLat) -> []
-{The list of prime ideals at which L is not unimodular or which are even}
+// {The list of prime ideals at which L is not unimodular or which are even}
+{The list of prime ideals at which L is not unimodular}
   disc := Discriminant(L);
   scale := Scale(L);
+  ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(disc) };
 /*
   if Type(disc) eq FldRatElt then
     disc := Integers()!disc;
@@ -1702,7 +1704,7 @@ intrinsic BadPrimes(L::ModDedLat) -> []
     scale := Integers()!scale;  
   end if;
 */
-  ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(2*disc) };
+  // ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(2*disc) };
 /*
   if Type(BaseRing(L)) eq RngInt then
     ret := {ideal<Integers()| p> : p in ret};

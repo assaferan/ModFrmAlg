@@ -701,8 +701,13 @@ intrinsic 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
 	  end if;
       end for;
   end for;
-  if M1`Hecke`Eigenforms ne M2`Hecke`Eigenforms then
-      return false;
+  if assigned M1`Hecke`Eigenforms then
+      if not assigned M2`Hecke`Eigenforms then
+	  return false;
+      end if;
+      if M1`Hecke`Eigenforms ne M2`Hecke`Eigenforms then
+	  return false;
+      end if;
   end if;
   return true;
 end intrinsic;

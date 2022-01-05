@@ -1140,7 +1140,7 @@ intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt
   R<q> := PuiseuxSeriesRing(BaseRing(v));
   dim := Degree(v);
   reps := Representatives(Genus(f`M));
-  aut := [#AutomorphismGroup(r) : r in reps];
+  aut := [#AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M)) : r in reps];
   invs := [R | Invariant(r : Precision := Precision) : r in reps];
   return &+[aut[i]^-1*v[i]*invs[i] : i in [1..#reps]];
 end intrinsic;
@@ -1260,7 +1260,7 @@ intrinsic Theta2(f::ModFrmAlgElt : Precision := 25) -> Assoc
 	r := reps[i];
 	shortvecs := ShortVectors(ZLattice(r), Precision);
 	shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
-	num_auts := #AutomorphismGroup(r);
+	num_auts := #AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M));
 	wt := num_auts^-1*v[i];
 	for v1,v2 in shortvecs do
 	    if (v1[1] eq v2[1]) or (v1[1] eq -v2[1]) then
@@ -1291,7 +1291,7 @@ intrinsic ThetaSiegel(f::ModFrmAlgElt, g::RngIntElt : Precision := 25) -> Assoc
         r := reps[i];
         shortvecs := ShortVectors(ZLattice(r), Precision);
         shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
-	num_auts := #AutomorphismGroup(r);
+	num_auts := #AutomorphismGroup(r : IsSpecialOrthogonal(f`M));
         wt := num_auts^-1*v[i];
 	subseqs := Subsequences(Set(shortvecs), g);
 	for xs in subseqs do

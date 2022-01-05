@@ -369,15 +369,17 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 	else
             is_sqrfree := &and[fa[2] eq 1 : fa in fac];
 	end if;
-        if is_sqrfree then
+        if is_sqrfree and not IsSpecialOrthogonal(M) then
 	  // Decompose the space to eigenspaces
           D := Decomposition(M : Estimate := Estimate,
 			     Orbits := Orbits, LowMemory := LowMemory,
 			     ThetaPrec := ThetaPrec);
-	else 
-	  D := Decomposition(M, 10 : Estimate := Estimate,
-			     Orbits := Orbits, LowMemory := LowMemory,
-			     ThetaPrec := ThetaPrec);
+	else
+	    // !! TODO - figre out the correct Hecke bound
+	    bound := 20;
+	    D := Decomposition(M, bound : Estimate := Estimate,
+					  Orbits := Orbits, LowMemory := LowMemory,
+					  ThetaPrec := ThetaPrec);
 	end if;
 
         // This actually repeats the previous to get also the eigenvectors.
@@ -405,59 +407,60 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 	// Replace this by an actual bilinear form compatible with the group
 	// Add handling the case when the narrow class group of the field
 	// is nontrivial.
-	wts := &cat[[#AutomorphismGroup(reps[i]) : j in [1..Dimension(M`H[i])]]:
-		    i in [1..#reps]];
+	wts := &cat[[#AutomorphismGroup(reps[i] : Special := IsSpecialOrthogonal(M))
+		     : j in [1..Dimension(M`H[i])]]: i in [1..#reps]];
 	// instead of dividing by wts[i], we multiply for the case of positive
 	// characteristic
         wt_prod := IsEmpty(wts) select 1 else &*wts;
 	mult_wts := [wt_prod div wt : wt in wts];
 	
 	for i in [1..#spaces] do
-	    // Extract the first basis vector of the eigenspace.
-	    vec := Basis(spaces[i])[1];
+	    // We build a form for every basis vector
+	    for vec in Basis(spaces[i]) do
+
+		//	    vec := Basis(spaces[i])[1];
 	    
-	    //		for vec in basis do
-	    // Construct an element of the modular space.
-	    mform := New(ModFrmAlgElt);
-
-	    // Assign parent modular space.
-	    mform`M := M;
-
-            // for display purposes
-            K_f := BaseRing(vec);
-            if Type(K_f) ne FldRat then
-               AssignNames(~K_f, [Sprintf("a_%o", i)]);
-            end if;
-	    // Assign vector.
-	    mform`vec := vec;
-
-	    // If the weight is non-trivial all forms are cuspidal
-            // !!! TODO - do the general case, we might have some
-            // multiplicity of the trivial representation
-            if not IsTrivial(Weight(M)) then
-              mform`IsCuspidal := true;
-	    else
-	      mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
-				    i in [1..#wts]] eq 0;
-            end if;
-
-	    // Cusp forms are not Eistenstein.
-	    mform`IsEisenstein := not mform`IsCuspidal;
-
-	    // This shouldn't happen if we fully decomposed the space.
-	    // This is an eigenform if and only if the size
-	    //  of the subspace has dimension 1.
-	    mform`IsEigenform := not i in reducible;
-	    // mform`IsEigenform := true;
-
-	    // Add to list.
-	    Append(~eigenforms, mform);
+		//		for vec in basis do
+		// Construct an element of the modular space.
+		mform := New(ModFrmAlgElt);
 		
-	    // Store the Eisenstein series in memory.
-	    if mform`IsEisenstein then
-		M`Hecke`EisensteinSeries := mform;
-	    end if;
-	    // end for;
+		// Assign parent modular space.
+		mform`M := M;
+		
+		// for display purposes
+		K_f := BaseRing(vec);
+		if Type(K_f) ne FldRat then
+		    AssignNames(~K_f, [Sprintf("a_%o", i)]);
+		end if;
+		// Assign vector.
+		mform`vec := vec;
+
+		// If the weight is non-trivial all forms are cuspidal
+		// !!! TODO - do the general case, we might have some
+		// multiplicity of the trivial representation
+		if not IsTrivial(Weight(M)) then
+		    mform`IsCuspidal := true;
+		else
+		    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+					    i in [1..#wts]] eq 0;
+		end if;
+		
+		// Cusp forms are not Eistenstein.
+		mform`IsEisenstein := not mform`IsCuspidal;
+		
+		// This shouldn't happen if we fully decomposed the space.
+		// This is an eigenform if and only if the size
+		//  of the subspace has dimension 1.
+		mform`IsEigenform := not i in reducible;
+
+		// Add to list.
+		Append(~eigenforms, mform);
+		
+		// Store the Eisenstein series in memory.
+		if mform`IsEisenstein then
+		    M`Hecke`EisensteinSeries := mform;
+		end if;
+	    end for;
 	end for;
 
 	// Assign Hecke eigenforms.
@@ -1218,7 +1221,7 @@ intrinsic Theta1(f::ModFrmAlgElt : Precision := 25) -> RngSerPowElt
 	      : j in [1..#all_polys]*];
     _<q> := PowerSeriesRing(BaseRing(v));
     reps := Representatives(Genus(f`M));
-    aut := [#AutomorphismGroup(r) : r in reps];
+    aut := [#AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M)) : r in reps];
     fs := [];
     assert #reps eq #H;
     for i in [1..#reps] do

@@ -647,6 +647,35 @@ function getIndices(M, dim)
     return good cat [ i : i in [1..dim] | not i in good ];
 end function;
 
+// The involution alpha induces a permutation on the
+// genus representatives, which is an ingredient in computing the
+// invariant unitary form
+function alpha_permutation(M)
+    V := ReflexiveSpace(Module(M));
+    alpha := Involution(V);
+    reps := Representatives(Genus(M));
+    perm := [];
+    for lat in reps do
+	pb := PseudoBasis(lat);
+	idls := [b[1] : b in pb];
+	vecs := [b[2] : b in pb];
+	alpha_idls := [alpha(x) : x in idls];
+	alpha_vecs := [alpha(v) : v in vecs];
+	alpha_pmat := PseudoMatrix(alpha_idls, Matrix(alpha_vecs));
+	alpha_lat := LatticeWithPseudobasis(V, alpha_pmat);
+	// !! TODO !! use invariants to make thi faster.
+	// can also use the fact that this is order 2 to do half the work
+	for idx in [1..#reps] do
+	    lat_prime := reps[idx];
+	    if IsIsometric(lat_prime, alpha_lat) then
+		Append(~perm, idx);
+		break;
+	    end if;
+	end for;
+    end for;
+    return perm;
+end function;
+
 function fillHeckeFromRelations(M, column, indices, ind)
     // We will now recover the entire Hecke operator from the data
     //  we just computed by using some tricks involving the
@@ -669,11 +698,13 @@ function fillHeckeFromRelations(M, column, indices, ind)
     // Is it the natural unitary form?
     aut := &cat[[aut[i] : j in [1..Dimension(M`H[i])]] : i in [1..#M`H]];
 
+    perm := alpha_permutation(M);
+    
     // add free variables in nonzero characteristic
     for j in [1..dim] do
         for i in [1..dim] do
             denom := BaseRing(Weight(M))!Denominator(aut[i]/aut[j]);
-            if (denom eq 0) then
+            if (denom eq 0) and (perm[i] notin indices[1..ind]) then
                 freevars +:= 1;
             end if;
         end for;
@@ -693,10 +724,10 @@ function fillHeckeFromRelations(M, column, indices, ind)
             hecke[j,i] := column[j][i];
             denom := BaseRing(Weight(M))!Denominator(aut[i]/aut[j]);
             if (denom ne 0) then
-                hecke[i,j] := aut[i] / aut[j] * column[j][i];
-            else
+                hecke[perm[i],perm[j]] := aut[i] / aut[j] * column[j][i];
+	    elif perm[i] notin indices[1..ind] then
                 kk +:= 1;
-                hecke[i,j] := Z.kk;
+                hecke[perm[i],perm[j]] := Z.kk;
             end if;
         end for;
     end for;
@@ -709,18 +740,19 @@ function fillHeckeFromRelations(M, column, indices, ind)
         // Skip the indices we've already computed.
         if i in indices[1..ind] then continue; end if;
 
-        for j in [i+1..dim] do
+        for j in [i..dim] do
             // Skip the indices we've already computed.
-            if j in indices[1..ind] then continue; end if;
+            if (perm[j] in indices[1..ind]) or
+	       (j eq perm[i] or perm[j] lt i) then continue; end if;
 
             kk +:= 1;
             hecke[i,j] := Z.kk;
             denom := BaseRing(Weight(M))!Denominator(aut[j]/aut[i]);
             if (denom ne 0) then
-                hecke[j,i] := aut[j] / aut[i] * Z.kk;
+                hecke[perm[j],perm[i]] := aut[j] / aut[i] * Z.kk;
             else
                 kk +:= 1;
-                hecke[j,i] := Z.kk;
+		hecke[perm[j],perm[i]] := Z.kk;
             end if;
         end for;
     end for;
@@ -732,7 +764,7 @@ function fillHeckeFromRelations(M, column, indices, ind)
         // Skip the indices we've already computed.
         if i in indices[1..ind] then continue; end if;
 
-        hecke[i,i] := neighbors - &+Eltseq(rows[i]);
+        hecke[i,perm[i]] := neighbors - &+Eltseq(rows[i]);
     end for;
 
     // Now we transpose so that column sums are constant.

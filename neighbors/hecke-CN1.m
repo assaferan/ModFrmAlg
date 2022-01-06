@@ -663,7 +663,7 @@ function alpha_permutation(M)
 	vecs := [b[2] : b in pb];
 	alpha_idls := [alpha(x) : x in idls];
 	alpha_vecs := [alpha(Vector(F,v)) : v in vecs];
-	if Type(BaseRing(Universe(vecs))) eq FldRat then
+	if Type(F) eq FldRat then
 	    alpha_lat := LatticeWithBasis(V, Matrix(alpha_vecs));
 	else
 	    alpha_pmat := PseudoMatrix(alpha_idls, Matrix(alpha_vecs));

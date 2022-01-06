@@ -661,7 +661,7 @@ function alpha_permutation(M)
 	idls := [b[1] : b in pb];
 	vecs := [b[2] : b in pb];
 	alpha_idls := [alpha(x) : x in idls];
-	alpha_vecs := [alpha(v) : v in vecs];
+	alpha_vecs := [alpha(Vector(v)) : v in vecs];
 	alpha_pmat := PseudoMatrix(alpha_idls, Matrix(alpha_vecs));
 	alpha_lat := LatticeWithPseudobasis(V, alpha_pmat);
 	// !! TODO !! use invariants to make thi faster.

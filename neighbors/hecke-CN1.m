@@ -654,6 +654,7 @@ end function;
 function alpha_permutation(M)
     V := ReflexiveSpace(Module(M));
     alpha := Involution(V);
+    F := BaseField(alpha);
     reps := Representatives(Genus(M));
     perm := [];
     for lat in reps do
@@ -661,7 +662,7 @@ function alpha_permutation(M)
 	idls := [b[1] : b in pb];
 	vecs := [b[2] : b in pb];
 	alpha_idls := [alpha(x) : x in idls];
-	alpha_vecs := [alpha(Vector(v)) : v in vecs];
+	alpha_vecs := [alpha(Vector(F,v)) : v in vecs];
 	if Type(BaseRing(Universe(vecs))) eq FldRat then
 	    alpha_lat := LatticeWithBasis(V, Matrix(alpha_vecs));
 	else

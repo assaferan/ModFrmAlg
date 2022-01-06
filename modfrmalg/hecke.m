@@ -257,7 +257,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt
 			  Force := false,
 			  Estimate := false,
 			  UseLLL := true,
-			  Orbits := false,
+			  Orbits := true,
 			  LowMemory := false,
 			  ComputeGenus := false,
 			  ThetaPrec := 25) -> AlgMatElt

@@ -585,46 +585,49 @@ function OrthogonalMass(L : Special := false)
   // Witt:= WittToHasse(m, Det, Hasse);
   // primes where the Witt-Invariant is not 1
   // Witt := {p[1] : p in Hasse | p[2] ne 1};
-  Witt:= WittToHasse2(L, Hasse);
 
-  // B:= { p: p in BadPrimes(L) } join Witt;
-  Witt:= { p: p in BadPrimes(L) } join Witt;
-  // B:= { p: p in B | Minimum(p) ne 2 };
-  B:= { p: p in Witt | Minimum(p) ne 2 };
-  Witt diff:= B;
 
   // Mass from infinity and even places.
   mass:= 2^(-AbsoluteDegree(K) * r);
   if IsOdd(m) then
-    mass *:= &* [ DedekindZetaExact(K, -i) : i in [1..m-2 by 2] ];
-    NonUnits:=  { f[1]: f in Factorization(Det*R) | IsOdd(f[2]) and Minimum(f[1]) eq 2 };
-    mass *:= &* [ Rationals() | (Norm(p)^r + (p in Witt select -1 else 1)) / 2 : p in NonUnits ];
-    Witt diff:= NonUnits;
-    mass *:= &* [ Rationals() | (q^(m-1)-1)/(2*(q+1)) where q:= Norm(p) : p in Witt ];
+      // Here the old ways worked, so we leave it as they were
+      Witt:= WittToHasse(m, Det, Hasse);
+      B:= { p: p in BadPrimes(L) } join Witt;
+      B:= { p: p in Witt | Minimum(p) ne 2 };
+      Witt diff:= B;
+      mass *:= &* [ DedekindZetaExact(K, -i) : i in [1..m-2 by 2] ];
+      NonUnits:=  { f[1]: f in Factorization(Det*R) | IsOdd(f[2]) and Minimum(f[1]) eq 2 };
+      mass *:= &* [ Rationals() | (Norm(p)^r + (p in Witt select -1 else 1)) / 2 : p in NonUnits ];
+      Witt diff:= NonUnits;
+      mass *:= &* [ Rationals() | (q^(m-1)-1)/(2*(q+1)) where q:= Norm(p) : p in Witt ];
   else
-    Disc:= (-1)^((m*(m-1)) div 2) * Det;
-    assert Disc eq (-1)^r * Det;
-    mass *:= &* [ Rationals() | DedekindZetaExact(K, -i) : i in [1..m-3 by 2] ];
-    if IsSquare(Disc) then
-      mass *:= DedekindZetaExact(K, 1-r);
-    else
-      E:= ext< K | Polynomial([-Disc,0,1]) >;
-      mass *:= DedekindZetaExact(E, 1-r : Relative);
-      FD:= [ f: f in Factorization(Discriminant(Integers(E))) | Minimum(f[1]) eq 2 ];
-      // for the odd primes, their contribution will be done using Combine
-      mass /:= 2^#FD;
-      for_removal := {f[1]: f in FD};
-      if ExtendedType(for_removal) eq SetEnum[RngIntElt] then
-        for_removal := {ideal<Integers()|x> : x in for_removal};
+      Witt:= WittToHasse2(L, Hasse);
+      Witt:= { p: p in BadPrimes(L) } join Witt;
+      B:= { p: p in Witt | Minimum(p) ne 2 };
+      Witt diff:= B;
+      Disc:= (-1)^((m*(m-1)) div 2) * Det;
+      assert Disc eq (-1)^r * Det;
+      mass *:= &* [ Rationals() | DedekindZetaExact(K, -i) : i in [1..m-3 by 2] ];
+      if IsSquare(Disc) then
+	  mass *:= DedekindZetaExact(K, 1-r);
+      else
+	  E:= ext< K | Polynomial([-Disc,0,1]) >;
+	  mass *:= DedekindZetaExact(E, 1-r : Relative);
+	  FD:= [ f: f in Factorization(Discriminant(Integers(E))) | Minimum(f[1]) eq 2 ];
+	  // for the odd primes, their contribution will be done using Combine
+	  mass /:= 2^#FD;
+	  for_removal := {f[1]: f in FD};
+	  if ExtendedType(for_removal) eq SetEnum[RngIntElt] then
+              for_removal := {ideal<Integers()|x> : x in for_removal};
+	  end if;
+	  Witt diff:= for_removal;
       end if;
-      Witt diff:= for_removal;
-    end if;
-    for p in Witt do
-      P := Type(p) eq RngInt select Norm(p) else p;
-      w:= IsLocalSquare(Disc, P) select -1 else 1;
-      mass *:= (q^(r-1)+w)*(q^r+w)/(2*(q+1)) where q:= Norm(p);
-    end for;
-    if Special then mass *:= 2; end if;
+      for p in Witt do
+	  P := Type(p) eq RngInt select Norm(p) else p;
+	  w:= IsLocalSquare(Disc, P) select -1 else 1;
+	  mass *:= (q^(r-1)+w)*(q^r+w)/(2*(q+1)) where q:= Norm(p);
+      end for;
+      if Special then mass *:= 2; end if;
   end if;
 
   // Fix odd places which are not unimodular or have Witt invariant -1.

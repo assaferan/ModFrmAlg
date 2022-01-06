@@ -1587,7 +1587,11 @@ end intrinsic;
 
 intrinsic IsIntegral(L::ModDedLat) -> BoolElt
 {.}
-  return &and[IsIntegral(L,p) : p in BadPrimes(L)];
+  R := BaseRing(L);
+  above_2 := {p[1] : p in Factorization(ideal<R|2>)};
+  bad_primes := BadPrimes(L) join above_2;
+  //  return &and[IsIntegral(L,p) : p in BadPrimes(L)];
+  return &and[IsIntegral(L,p) : p in bad_primes];
 end intrinsic;
 
 intrinsic IsMaximalIntegral(L::ModDedLat, p::RngIntElt) -> BoolElt, ModDedLat
@@ -1715,7 +1719,12 @@ end intrinsic;
 
 intrinsic IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
 {Checks whether L is maximal integral. If not, a minimal integral over-lattice is returned}
-  for p in BadPrimes(L) do
+  
+  R := BaseRing(L);
+  above_2 := {p[1] : p in Factorization(ideal<R|2>)};
+  bad_primes := BadPrimes(L) join above_2;
+  // for p in BadPrimes(L) do
+  for p in bad_primes do
     ok, LL:= IsMaximalIntegral(L, p);
     if not ok then return false, LL; end if;
   end for;
@@ -1741,7 +1750,11 @@ intrinsic MaximalIntegralLattice(L::ModDedLat) -> ModDedLat
   require not IsZero(L) and IsIntegral(Norm(L)) :
     "The lattice must be integral and non-zero";
 
-  for p in BadPrimes(L) do
+  R := BaseRing(L);
+  above_2 := {p[1] : p in Factorization(ideal<R|2>)};
+  bad_primes := BadPrimes(L) join above_2;
+  // for p in BadPrimes(L) do
+  for p in bad_primes do
     ok, LL:= IsMaximalIntegral(L, p);
     while not ok do 
       L:= LL;    

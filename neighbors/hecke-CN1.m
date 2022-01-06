@@ -354,8 +354,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
           nNbrs := NumberOfNeighbors(M, pR, k);
-          vprintf AlgebraicModularForms, 1 :
-	    "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
+	  if nNbrs ne 0 then
+              vprintf AlgebraicModularForms, 1 :
+		  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
+	  end if;
           loopCount := fullCount - nNbrs + #isoOrbits * #F^nProc`skewDim;
           orb_start := Realtime();
 	  for orbit in isoOrbits do
@@ -426,10 +428,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
    
     vprintf AlgebraicModularForms, 1 :
       "time spent on neighbors is %o sec.\n", nbr_tm;
-    if Orbits then
+    if Orbits and not LowMemory and #isoOrbits gt 0 then
       vprintf AlgebraicModularForms, 1 :
        "time spent per orbit is %o sec.\n", nbr_tm / #isoOrbits;
-    else
+    elif fullCount gt 0 then 
       vprintf AlgebraicModularForms, 1 :
        "time spent per neighbor is %o sec.\n", nbr_tm / fullCount;
     end if;
@@ -661,6 +663,11 @@ function fillHeckeFromRelations(M, column, indices, ind)
     // The sizes of the automorphism groups.
     aut := [ #AutomorphismGroup(L : Special := IsSpecialOrthogonal(M))
 	     : L in M`genus`Representatives ];
+
+    // spreading them according to the spaces
+    // !! TODO !! - Is this the correct thing to do?
+    // Is it the natural unitary form?
+    aut := &cat[[aut[i] : j in [1..Dimension(M`H[i])]] : i in [1..#M`H]];
 
     // add free variables in nonzero characteristic
     for j in [1..dim] do

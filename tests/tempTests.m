@@ -1,6 +1,7 @@
 SetDebugOnError(true);
 SetHelpUseExternalBrowser(false);
 AttachSpec("ModFrmAlg.spec");
+SetVerbose("AlgebraicModularForms", 1);
 
 if assigned AlgebraicModularFormsExamples then
     delete AlgebraicModularFormsExamples;

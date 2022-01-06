@@ -650,6 +650,7 @@ end function;
 // The involution alpha induces a permutation on the
 // genus representatives, which is an ingredient in computing the
 // invariant unitary form
+// !! TODO !! - This could be just called once, remembering the information
 function alpha_permutation(M)
     V := ReflexiveSpace(Module(M));
     alpha := Involution(V);

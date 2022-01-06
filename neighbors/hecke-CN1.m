@@ -662,8 +662,12 @@ function alpha_permutation(M)
 	vecs := [b[2] : b in pb];
 	alpha_idls := [alpha(x) : x in idls];
 	alpha_vecs := [alpha(Vector(v)) : v in vecs];
-	alpha_pmat := PseudoMatrix(alpha_idls, Matrix(alpha_vecs));
-	alpha_lat := LatticeWithPseudobasis(V, alpha_pmat);
+	if Type(BaseRing(Universe(vecs))) eq FldRat then
+	    alpha_lat := LatticeWithBasis(V, Matrix(alpha_vecs));
+	else
+	    alpha_pmat := PseudoMatrix(alpha_idls, Matrix(alpha_vecs));
+	    alpha_lat := LatticeWithPseudobasis(V, alpha_pmat);
+	end if;
 	// !! TODO !! use invariants to make thi faster.
 	// can also use the fact that this is order 2 to do half the work
 	for idx in [1..#reps] do
@@ -700,6 +704,10 @@ function fillHeckeFromRelations(M, column, indices, ind)
     aut := &cat[[aut[i] : j in [1..Dimension(M`H[i])]] : i in [1..#M`H]];
 
     perm := alpha_permutation(M);
+
+    h_dims := [Dimension(h) : h in M`H];
+    space_idxs := [&+h_dims[1..i] : i in [0..#M`H-1]];
+    perm := &cat[[space_idxs[perm[i]]+j : j in [1..Dimension(M`H[i])]] : i in [1..#M`H]];
     
     // add free variables in nonzero characteristic
     for j in [1..dim] do

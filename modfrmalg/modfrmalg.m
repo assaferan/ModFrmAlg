@@ -589,18 +589,29 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	eis := EisensteinSeries(M);
 
 	// The dimension of the space.
-	dim := #GenusReps(M);
+	// dim := #GenusReps(M);
+	dim := Dimension(M);
 
-	// Compute the sizes of the automorphism groups of each of the genus
-	//  representatives.
-	aut := [ #AutomorphismGroup(L) : L in Representatives(Genus(M)) ];
+	reps := Representatives(Genus(M));
+	// !!! TODO :
+	// Replace this by an actual bilinear form compatible with the group
+	// Add handling the case when the narrow class group of the field
+	// is nontrivial.
+	wts := &cat[[#AutomorphismGroup(reps[i] : Special := IsSpecialOrthogonal(M))
+		     : j in [1..Dimension(M`H[i])]]: i in [1..#reps]];
+	// instead of dividing by wts[i], we multiply for the case of positive
+	// characteristic
+        wt_prod := IsEmpty(wts) select 1 else &*wts;
+	mult_wts := [wt_prod div wt : wt in wts];
 
+	F := BaseRing(M`W);
+	
 	// Initialize the Hermitian inner product space in which the Hecke
 	//  operators are self-adjoint.
-	gram := ChangeRing(DiagonalMatrix(aut), Rationals());
+	gram := ChangeRing(DiagonalMatrix(mult_wts), F);
 
 	// The change-of-basis matrix.
-	basis := Id(MatrixRing(Rationals(), dim));
+	basis := Id(MatrixRing(F, dim));
 
 	// Make the Eisenstein series the first basis vector.
 	for i in [2..dim] do
@@ -632,10 +643,14 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 		Append(~cuspBasis, vec[pivot]^-1 * vec);
 	end for;
 
+	if IsEmpty(cuspBasis) then
+	    return VectorSpace(F, 0);
+	end if;
+	
 	// Reduce the cuspidal basis to be as sparse as possible.
 	cuspBasis := EchelonForm(Matrix(cuspBasis));
-
-	return cuspBasis;
+	
+	return VectorSpaceWithBasis(cuspBasis);
 end intrinsic;
 
 // TODO: Make this more general.

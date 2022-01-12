@@ -215,7 +215,8 @@ function makeZ_K_Order(C_0_Q, iota_Q, omega_Q, delta)
     return A_S, nm_A_S;
 end function;
 
-// We start by doing it in the split case
+// Isometry is an isometry from M to another lattice
+// This gives the induced element of the quatenrion algebra.
 function get_quaternion_orders(M : Isometry := 1)
     C_0_Q, emb_Q := RationalEvenClifford(M);
     _, T := Diagonalization(M);
@@ -230,10 +231,12 @@ function get_quaternion_orders(M : Isometry := 1)
     my_basis := [1, i, j, i*j];
     my_basis := my_basis cat [delta_Q * x : x in my_basis];
     my_basis := [C_0_Q!x : x in my_basis];
-    my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
-    images := [Solution(Matrix(my_basis), C_0_Q.i) * Matrix(my_images)
-	       : i in [1..8]];
-    iota_Q := hom<C_0_Q -> C_0_Q | [C_0_Q!Eltseq(x) : x in images]>;
+    // This should just be th block matrix [[1,0],[tr(delta), -1]] !?
+    // my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
+    // sol_mat := Matrix([Solution(Matrix(my_basis), C_0_Q.i) : i in [1..8]]);
+    // images := Rows(Matrix(my_images) * sol_mat);
+//    images := [Solution(Matrix(my_basis), C_0_Q.i) * Matrix(my_images) : i in [1..8]];
+    // iota_Q := hom<C_0_Q -> C_0_Q | [C_0_Q!Eltseq(x) : x in images]>;
     f<x> := MinimalPolynomial(delta_Q);
     K<delta_K> := quo<Parent(f) | f>;
     KK, roots := SplittingField(f);
@@ -244,7 +247,9 @@ function get_quaternion_orders(M : Isometry := 1)
     delta_mat := Matrix([delta_Q * C_0_Q.i : i in [1..8]]);
     X := Matrix(my_basis[1..4]);
     X_tmp := VerticalJoin(X, X * delta_mat);
+    // X_tmp is just my_basis again. Why do we do it twice?
     X_tmp_inv := X_tmp^(-1);
+    // X_tmp_inv = sol_mat
     if (Isometry eq 1) then Isometry := IdentityMatrix(Rationals(), 4); end if;
     X_tmp_inv := DirectSum(Isometry,Isometry)*X_tmp_inv;
     nfl_basis := [Vector([X_tmp_inv[i,j] + delta_K * X_tmp_inv[i,j+4]
@@ -270,8 +275,11 @@ function get_quaternion_orders(M : Isometry := 1)
 	s := [1, i, j, i*j];
 	gen_vecs_parts := [[isom(&+[v[idx][j]*s[idx] : idx in [1..4]]) :
 			    j in [1..2]] : v in gen_vecs_eltseq];
-	delta_KK := KK.1;
-	elts := [BB_KK_emb(v[1]) + delta_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
+	// delta_KK := KK.1;
+	// HNF might change the basis
+	omega_KK := KK!(Order(hnf).2);
+//	elts := [BB_KK_emb(v[1]) + delta_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
+	elts := [BB_KK_emb(v[1]) + omega_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
 	orders := [Order(elts)];
     end if;
     return orders;
@@ -303,6 +311,8 @@ function get_genus_orders(M)
     return orders_B;
 end function;
 
+// Finds an isometry away from p, from M2 to M1,
+// i.e. s * M1 * s^t = M2
 function find_local_isom(M1, M2, p)
     L1 := LatticeFromLat(LatticeWithGram(M1));
     L2 := LatticeFromLat(LatticeWithGram(M2));

@@ -1736,7 +1736,7 @@ end intrinsic;
 intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 2) -> ModDedLat
 {Convert from the (now existing) magma built in type for number field lattices.}
   // The inner form.
-  innerForm := (2/GramFactor) * GramMatrix(L);
+  innerForm := (2/GramFactor) * PseudoGramMatrix(L);
 
   // The ambient reflexive space.
   Q := AmbientReflexiveSpace(innerForm);

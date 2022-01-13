@@ -490,9 +490,9 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 	// In order to support positive characteristic we leave the coordinates
 	// not normalized by weights.
 	
-	require Dimension(M`W) eq 1 :
-	// require IsTrivial(M`W) : 
-				    "Cannot create Eisenstein series for weight which is not one-dimensional";
+	// require Dimension(M`W) eq 1 :
+	require IsTrivial(M`W) : 
+			 "Cannot create Eisenstein series for non-trivial weight";
 
 	require Dimension(M) gt 0 :
 				  "There are no Eisenstein Series in a 0-dimensional space";

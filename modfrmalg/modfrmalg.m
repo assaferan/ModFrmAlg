@@ -585,7 +585,8 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	// Initialize the space of algebraic modular forms.
 	ModFrmAlgInit(M);
 
-        if Dimension(M`W) gt 1 or Dimension(M) eq 0 then
+        // for a non-trivial representation, everything is cuspidal
+        if not IsTrivial(M`W) or Dimension(M) eq 0 then
 	    return VectorSpace(M);
 	end if;
 

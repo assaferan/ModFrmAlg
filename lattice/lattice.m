@@ -1717,9 +1717,53 @@ intrinsic BadPrimes(L::ModDedLat) -> []
   return ret;
 end intrinsic;  
 
+intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
+{Convert to the (now existing) magma built in type for number field lattices.}
+  gram := InnerForm(ReflexiveSpace(L));
+  pb := PseudoBasis(L);
+  ideals := [x[1] : x in pb];
+  F := BaseRing(gram);
+  if Type(F) eq FldRat then
+      // currently this functionality only exists over a number field
+      F := QNF();
+      ideals := [ideal<Integers(F) | Norm(I)> : I in ideals];
+  end if;
+  basis := [Vector(F, x[2]) : x in pb];
+  nfl := NumberFieldLattice(basis : Gram := gram, Ideals := ideals);
+  return nfl;
+end intrinsic;
+
+intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 2) -> ModDedLat
+{Convert from the (now existing) magma built in type for number field lattices.}
+  // The inner form.
+  innerForm := (2/GramFactor) * GramMatrix(L);
+
+  // The ambient reflexive space.
+  Q := AmbientReflexiveSpace(innerForm);
+
+  // The basis for the lattice.
+  basis := ChangeRing(Matrix(Basis(L)), BaseRing(Q));
+  ideals := CoefficientIdeals(L);
+
+  // Build the lattice and return it.
+  return LatticeWithBasis(Q, basis, ideals);
+end intrinsic;
+
+// This is buggy!! Especially over 2
+// We replace it by the stable version from the NumberFieldLattice package
+// (Eventually, all this file should be replaced by it)
 intrinsic IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
 {Checks whether L is maximal integral. If not, a minimal integral over-lattice is returned}
+
+  // converting to number field lattice
+  nfl := NumberFieldLattice(L);
+
+  ok, LL := IsMaximalIntegral(nfl);
   
+  if not ok then return false, LatticeFromLatNF(LL); end if;
+
+  return true, _;
+/*
   R := BaseRing(L);
   above_2 := {p[1] : p in Factorization(ideal<R|2>)};
   bad_primes := BadPrimes(L) join above_2;
@@ -1729,6 +1773,7 @@ intrinsic IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
     if not ok then return false, LL; end if;
   end for;
   return true, _;
+*/
 end intrinsic;
 
 intrinsic MaximalIntegralLattice(L::ModDedLat, p::RngOrdIdl) -> ModDedLat

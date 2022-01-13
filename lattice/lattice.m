@@ -1719,7 +1719,8 @@ end intrinsic;
 
 intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
 {Convert to the (now existing) magma built in type for number field lattices.}
-  gram := InnerForm(ReflexiveSpace(L));
+  // We might need a GramFactor here in general, check it out.
+  gram := 1/2*InnerForm(ReflexiveSpace(L));
   pb := PseudoBasis(L);
   ideals := [x[1] : x in pb];
   F := BaseRing(gram);
@@ -1733,7 +1734,9 @@ intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
   return nfl;
 end intrinsic;
 
-intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 2) -> ModDedLat
+// The standard GramFactor here is set to 1 beacuse this is the
+// default in the magma built in package.
+intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 1) -> ModDedLat
 {Convert from the (now existing) magma built in type for number field lattices.}
   // The inner form.
   innerForm := (2/GramFactor) * PseudoGramMatrix(L);

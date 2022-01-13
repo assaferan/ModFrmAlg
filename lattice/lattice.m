@@ -1742,7 +1742,7 @@ intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 2) -> ModDedLat
   Q := AmbientReflexiveSpace(innerForm);
 
   // The basis for the lattice.
-  basis := ChangeRing(Matrix(Basis(L)), BaseRing(Q));
+  basis := ChangeRing(Matrix(PseudoBasis(L)), BaseRing(Q));
   ideals := CoefficientIdeals(L);
 
   // Build the lattice and return it.

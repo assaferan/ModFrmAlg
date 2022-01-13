@@ -489,9 +489,13 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
        */
 	// In order to support positive characteristic we leave the coordinates
 	// not normalized by weights.
-
+	
 	require Dimension(M`W) eq 1 :
-		"Cannot create Eisenstein series for nontrivial weight!";
+	// require IsTrivial(M`W) : 
+				    "Cannot create Eisenstein series for weight which is not one-dimensional";
+
+	require Dimension(M) gt 0 :
+				  "There are no Eisenstein Series in a 0-dimensional space";
 	vec := Vector([1 : i in [1..Dimension(M)]]);
 	
 	// Create the modular form corresponding to the Eisenstein series.

@@ -585,7 +585,11 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	// Initialize the space of algebraic modular forms.
 	ModFrmAlgInit(M);
 
-	// Retrieve the Eisenstein series.
+        if Dimension(M`W) gt 1 or Dimension(M) eq 0 then
+	    return VectorSpace(M);
+	end if;
+
+        // Retrieve the Eisenstein series.
 	eis := EisensteinSeries(M);
 
 	// The dimension of the space.

@@ -50,22 +50,30 @@ intrinsic EvenClifford(M::AlgMatElt[RngInt]) ->
   C_1_Q, emb_C_1_Q := sub<V_C_Q | [vec_Q(b) : b in basis_C_1]>;
   C_1, emb_C_1 := sub<V_C | [Vector(ChangeRing(Solution(Matrix(basis_C_Q),v), Integers()))
 			     : v in basis_C_1]>;
+  x := emb_Q(ShortestVector(LatticeWithGram(M)));
+  assert x^2 eq 1;
+  /*
   // We choose a generator for the odd clifford
   // What we really need to do is just to find a linear combination of the generators
   // such that we get a linearly independent set of vectors.
-  R<[a]> := PolynomialRing(Rationals(), #basis_C_1);
+  // We want the generator to come from V so that iota will be an involution
+  // R<[a]> := PolynomialRing(Rationals(), #basis_C_1);
+  R<[a]> := PolynomialRing(Rationals(), #basis_C_1[1..4]);
   mat := &+[a[i]*ChangeRing(Matrix([Solution(Matrix(basis_C_1),vec_Q(b * basis_C_1[i]))
-				    : b in basis_C_0]),R) : i in [1..#basis_C_1]];
+			//	    : b in basis_C_0]),R) : i in [1..#basis_C_1]];
+				    : b in basis_C_0]),R) : i in [1..#a]];
   det := Determinant(mat);
   //  det_fac := Factorization(Determinant(mat));
   // Now we want the determinant to be 1 (or -1)
   // There should be a better way of enumeration on this scheme
-  B := Floor(Determinant(M)^(1/8));
+  // B := Floor(Determinant(M)^(1/8));
+  B := Floor(Determinant(M)^(1/4));
   enum_set := [0] cat &cat[[i,-i] : i in [1..B]];
   a_vals := CartesianPower(enum_set,#a);
 
   assert exists(a_val){a_val : a_val in a_vals | Abs(Evaluate(det, a_val)) eq 1};
   x := &+[a_val[i]*basis_C_1[i] : i in [1..#a_val]];
+ */
   C_0_Q_x := sub<V_C_Q | [vec_Q(b * x) : b in basis_C_0] >;
   x_C_0_Q := sub<V_C_Q | [vec_Q(x * b) : b in basis_C_0] >;
   assert (C_0_Q_x eq C_1_Q) and (x_C_0_Q eq C_1_Q);
@@ -221,8 +229,9 @@ function get_quaternion_orders(M : Isometry := 1)
     C_0_Q, emb_Q := RationalEvenClifford(M);
     _, T := Diagonalization(M);
     v_orth := [emb_Q(r) : r in Rows(T)];
-    i := v_orth[1]*v_orth[2];
-    j := v_orth[2]*v_orth[3];
+    assert v_orth[1]*v_orth[1] eq 1;
+    i := v_orth[2]*v_orth[3];
+    j := v_orth[3]*v_orth[4];
     B, quat_emb := sub<C_0_Q | i, j>;
     _, BB, isom := IsQuaternionAlgebra(B);
     delta_Q := C_0_Q!(Center(C_0_Q).2);
@@ -231,7 +240,7 @@ function get_quaternion_orders(M : Isometry := 1)
     my_basis := [1, i, j, i*j];
     my_basis := my_basis cat [delta_Q * x : x in my_basis];
     my_basis := [C_0_Q!x : x in my_basis];
-    // This should just be th block matrix [[1,0],[tr(delta), -1]] !?
+    // This should just be the block matrix [[1,0],[tr(delta), -1]] !?
     // my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
     // sol_mat := Matrix([Solution(Matrix(my_basis), C_0_Q.i) : i in [1..8]]);
     // images := Rows(Matrix(my_images) * sol_mat);
@@ -379,4 +388,22 @@ function orthClassNumberPrimeSquare(p)
     f_p := (p mod 4 eq 1) select -1 else (p mod 8 eq 3) select 1 else 0;
     h_m_p := ClassNumber(QuadraticField(-p));
     return (h_p^2 + 4^f_p * h_m_p^2) / 2;
+end function;
+
+// return the dimensions of spaces of modular forms
+// and cusp forms for the space of Hilbert modular forms
+// over Q(sqrt(d)) of level n^2
+function getHilbertDims(d,n)
+    // we take the genera corresponding to maximal lattices
+    Gs := [SO(g[1]) : g in QuaternaryQuadraticLattices(d*n^2) |
+	  IsMaximalIntegral(LatticeFromLat(LatticeWithGram(g[1])))];
+    // We go over all spinor norms to obtain all possible AL signs
+    Ws := [[SpinorNormRepresentationOld(G, d) : d in Divisors(n)]
+	   : G in Gs];
+    L := IdentityMatrix(Rationals(),4);
+    omfs := [[AlgebraicModularForms(Gs[i], W, L) : W in Ws[i]] : i in [1..#Gs]];
+    total := &+([0] cat [&+[Dimension(omf) : omf in omfs_G] : omfs_G in omfs]);
+    cusp := &+([0] cat [&+[Dimension(CuspidalSubspace(omf)) : omf in omfs_G]
+	       : omfs_G in omfs]);
+    return total, cusp;
 end function;

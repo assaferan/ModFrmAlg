@@ -1753,20 +1753,22 @@ intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 1) -> ModDedLat
 end intrinsic;
 
 // This is buggy!! Especially over 2
-// We replace it by the stable version from the NumberFieldLattice package
+// We replace it by the stable version from the NumberFieldLattice package, at least for quadratic lattices
 // (Eventually, all this file should be replaced by it)
 intrinsic IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
 {Checks whether L is maximal integral. If not, a minimal integral over-lattice is returned}
 
-  // converting to number field lattice
-  nfl := NumberFieldLattice(L);
+  if IsQuadratic(L) then
+    // converting to number field lattice
+    nfl := NumberFieldLattice(L);
 
-  ok, LL := IsMaximalIntegral(nfl);
+    ok, LL := IsMaximalIntegral(nfl);
   
-  if not ok then return false, LatticeFromLatNF(LL); end if;
+    if not ok then return false, LatticeFromLatNF(LL); end if;
 
-  return true, _;
-/*
+    return true, _;
+  end if;
+
   R := BaseRing(L);
   above_2 := {p[1] : p in Factorization(ideal<R|2>)};
   bad_primes := BadPrimes(L) join above_2;
@@ -1776,7 +1778,7 @@ intrinsic IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
     if not ok then return false, LL; end if;
   end for;
   return true, _;
-*/
+
 end intrinsic;
 
 intrinsic MaximalIntegralLattice(L::ModDedLat, p::RngOrdIdl) -> ModDedLat

@@ -390,18 +390,47 @@ function orthClassNumberPrimeSquare(p)
     return (h_p^2 + 4^f_p * h_m_p^2) / 2;
 end function;
 
+function firstPrimeNotDividing(n : LowerBound := 2)
+    p := NextPrime(LowerBound-1);
+    while n mod p eq 0 do
+	p := NextPrime(p);
+    end while;
+    return p;
+end function;
+
 // return the dimensions of spaces of modular forms
 // and cusp forms for the space of Hilbert modular forms
 // over Q(sqrt(d)) of level n^2
-function getHilbertDims(d,n : k := [2,2])
+function getHilbertDims(d,n : k := [2,2], UseFinite := false)
     // we take the genera corresponding to maximal lattices
-    Gs := [SO(g[1]) : g in QuaternaryQuadraticLattices(d*n^2) |
-	  IsMaximalIntegral(LatticeFromLat(LatticeWithGram(g[1])))];
+    forms := [g[1] : g in QuaternaryQuadraticLattices(d*n^2) |
+	      IsMaximalIntegral(LatticeFromLat(LatticeWithGram(g[1])))];
+    Gs := [SO(Q) : Q in forms];
     // We go over all spinor norms to obtain all possible AL signs
     wt := [(k[1]+k[2]) div 2-2, (k[1]-k[2]) div 2];
-    W0s := [HighestWeightRepresentation(G, wt) : G in Gs];
+    if UseFinite then
+	p := firstPrimeNotDividing(d*n^2 : LowerBound := 2^4);
+	Fp := GF(p);
+	Gps := [SO(ChangeRing(Q, Fp)) : Q in forms];
+	W0s := [HighestWeightRepresentation(G, wt) : G in Gps];
+	f_desc := Sprintf("
+      function foo(H)
+        F := BaseRing(H);
+        n := %m; 
+        pR := Factorization(ideal<Integers(F)|%m>)[1][1];
+        Fq, mod_q := ResidueClassField(pR);
+        f := map< H -> GL(n,Fq) |
+		  x :-> projLocalization(x, mod_q)>;
+        return f;
+      end function;
+      return foo;
+       ", 4, p);
+	W0s := [Pullback(V,f_desc, GL(4, Rationals())) : V in W0s];
+    else
+	W0s := [HighestWeightRepresentation(G, wt) : G in Gs];
+    end if;
     Ws := [[TensorProduct(W0s[i],SpinorNormRepresentationOld(Gs[i], d)) :
-		       d in Divisors(n)] : i in [1..#Gs]];
+		d in Divisors(n)] : i in [1..#Gs]];
     L := IdentityMatrix(Rationals(),4);
     omfs := [[AlgebraicModularForms(Gs[i], W, L) : W in Ws[i]] : i in [1..#Gs]];
     total := &+([0] cat [&+[Dimension(omf) : omf in omfs_G] : omfs_G in omfs]);

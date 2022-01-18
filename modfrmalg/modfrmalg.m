@@ -347,25 +347,46 @@ function getWeightRep(G, weight, char, F, n)
 //    F := AbsoluteField(F);
   //  if Type(F) eq FldRat then
 	//F := RationalsAsNumberField();
-   // end if;
+   // end if;
     // !!! TODO - change the positive characteristic to support also orthogonal
     if char ne 0 then
       pR := Factorization(ideal<Integers(F)|char>)[1][1];
       Fq, mod_q := ResidueClassField(pR);
-      GL_n_q := GroupOfLieType(StandardRootDatum("A",n-1), Fq);
-      V := GroupRepresentation(GL_n_q, weight);
+      if IsOrthogonal(G) then
+	  lie_type := IsOdd(n) select "B" else "D";
+	  lie_dim := n div 2;
+      else
+	  lie_type := "A";
+	  lie_dim := n-1;
+      end if;
+      // GL_n_q := GroupOfLieType(StandardRootDatum("A",n-1), Fq);
+      // G_q := GroupOfLieType(StandardRootDatum(lie_type,lie_dim), Fq);
+      lie_data := Sprintf("%o%o", lie_type, lie_dim);
+      // Problem : This does not construct the correct group,
+      // only a subgroup. In the case of n = 4 this is even worse,
+      // since the group is not simple
+      G_q := GroupOfLieType(StandardRootDatum(lie_type,lie_dim), Fq);
+      
+      // G_q := GroupOfLieType(lie_data, Fq : Isogeny := "SC");
+      V := GroupRepresentation(G_q, weight);
+      /*
+      innerForm := InnerForm(InnerForms(G)[1]);
+      // !! TODO - support also inner forms of the unitary group
+      D, T := Decompose(ChangeRing(innerForm,Fq));
+      assert D eq PermutationMatrix(Fq, Reverse([1..n]));
+      */
       f_desc := Sprintf("
       function foo(H)
-      F := BaseRing(H);
-      n := %m; 
-      pR := Factorization(ideal<Integers(F)|%m>)[1][1];
-      Fq, mod_q := ResidueClassField(pR);
-      f := map< H -> GL(n,Fq) |
-	      x :-> projLocalization(x, mod_q)>;
-      return f;
+        F := BaseRing(H);
+        n := %m; 
+        pR := Factorization(ideal<Integers(F)|%m>)[1][1];
+        Fq, mod_q := ResidueClassField(pR);
+        f := map< H -> GL(n,Fq) |
+		  x :-> projLocalization(x, mod_q)>;
+        return f;
       end function;
       return foo;
-      ", n, char);
+       ", n, char);
       W := Pullback(V,f_desc, GL(n, F));
     else
       // we would love to do that but Magma does not support that...

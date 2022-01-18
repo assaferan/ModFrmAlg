@@ -393,13 +393,15 @@ end function;
 // return the dimensions of spaces of modular forms
 // and cusp forms for the space of Hilbert modular forms
 // over Q(sqrt(d)) of level n^2
-function getHilbertDims(d,n)
+function getHilbertDims(d,n : k := [2,2])
     // we take the genera corresponding to maximal lattices
     Gs := [SO(g[1]) : g in QuaternaryQuadraticLattices(d*n^2) |
 	  IsMaximalIntegral(LatticeFromLat(LatticeWithGram(g[1])))];
     // We go over all spinor norms to obtain all possible AL signs
-    Ws := [[SpinorNormRepresentationOld(G, d) : d in Divisors(n)]
-	   : G in Gs];
+    wt := [(k[1]+k[2]) div 2-2, (k[1]-k[2]) div 2];
+    W0s := [HighestWeightRepresentation(G, wt) : G in Gs];
+    Ws := [[TensorProduct(W0s[i],SpinorNormRepresentationOld(Gs[i], d)) :
+		       d in Divisors(n)] : i in [1..#Gs]];
     L := IdentityMatrix(Rationals(),4);
     omfs := [[AlgebraicModularForms(Gs[i], W, L) : W in Ws[i]] : i in [1..#Gs]];
     total := &+([0] cat [&+[Dimension(omf) : omf in omfs_G] : omfs_G in omfs]);

@@ -496,7 +496,7 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 
 	require Dimension(M) gt 0 :
 				  "There are no Eisenstein Series in a 0-dimensional space";
-	vec := Vector([1 : i in [1..Dimension(M)]]);
+	vec := Vector(BaseRing(M`W), [1 : i in [1..Dimension(M)]]);
 	
 	// Create the modular form corresponding to the Eisenstein series.
 	mform := New(ModFrmAlgElt);

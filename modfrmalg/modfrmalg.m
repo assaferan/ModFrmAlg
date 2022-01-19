@@ -636,6 +636,9 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	//  operators are self-adjoint.
 	gram := ChangeRing(DiagonalMatrix(mult_wts), F);
 
+	// vectors orthogonal to the Eisenstein series
+	cuspBasis := Basis(Kernel(Transpose(Matrix(eis`vec*gram))));
+	/*
 	// The change-of-basis matrix.
 	basis := Id(MatrixRing(F, dim));
 
@@ -675,7 +678,7 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	
 	// Reduce the cuspidal basis to be as sparse as possible.
 	cuspBasis := EchelonForm(Matrix(cuspBasis));
-	
+	*/
 	return VectorSpaceWithBasis(cuspBasis);
 end intrinsic;
 

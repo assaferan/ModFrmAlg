@@ -667,7 +667,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 
     // Convert the pulled-back basis to an appropriate p-maximal basis.
     pMaximalBasis :=
-	ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
+	ChangeRing(L`pMaximal[pR][2], BaseRing(Q));
 
     // for profiling reasons we need here a function
     function __changeBasis(XX,ZZ,UU, Q, pMaximalBasis)
@@ -693,7 +693,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 	for i in [1..dim] do
 	    I := pb[i,1];
 	    Igens := Generators(I);
-	    if Igens[1] notin alpha(nProc`pR)*I then
+	    if Igens[1] notin alpha(pR)*I then
 		Append(~local_basis, Igens[1]*pb[i,2]);
 	    else
 		Append(~local_basis, Igens[2]*pb[i,2]);
@@ -704,16 +704,16 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 	//	    Fixing for it to work for larger k
 	pairings := &cat[Eltseq(Matrix(y)*B*Transpose(Matrix(X_conj))) :
 			 y in local_basis];
-	kPbar, kPbarMap := ResidueClassField(alpha(nProc`pR));
+	kPbar, kPbarMap := ResidueClassField(alpha(pR));
 	A := Matrix(kPbar, dim, #XX, [kPbarMap(x) : x in pairings]);
 	lifted_null_space_basis := [&+[w[i]@@kPbarMap*local_basis[i] :
 				       i in [1..dim]] :
 				    w in Basis(Nullspace(A))];
-	pbPbarLambda := PseudoBasis(alpha(nProc`pR)*Module(L));
+	pbPbarLambda := PseudoBasis(alpha(pR)*Module(L));
 	prePi := Module(lifted_null_space_basis cat
 			&cat[[x*pb[2] : x in Generators(pb[1])] :
 			     pb in pbPbarLambda]);
-	Pi := &+[nProc`pR^-1 * x : x in XX] + prePi;
+	Pi := &+[pR^-1 * x : x in XX] + prePi;
 	psb := PseudoBasis(Pi);
 	idls := [ x[1] : x in psb];
 	basis := [ x[2] : x in psb];
@@ -726,8 +726,8 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 	  // The spacess we'll perform HNF on; they need to be scaled by D*p so
 	  //  that HNF will be happy. We'll undo this once we perform HNF.
 	  // Here D is the common denominator, which is a power of 2
-	  p := Norm(nProc`pR);
-          denom := L`pMaximal[nProc`pR][3]*BasisDenominator(Module(L));
+	  p := Norm(pR);
+          denom := L`pMaximal[pR][3]*BasisDenominator(Module(L));
           diag := Perestroika select
 		  DiagonalMatrix(Rationals(), [1 : i in [1..k]]
 					      cat [p : i in [1..k]]
@@ -781,32 +781,25 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 
           nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
 
-	  if Perestroika then
-	      nLat := ScaledLattice(nLat, 1/p);
-	  end if;
-
       else
 	if Perestroika then
 	  idls := [ 1*R : i in [1..#XX] ] cat
-	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
+	        [ alpha(pR) : i in [1..#ZZ] ] cat
 	// There should not be any Us
-	//	[ alpha(nProc`pR) : i in [1..#UU] ] cat
-	        [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
+	//	[ alpha(pR) : i in [1..#UU] ] cat
+	        [ pR * alpha(pR) * pb[1] : pb in
 						       PseudoBasis(Module(L)) ];
 	else
 	//  order to construct the neighbor lattice.
-	idls := [ nProc`pR^-1 : i in [1..#XX] ] cat
-	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
+	idls := [ pR^-1 : i in [1..#XX] ] cat
+	        [ alpha(pR) : i in [1..#ZZ] ] cat
 		[ 1*R : i in [1..#UU] ] cat
-	        [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
-						       PseudoBasis(Module(L)) ];
+	        [ pR * alpha(pR) * pb[1] : pb in
+					   PseudoBasis(Module(L)) ];
         end if; 
 	// Build the neighbor lattice.
 	nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
-        if Perestroika then
-  	  pi := SafeUniformizer(pR);
-	  nLat := ScaledLattice(nLat, 1/pi);
-        end if;
+
       end if;
     end if;
     if BeCareful then
@@ -841,7 +834,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
     end if;
 
     if Perestroika then
-	pi := SafeUniformizer(pR);
+	pi := Vpp`pElt;
 	nLat := ScaledLattice(nLat, 1/pi);
     end if;
     return nLat;

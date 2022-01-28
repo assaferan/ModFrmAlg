@@ -50,22 +50,30 @@ intrinsic EvenClifford(M::AlgMatElt[RngInt]) ->
   C_1_Q, emb_C_1_Q := sub<V_C_Q | [vec_Q(b) : b in basis_C_1]>;
   C_1, emb_C_1 := sub<V_C | [Vector(ChangeRing(Solution(Matrix(basis_C_Q),v), Integers()))
 			     : v in basis_C_1]>;
+  x := emb_Q(ShortestVector(LatticeWithGram(M)));
+  assert x^2 eq 1;
+  /*
   // We choose a generator for the odd clifford
   // What we really need to do is just to find a linear combination of the generators
   // such that we get a linearly independent set of vectors.
-  R<[a]> := PolynomialRing(Rationals(), #basis_C_1);
+  // We want the generator to come from V so that iota will be an involution
+  // R<[a]> := PolynomialRing(Rationals(), #basis_C_1);
+  R<[a]> := PolynomialRing(Rationals(), #basis_C_1[1..4]);
   mat := &+[a[i]*ChangeRing(Matrix([Solution(Matrix(basis_C_1),vec_Q(b * basis_C_1[i]))
-				    : b in basis_C_0]),R) : i in [1..#basis_C_1]];
+			//	    : b in basis_C_0]),R) : i in [1..#basis_C_1]];
+				    : b in basis_C_0]),R) : i in [1..#a]];
   det := Determinant(mat);
   //  det_fac := Factorization(Determinant(mat));
   // Now we want the determinant to be 1 (or -1)
   // There should be a better way of enumeration on this scheme
-  B := Floor(Determinant(M)^(1/8));
+  // B := Floor(Determinant(M)^(1/8));
+  B := Floor(Determinant(M)^(1/4));
   enum_set := [0] cat &cat[[i,-i] : i in [1..B]];
   a_vals := CartesianPower(enum_set,#a);
 
   assert exists(a_val){a_val : a_val in a_vals | Abs(Evaluate(det, a_val)) eq 1};
   x := &+[a_val[i]*basis_C_1[i] : i in [1..#a_val]];
+ */
   C_0_Q_x := sub<V_C_Q | [vec_Q(b * x) : b in basis_C_0] >;
   x_C_0_Q := sub<V_C_Q | [vec_Q(x * b) : b in basis_C_0] >;
   assert (C_0_Q_x eq C_1_Q) and (x_C_0_Q eq C_1_Q);
@@ -215,13 +223,15 @@ function makeZ_K_Order(C_0_Q, iota_Q, omega_Q, delta)
     return A_S, nm_A_S;
 end function;
 
-// We start by doing it in the split case
+// Isometry is an isometry from M to another lattice
+// This gives the induced element of the quatenrion algebra.
 function get_quaternion_orders(M : Isometry := 1)
     C_0_Q, emb_Q := RationalEvenClifford(M);
     _, T := Diagonalization(M);
     v_orth := [emb_Q(r) : r in Rows(T)];
-    i := v_orth[1]*v_orth[2];
-    j := v_orth[2]*v_orth[3];
+    assert v_orth[1]*v_orth[1] eq 1;
+    i := v_orth[2]*v_orth[3];
+    j := v_orth[3]*v_orth[4];
     B, quat_emb := sub<C_0_Q | i, j>;
     _, BB, isom := IsQuaternionAlgebra(B);
     delta_Q := C_0_Q!(Center(C_0_Q).2);
@@ -230,10 +240,12 @@ function get_quaternion_orders(M : Isometry := 1)
     my_basis := [1, i, j, i*j];
     my_basis := my_basis cat [delta_Q * x : x in my_basis];
     my_basis := [C_0_Q!x : x in my_basis];
-    my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
-    images := [Solution(Matrix(my_basis), C_0_Q.i) * Matrix(my_images)
-	       : i in [1..8]];
-    iota_Q := hom<C_0_Q -> C_0_Q | [C_0_Q!Eltseq(x) : x in images]>;
+    // This should just be the block matrix [[1,0],[tr(delta), -1]] !?
+    // my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
+    // sol_mat := Matrix([Solution(Matrix(my_basis), C_0_Q.i) : i in [1..8]]);
+    // images := Rows(Matrix(my_images) * sol_mat);
+//    images := [Solution(Matrix(my_basis), C_0_Q.i) * Matrix(my_images) : i in [1..8]];
+    // iota_Q := hom<C_0_Q -> C_0_Q | [C_0_Q!Eltseq(x) : x in images]>;
     f<x> := MinimalPolynomial(delta_Q);
     K<delta_K> := quo<Parent(f) | f>;
     KK, roots := SplittingField(f);
@@ -244,7 +256,9 @@ function get_quaternion_orders(M : Isometry := 1)
     delta_mat := Matrix([delta_Q * C_0_Q.i : i in [1..8]]);
     X := Matrix(my_basis[1..4]);
     X_tmp := VerticalJoin(X, X * delta_mat);
+    // X_tmp is just my_basis again. Why do we do it twice?
     X_tmp_inv := X_tmp^(-1);
+    // X_tmp_inv = sol_mat
     if (Isometry eq 1) then Isometry := IdentityMatrix(Rationals(), 4); end if;
     X_tmp_inv := DirectSum(Isometry,Isometry)*X_tmp_inv;
     nfl_basis := [Vector([X_tmp_inv[i,j] + delta_K * X_tmp_inv[i,j+4]
@@ -270,8 +284,11 @@ function get_quaternion_orders(M : Isometry := 1)
 	s := [1, i, j, i*j];
 	gen_vecs_parts := [[isom(&+[v[idx][j]*s[idx] : idx in [1..4]]) :
 			    j in [1..2]] : v in gen_vecs_eltseq];
-	delta_KK := KK.1;
-	elts := [BB_KK_emb(v[1]) + delta_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
+	// delta_KK := KK.1;
+	// HNF might change the basis
+	omega_KK := KK!(Order(hnf).2);
+//	elts := [BB_KK_emb(v[1]) + delta_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
+	elts := [BB_KK_emb(v[1]) + omega_KK * BB_KK_emb(v[2]) : v in gen_vecs_parts];
 	orders := [Order(elts)];
     end if;
     return orders;
@@ -303,6 +320,8 @@ function get_genus_orders(M)
     return orders_B;
 end function;
 
+// Finds an isometry away from p, from M2 to M1,
+// i.e. s * M1 * s^t = M2
 function find_local_isom(M1, M2, p)
     L1 := LatticeFromLat(LatticeWithGram(M1));
     L2 := LatticeFromLat(LatticeWithGram(M2));
@@ -369,4 +388,53 @@ function orthClassNumberPrimeSquare(p)
     f_p := (p mod 4 eq 1) select -1 else (p mod 8 eq 3) select 1 else 0;
     h_m_p := ClassNumber(QuadraticField(-p));
     return (h_p^2 + 4^f_p * h_m_p^2) / 2;
+end function;
+
+function firstPrimeNotDividing(n : LowerBound := 2)
+    p := NextPrime(LowerBound-1);
+    while n mod p eq 0 do
+	p := NextPrime(p);
+    end while;
+    return p;
+end function;
+
+// return the dimensions of spaces of modular forms
+// and cusp forms for the space of Hilbert modular forms
+// over Q(sqrt(d)) of level n^2
+function getHilbertDims(d,n : k := [2,2], UseFinite := false)
+    // we take the genera corresponding to maximal lattices
+    forms := [g[1] : g in QuaternaryQuadraticLattices(d*n^2) |
+	      IsMaximalIntegral(LatticeFromLat(LatticeWithGram(g[1])))];
+    Gs := [SO(Q) : Q in forms];
+    // We go over all spinor norms to obtain all possible AL signs
+    wt := [(k[1]+k[2]) div 2-2, (k[1]-k[2]) div 2];
+    if UseFinite then
+	p := firstPrimeNotDividing(d*n^2 : LowerBound := 2^4);
+	Fp := GF(p);
+	Gps := [SO(ChangeRing(Q, Fp)) : Q in forms];
+	W0s := [HighestWeightRepresentation(G, wt) : G in Gps];
+	f_desc := Sprintf("
+      function foo(H)
+        F := BaseRing(H);
+        n := %m; 
+        pR := Factorization(ideal<Integers(F)|%m>)[1][1];
+        Fq, mod_q := ResidueClassField(pR);
+        f := map< H -> GL(n,Fq) |
+		  x :-> projLocalization(x, mod_q)>;
+        return f;
+      end function;
+      return foo;
+       ", 4, p);
+	W0s := [Pullback(V,f_desc, GL(4, Rationals())) : V in W0s];
+    else
+	W0s := [HighestWeightRepresentation(G, wt) : G in Gs];
+    end if;
+    Ws := [[TensorProduct(W0s[i],SpinorNormRepresentationOld(Gs[i], d)) :
+		d in Divisors(n)] : i in [1..#Gs]];
+    L := IdentityMatrix(Rationals(),4);
+    omfs := [[AlgebraicModularForms(Gs[i], W, L) : W in Ws[i]] : i in [1..#Gs]];
+    total := &+([0] cat [&+[Dimension(omf) : omf in omfs_G] : omfs_G in omfs]);
+    cusp := &+([0] cat [&+[Dimension(CuspidalSubspace(omf)) : omf in omfs_G]
+	       : omfs_G in omfs]);
+    return total, cusp;
 end function;

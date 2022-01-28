@@ -1885,7 +1885,10 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
 {returns the irreducible representation with highest weight lambda.}
   require #InnerForms(G) eq 1 : "Highest weight representation for G is currently not supported";
   Q := InnerForm(InnerForms(G)[1]);
-  F := NumberField(MaximalOrder(BaseRing(Q)));
+  F := BaseRing(Q);
+  if Type(F) ne FldFin then
+      F := NumberField(MaximalOrder(F));
+  end if;
   Q := ChangeRing(Q, F);
   if IsOrthogonal(G) then
     V := getSOHighestWeightRepresentationPolys(lambda, Q);

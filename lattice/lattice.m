@@ -277,9 +277,9 @@ intrinsic StandardLattice(rfxSpace::RfxSpace) -> ModDedLat
   
   // Build the standard lattice.
   L := LatticeWithBasis(rfxSpace, basis);
-	
+
   require IsIntegral(L) :
-		    "Standard Lattice is not integral for reflexive space!" ; 
+    "Standard Lattice is not integral for reflexive space!" ;
 
   // Assign the ZLattice.
   L`ZLattice := ZLattice(L : Standard := true);
@@ -812,6 +812,16 @@ intrinsic Scale(lat::ModDedLat) -> RngOrdFracIdl
 
   // Return the scale.
   return lat`Scale;
+end intrinsic;
+
+// TODO - check that we have the right thing for number fields
+// We actually return an isometric lattice 
+intrinsic ScaledLattice(lat::ModDedLat, alpha::FldElt) -> ModDedLat
+{The lattice similar to L with Gram matrix scaled by alpha.}
+  gram := GramMatrixOfBasis(lat : Half := false);
+  form := alpha * gram;
+  V_new := AmbientReflexiveSpace(form); 
+  return StandardLattice(V_new);
 end intrinsic;
 
 intrinsic ElementaryDivisors(lambda::ModDedLat, pi::ModDedLat) -> SeqEnum
@@ -1729,7 +1739,7 @@ intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
       F := QNF();
       ideals := [ideal<Integers(F) | Norm(I)> : I in ideals];
   end if;
-  basis := [Vector(F, x[2]) : x in pb];
+  basis := [Vector(NumberField(Order(F)), x[2]) : x in pb];
   nfl := NumberFieldLattice(basis : Gram := gram, Ideals := ideals);
   return nfl;
 end intrinsic;

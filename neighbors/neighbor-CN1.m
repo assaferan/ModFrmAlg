@@ -616,7 +616,8 @@ end function;
 
 // Constructing the next p-neighbor
 
-function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
+function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
+		       Perestroika := false)
     assert nProc`isoSubspace ne [];
     
     // The affine data.
@@ -630,6 +631,9 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 
     // The lattice.
     L := nProc`L;
+
+    // The prime
+    pR := nProc`pR;
 
     // The base ring.
     R := BaseRing(L);
@@ -718,36 +722,46 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
       // The special treatment below seems to sometime fail, so
       // we try to do the same
       // Special treatment of the rationals to speed things up
-      if (Type(BaseRing(L)) eq RngInt) then
-      					 
-	// The spacess we'll perform HNF on; they need to be scaled by D*p so
-	//  that HNF will be happy. We'll undo this once we perform HNF.
-	// Here D is the common denominator, which is a power of 2
-	p := Norm(nProc`pR);
-        denom := L`pMaximal[nProc`pR][3]*BasisDenominator(Module(L));
-        diag := nProc`scale;
-        function __scale(XX, ZZ, UU, BB, p, denom)
-          ret := denom*diag*Matrix(XX cat ZZ cat UU cat BB);
-          return ChangeRing(ret, Integers());
-	end function;
-        BB := Basis(ZLattice(L));
+      if (Type(BaseRing(L)) eq RngInt) then	 
+	  // The spacess we'll perform HNF on; they need to be scaled by D*p so
+	  //  that HNF will be happy. We'll undo this once we perform HNF.
+	  // Here D is the common denominator, which is a power of 2
+	  p := Norm(nProc`pR);
+          denom := L`pMaximal[nProc`pR][3]*BasisDenominator(Module(L));
+          diag := Perestroika select
+		  DiagonalMatrix(Rationals(), [1 : i in [1..k]]
+					      cat [p : i in [1..k]]
+					      cat [p^2 : i in [1..dim]])
+		  else nProc`scale;
+          function __scale(XX, ZZ, UU, BB, denom)
+              ret := denom*diag*Matrix(XX cat ZZ cat UU cat BB);
+              return ChangeRing(ret, Integers());
+          end function;
+          BB := Basis(ZLattice(L));
 
-        xzub := __scale(XX, ZZ, UU, BB, p, denom);
+          xzub := __scale(XX, ZZ, UU, BB, denom);
 
-        H := HermiteForm(xzub);
+          H := HermiteForm(xzub);
 
-        H := RowSubmatrix(H, 1, dim);
+          H := RowSubmatrix(H, 1, dim);
 
-        function __rescale(H, denom, p, dim)
-	  return 1/(denom*p) * ChangeRing(H, Rationals());
-	end function;
-        // Get new basis for the neighbor lattice.
-        nLatBasis := __rescale(H, denom, p, dim);
-        // skip conversions back and forth
-        if UseLLL and not BeCareful then
-          zlat := Lattice(nLatBasis, 2*InnerForm(Q));
-	  lll_ZZ := LLL(zlat : Proof := false);
-          nLat := LatticeWithBasis(Q,
+          function __rescale(H, denom, dim)
+	      return (1/denom) * ChangeRing(H, Rationals());
+	  end function;
+
+	  // Get new basis for the neighbor lattice.
+	  
+	  if Perestroika then
+	      nLatBasis := __rescale(H, denom, dim);
+	  else
+              nLatBasis := __rescale(H, denom*p, dim);
+	  end if;
+	  
+          // skip conversions back and forth
+          if UseLLL and not BeCareful then
+            zlat := Lattice(nLatBasis, 2*InnerForm(Q));
+	    lll_ZZ := LLL(zlat : Proof := false);
+            nLat := LatticeWithBasis(Q,
 				   ChangeRing(BasisMatrix(lll_ZZ), Rationals()));
       
           // trying to save time in the next conversion
@@ -757,35 +771,55 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
           nLat`ZLattice`basisR := Basis(lll_ZZ);
           nLat`ZLattice`basisZ := ChangeRing(BasisMatrix(lll_ZZ), Rationals());
 */
-					 
-          return nLat;
-	end if;
+	    if Perestroika then
+		nLat := ScaledLattice(nLat, 1/p);
+	    end if;
+            return nLat;
+	  end if;
 
-	// Build the neighbor lattice.
+	  // Build the neighbor lattice.
 
-        nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
+          nLat := LatticeWithBasis(Q, ChangeRing(nLatBasis, BaseRing(Q)));
+
+	  if Perestroika then
+	      nLat := ScaledLattice(nLat, 1/p);
+	  end if;
 
       else
+	if Perestroika then
+	  idls := [ 1*R : i in [1..#XX] ] cat
+	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
+	// There should not be any Us
+	//	[ alpha(nProc`pR) : i in [1..#UU] ] cat
+	        [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
+						       PseudoBasis(Module(L)) ];
+	else
 	//  order to construct the neighbor lattice.
 	idls := [ nProc`pR^-1 : i in [1..#XX] ] cat
 	        [ alpha(nProc`pR) : i in [1..#ZZ] ] cat
 		[ 1*R : i in [1..#UU] ] cat
 	        [ nProc`pR * alpha(nProc`pR) * pb[1] : pb in
 						       PseudoBasis(Module(L)) ];
-	
+        end if; 
 	// Build the neighbor lattice.
 	nLat := LatticeWithPseudobasis(Q, HermiteForm(PseudoMatrix(idls, bb)));
+        if Perestroika then
+  	  pi := SafeUniformizer(pR);
+	  nLat := ScaledLattice(nLat, 1/pi);
+        end if;
       end if;
     end if;
     if BeCareful then
+       if not Perestroika then
 	// Compute the intersection lattice.
 	intLat := IntersectionLattice(nLat, L);
-	
+    
 	// Verify that this neighbor has the proper index properties.
 	assert Norm(Index(L, intLat)) eq nProc`pRnorm^nProc`k;
 	assert Norm(Index(nLat, intLat)) eq nProc`pRnorm^nProc`k;
-	assert IsIntegral(ZLattice(nLat));
-	assert IsIntegral(nLat);
+      end if;
+      assert IsIntegral(ZLattice(nLat));
+      assert IsIntegral(nLat);
     end if;
     
     if UseLLL then
@@ -805,7 +839,11 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false)
 	  nLat := LatticeWithBasis(Q, Matrix(basis));
         end if;
     end if;
-    
+
+    if Perestroika then
+	pi := SafeUniformizer(pR);
+	nLat := ScaledLattice(nLat, 1/pi);
+    end if;
     return nLat;
 end function;
 

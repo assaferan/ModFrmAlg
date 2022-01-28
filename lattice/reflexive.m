@@ -368,7 +368,6 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
   rfxSpace`dim := Nrows(innerForm);
 
   // Assign the standard lattice for this reflexive space.
-  
   if Type(F) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
       rfxSpace`stdLat := StandardLattice(rfxSpace);
   end if;

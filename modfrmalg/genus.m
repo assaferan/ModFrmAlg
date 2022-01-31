@@ -73,7 +73,12 @@ intrinsic GenusReps(M::ModFrmAlg
           disc := Integers()!disc;
         end if;
         fac := Factorization(disc);
-        is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+	if IsEven(Rank(Level(M))) then
+	    is_sqrfree := &and[ fa[2] le 3 : fa in fac];
+	else
+            is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+	end if;
+        // is_sqrfree := &and[fa[2] eq 1 : fa in fac];
         computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force,
 			    UseMass := (not is_sqrfree) and
 			    (not IsSpecialOrthogonal(M)));

@@ -129,7 +129,7 @@ function PermutationReduction(QF)
     return Q0, U, auts;
 end function;
 
-function SignNormalization(QF)
+function SignNormalization(QF : FindAuts := false)
     // PRE: Takes a symmetric matrix over the Integers().
     // POST: Defines an ordering of the non-diagonal elements 
     // and makes as many as possible positive, with priority 
@@ -143,34 +143,40 @@ function SignNormalization(QF)
     FF2 := FiniteField(2);
     VF2 := VectorSpace(FF2,dim);
 
-    PrioritySet := { };
-    BoundaryBasis := { VF2 | };
+    PrioritySet := [];
+    BoundaryBasis := [ VF2 | ];
     count := 0;
     // Go through the indices in desired order:
     for j in [1..dim-1] do 
 	for k in [1..dim-j] do
-	    WF2 := sub< VF2 | BoundaryBasis, VF2.k - VF2.(k+j) >;
-	    if Rank(WF2) gt count and QF[k,k+j] ne 0 then
-		PrioritySet := PrioritySet join {[k,k+j]};
-		BoundaryBasis := BoundaryBasis join {VF2.k - VF2.(k+j)};
-		count := count + 1;
-	    end if;
+	    if QF[k,k+j] ne 0 then
+	       WF2 := sub< VF2 | BoundaryBasis, VF2.k + VF2.(k+j) >;
+	       if Rank(WF2) gt count then
+		 Append(~PrioritySet, [k,k+j]);
+                 Append(~BoundaryBasis, VF2.k + VF2.(k+j));
+		 count := count + 1;
+	       end if;
+            end if;
 	end for;
     end for;
-    SkewBasis := { VF2 | };
-    for x in PrioritySet do
-	if QF[x[1],x[2]] lt 0 then 
-	    SkewBasis := SkewBasis join {VF2.x[1] + VF2.x[2] + VF2.1};
-	else 
-	    SkewBasis := SkewBasis join {VF2.x[1] + VF2.x[2]};
-	end if;
+
+    pairs := [x : x in PrioritySet];
+    rows := [];
+    vec := Vector(GF(2), [ 0 : x in pairs]);
+    for j in [1..#pairs] do
+      x := pairs[j];
+      if QF[x[1],x[2]] lt 0 then
+        vec[j] := 1;
+      end if;
+      Append(~rows, VF2.x[1] + VF2.x[2]);
     end for;
-    WF2 := sub< VF2 | SkewBasis >;
-    UF2 := VectorSpace(FiniteField(2),Dimension(WF2));
-    HF2 := Hom(UF2,VF2);
-    
-// w := Kernel(Transpose(HF2![WF2.i : i in [1..Dimension(WF2)]])).1;
-    for w in Basis(Kernel(Transpose(HF2![WF2.i : i in [1..Dimension(WF2)]]))) do
+
+    mat := Transpose(Matrix(rows));
+    ker := Kernel(mat);
+    sol := Solution(mat, vec);
+
+   for b in Basis(ker) do
+      w := sol + b;
     // Now do the sign changes.
       P := Identity(Parent(QF));
       for i in [1..dim] do
@@ -179,9 +185,12 @@ function SignNormalization(QF)
 	end if;
       end for;
       if P*QF*P eq QF then
-        Append(~auts, P);
+        if FindAuts then
+          Append(~auts, P);
+        end if;
         P := I;
       end if;
+      if not FindAuts then break; end if;
     end for;
     return P*QF*P, P, auts;
 end function;
@@ -254,12 +263,14 @@ function NeighborReduction(QF)
 	inds := [ i : i in [1..dim] | QF[i,i] eq n ];
 	X := &join[ LocalNeighbors[i] : i in inds ];
 	for i in inds do
-	    LocalNeighbors[i] := X;
+	  LocalNeighbors[i] := X;
 	end for; 
     end for;
 
     vprint Minkowski, 2 : "Original NeighborSpace size:", 
     &*[ #S : S in LocalNeighbors ];
+
+    LocalNeighbors := [Sort([x : x in X]) : X in LocalNeighbors];
 
     NeighborSpace := [ [ x ] : x in LocalNeighbors[1] ];
     for i in [2..dim] do
@@ -382,7 +393,7 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
       end for;
     end for;
    end for;
-   printf "Checked %o forms.\n", cnt;
+   vprintf AlgebraicModularForms, 1 : "Checked %o forms.\n", cnt;
    return forms;
 end intrinsic;
 
@@ -480,9 +491,8 @@ intrinsic TernaryQuadraticLattice(N::RngIntElt) -> Mtrx
   return Q;
 end intrinsic;
 
-// Still not working - has to make it positive definite
 intrinsic QuinaryQuadraticOfPrimeLevel(p::RngIntElt) -> Mtrx
-{.}
+{returns a positive definite quinary quadratic lattice of prime discriminant p.}
   // For now we assume p is an odd prime
   require IsPrime(p) and IsOdd(p) : "Currently only implemented for odd primes.";
   residues := [3] cat [-Integers()!PrimitiveElement(Integers(p))];
@@ -660,6 +670,22 @@ function isReduced(vec, constraints)
   end for;
   return true, _;
 end function;
+
+function QuaternaryLatticeOfPrimeDiscriminant(p)
+    K<sqrtp> := QuadraticField(p);
+    sigma := Automorphisms(K)[2];
+    D := QuaternionAlgebra(K, -1, -1);
+    R := MaximalOrder(D);
+    Z_K<omega> := Integers(K);
+    basis_R := Basis(R) cat [omega*b : b in Basis(R)];
+    tmp := [Eltseq(R!(D![sigma(x) : x in Eltseq(b)] - Conjugate(b))) : b in basis_R];
+    M := Matrix([&cat[Eltseq(x) : x in tmp[i]] : i in [1..8]]);
+    ker := Kernel(M);
+    basis_ker := [&+[b[i]*basis_R[i] : i in [1..8]] : b in Basis(ker)];
+    Q := Matrix([[Norm(x+y)-Norm(x)-Norm(y) : x in basis_ker] : y in basis_ker]);
+    return Q;
+end function;
+
 /*
 function MinkowskiReduction(A)
   assert IsPositiveDefinite(A);
@@ -739,7 +765,7 @@ function closestLatticeVectorMinkowskiReduced(b, t, gram)
   return min_x_t*Matrix(b), min_g;
 end function;
 
-function magmaKohelReduction(M)
+function magmaKohelReduction(M : FindAuts := false)
     auts := [];
     deg := Degree(Parent(M));
     ZMat := MatrixAlgebra(Integers(),deg);
@@ -803,18 +829,15 @@ function magmaKohelReduction(M)
     end if;
     repeat
         M0, T1, aut1 := PermutationReduction(M0);
-        M0, T2, aut2 := SignNormalization(M0);
+        M0, T2, aut2 := SignNormalization(M0 : FindAuts);
         M0, T3, aut3 := NeighborReduction(M0);
-        auts cat:= [T^(-1)*g*T : g in aut1];
-// print "Permutations";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-        auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
-//     print "Signs";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-        auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
-//      print "Neighbors";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-	T1 := T3*T2*T1; 
+        if FindAuts then
+	  auts cat:= [T^(-1)*g*T : g in aut1];
+          auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
+          auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
+          assert &and[g*M*Transpose(g) eq M : g in auts];
+        end if;
+        T1 := T3*T2*T1;
 	T := T1*T;
     until T1 eq I;
     return Parent(M) ! (c * M0), T, auts;
@@ -877,6 +900,17 @@ intrinsic GreedyReduce(L::ModDedLat) -> AlgMatElt
 // b, mult := GreedyReduction(b, gram_b);
 // return Transpose(mult)*gram_b*mult, Matrix(b);
   return magmaKohelReduction(gram_b);
+end intrinsic;
+
+intrinsic GreedyReduce2(L::ModDedLat) -> AlgMatElt
+{Reduce L using the Greedy algorithm of Nguyen and Stehle.}
+  lat := ZLattice(L);
+  b := Basis(lat);
+  gram := InnerProductMatrix(lat);
+  b := [ChangeRing(Vector(Eltseq(x)), Rationals()) : x in b];
+  gram_b := Matrix(b)*gram*Transpose(Matrix(b));
+  _,_,gram_red := GreedyReductionSimple(b, gram_b);
+  return gram_red;
 end intrinsic;
 
 primeSymbol := recformat <
@@ -1182,4 +1216,145 @@ function get_quad_form(input)
     assert HilbertSymbol(-x, -disc, symb`p) eq sign;
   end for;
   return 2*b_q;
+end function;
+
+function PermutationOrbit(QF)
+    // PRE: QF is a Gram matrix.
+    // POST: Returns all the Minkowski reduced Gram matrices equivalent to
+    // QF by a permutation
+  
+    RMat := Parent(QF);
+    dim := Degree(RMat);  
+    U := Identity(RMat);
+    orbit := {};
+ 
+    // Pick the smallest form from the permutations 
+    // stabilizing the norms.
+
+    Q0 := QF;
+    G := CoordinatePermutationGroup([ QF[i,i] : i in [1..dim] ]);
+    for g in G do 
+	P := PermutationMatrix(g);
+// _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+        Q1 := P*QF*Transpose(P);
+        Include(~orbit, Q1);
+    end for;
+    return orbit;
+end function;
+
+function SignOrbit(QF)
+
+  RMat := Parent(QF);
+  dim := Degree(RMat);  
+  U := Identity(RMat);
+  P := Identity(RMat);
+  orbit := {};
+  
+  for signs in CartesianPower({-1,1},dim) do
+    for i in [1..dim] do
+      P[i,i] := signs[i];
+    end for;
+//_,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+    Q1 := P*QF*Transpose(P);
+    Include(~orbit, Q1);
+  end for;
+  return orbit;
+
+end function;
+
+function NeighborOrbit(QF)
+    // Returns all Minkowski reduced in the neighborhood 
+    // of QF.
+
+    RMat := Parent(QF);
+    I := Identity(RMat);
+    M := BaseModule(RMat);
+    dim := Degree(RMat);
+    orbit := {};
+
+    // Neighbor search variables.
+    LocalNeighbors := [ { M | [ 1 ] cat [ 0 : i in [2..dim] ] } ];
+    for i in [2..dim] do
+	NearZero := {-1,0,1};
+	Zeros := [ 0 : j in [i+1..dim] ];
+	FreeHood := { M | [ x[k] : k in [1..i-1] ] cat [1] cat Zeros 
+	: x in CartesianPower(NearZero,i-1) };
+	for x in FreeHood do
+	    n := InnerProduct(x*QF,x);
+	    if n gt QF[i,i] then
+		// Neighbor larger, exclude.
+		Exclude(~FreeHood,x);
+	    end if;
+	end for;
+	// Freehood now consists only of coordinates of neighbors 
+	// which are ith successive minima.
+	Append(~LocalNeighbors,FreeHood);
+    end for;
+
+    norms := { QF[i,i] : i in [1..dim] };
+    for n in norms do
+	inds := [ i : i in [1..dim] | QF[i,i] eq n ];
+	X := &join[ LocalNeighbors[i] : i in inds ];
+	for i in inds do
+	  LocalNeighbors[i] := X;
+	end for; 
+    end for;
+
+    vprint Minkowski, 2 : "Original NeighborSpace size:", 
+    &*[ #S : S in LocalNeighbors ];
+
+    LocalNeighbors := [Sort([x : x in X]) : X in LocalNeighbors];
+
+    NeighborSpace := [ [ x ] : x in LocalNeighbors[1] ];
+    for i in [2..dim] do
+	NS1 := [ ]; 
+	n := QF[i,i];
+	inds := [ j : j in [1..i-1] | QF[j,j] eq n ];
+	for y in LocalNeighbors[i] do
+	    for C in NeighborSpace do
+		// Exclude (C,y) if C[j] = y for some y, or if inner 
+		// product with neighboring vector is not maximal.
+		if &and[ Booleans() | C[j] ne y : j in inds ] and 
+		    Abs(InnerProduct(C[i-1]*QF,y)) ge Abs(QF[i,i-1]) then
+		    Append(~NS1,C cat [y]);
+		elif &or[ Booleans() | 
+		    Abs(InnerProduct(C[j-1]*QF,C[j])) gt 
+		    Abs(QF[j,j-1]) : j in [2..i-1] ] then
+		    Append(~NS1,C cat [y]);
+		end if;
+	    end for;
+	end for;
+	NeighborSpace := NS1;
+    end for;
+
+    vprint Minkowski, 2 : 
+    "Reduced to NeighborSpace of size:", #NeighborSpace;
+
+    for C in NeighborSpace do
+	B0 := Matrix(C); 
+	if Abs(Determinant(B0)) eq 1 then
+	  // _, _, Q := GreedyReductionSimple(Rows(I), B0*QF*Transpose(B0));
+          Q := B0*QF*Transpose(B0);
+// Include(~orbit, Q);
+          orbit join:= SignOrbit(Q);
+	end if;
+    end for;
+    return orbit;
+end function;
+
+function GenerateOrbit(QF)
+  num := 0;
+  qs := {QF};
+  while num lt #qs do
+    num := #qs;
+    qs := &join[PermutationOrbit(q) : q in qs];
+    qs := &join[SignOrbit(q) : q in qs];
+    qs := &join[NeighborOrbit(q) : q in qs];
+  end while;
+  orbit := {};
+  for q in qs do
+    _,_,q_red := GreedyReductionSimple(Rows(MatrixAlgebra(Rationals(),5)!1),q);
+    Include(~orbit, q_red);
+  end for;
+  return orbit;
 end function;

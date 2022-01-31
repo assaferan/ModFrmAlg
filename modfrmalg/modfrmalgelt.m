@@ -111,6 +111,24 @@ end intrinsic;
 
 // access
 
+intrinsic BaseField(f::ModFrmAlgElt) -> Fld
+{returns the field of definition of the vector representing the eigenform.}
+  return BaseRing(f`vec);
+end intrinsic;
+
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, p::RngIntElt : k := 1) -> SeqEnum
+{Returns the Hecke eigenvalue of T(p^k) at the specified prime.}
+   R := BaseRing(Module(f`M));
+   pR := Type(R) eq RngInt select ideal<R|p> else Factorization(R!!p)[1][1];
+   return HeckeEigenvalue(f, pR : k := k);
+end intrinsic;
+
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, pR::RngInt : k := 1) -> SeqEnum
+{Returns the Hecke eigenvalue of T(p^k) at the specified prime.}
+  vals, _ := HeckeEigensystem(f, k : Precision := [pR]);
+  return vals[1];
+end intrinsic;
+
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, p::RngIntElt) -> SeqEnum
 {Returns a list of all Hecke eigenvalues at the specified prime.}
      R := BaseRing(Module(f`M));
@@ -125,8 +143,9 @@ end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngOrdIdl) -> SeqEnum
 { Returns a list of all Hecke eigenvalues at the specified prime. }
+        // not really needed
 	// Verify that this is an eigenform.
-	if not f`IsEigenform then return []; end if;
+	// if not f`IsEigenform then return []; end if;
 
 	// The largest possible type of Hecke operator to look at.
 	// max := Floor(Dimension(QuadraticSpace(f`M)) / 2);
@@ -178,7 +197,11 @@ intrinsic DisplayHeckeEigensystem(f::ModFrmAlgElt : Verbose := true, Precision :
 
 	// Retrieve all dimensions at which eigenvalues have been computed
         if IsZero(Precision) then
-	  keys := Keys(f`Eigenvalues);
+          if assigned f`Eigenvalues then
+	    keys := Keys(f`Eigenvalues);
+          else
+	    keys := [];
+	  end if;
         else
           n := Dimension(Module(f`M));
           keys := [1..n div 2];
@@ -341,16 +364,22 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
           disc := Integers()!disc;
         end if;
         fac := Factorization(disc);
-        is_sqrfree := &and[fa[2] eq 1 : fa in fac];
-        if is_sqrfree then
-	  // Decompose the spaceto eigenspaces
+	if IsEven(Rank(Level(M))) then
+	    is_sqrfree := &and[ fa[2] le 3 : fa in fac];
+	else
+            is_sqrfree := &and[fa[2] eq 1 : fa in fac];
+	end if;
+        if is_sqrfree and not IsSpecialOrthogonal(M) then
+	  // Decompose the space to eigenspaces
           D := Decomposition(M : Estimate := Estimate,
 			     Orbits := Orbits, LowMemory := LowMemory,
 			     ThetaPrec := ThetaPrec);
-	else 
-	  D := Decomposition(M, 10 : Estimate := Estimate,
-			     Orbits := Orbits, LowMemory := LowMemory,
-			     ThetaPrec := ThetaPrec);
+	else
+	    // !! TODO - figre out the correct Hecke bound
+	    bound := 20;
+	    D := Decomposition(M, bound : Estimate := Estimate,
+					  Orbits := Orbits, LowMemory := LowMemory,
+					  ThetaPrec := ThetaPrec);
 	end if;
 
         // This actually repeats the previous to get also the eigenvectors.
@@ -378,59 +407,60 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 	// Replace this by an actual bilinear form compatible with the group
 	// Add handling the case when the narrow class group of the field
 	// is nontrivial.
-	wts := &cat[[#AutomorphismGroup(reps[i]) : j in [1..Dimension(M`H[i])]]:
-		    i in [1..#reps]];
+	wts := &cat[[#AutomorphismGroup(reps[i] : Special := IsSpecialOrthogonal(M))
+		     : j in [1..Dimension(M`H[i])]]: i in [1..#reps]];
 	// instead of dividing by wts[i], we multiply for the case of positive
 	// characteristic
         wt_prod := IsEmpty(wts) select 1 else &*wts;
 	mult_wts := [wt_prod div wt : wt in wts];
 	
 	for i in [1..#spaces] do
-	    // Extract the first basis vector of the eigenspace.
-	    vec := Basis(spaces[i])[1];
+	    // We build a form for every basis vector
+	    for vec in Basis(spaces[i]) do
+
+		//	    vec := Basis(spaces[i])[1];
 	    
-	    //		for vec in basis do
-	    // Construct an element of the modular space.
-	    mform := New(ModFrmAlgElt);
-
-	    // Assign parent modular space.
-	    mform`M := M;
-
-            // for display purposes
-            K_f := BaseRing(vec);
-            if Type(K_f) ne FldRat then
-               AssignNames(~K_f, [Sprintf("a_%o", i)]);
-            end if;
-	    // Assign vector.
-	    mform`vec := vec;
-
-	    // If the weight is non-trivial all forms are cuspidal
-            // !!! TODO - do the general case, we might have some
-            // multiplicity of the trivial representation
-            if not IsTrivial(Weight(M)) then
-              mform`IsCuspidal := true;
-	    else
-	      mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
-				    i in [1..#wts]] eq 0;
-            end if;
-
-	    // Cusp forms are not Eistenstein.
-	    mform`IsEisenstein := not mform`IsCuspidal;
-
-	    // This shouldn't happen if we fully decomposed the space.
-	    // This is an eigenform if and only if the size
-	    //  of the subspace has dimension 1.
-	    mform`IsEigenform := not i in reducible;
-	    // mform`IsEigenform := true;
-
-	    // Add to list.
-	    Append(~eigenforms, mform);
+		//		for vec in basis do
+		// Construct an element of the modular space.
+		mform := New(ModFrmAlgElt);
 		
-	    // Store the Eisenstein series in memory.
-	    if mform`IsEisenstein then
-		M`Hecke`EisensteinSeries := mform;
-	    end if;
-	    // end for;
+		// Assign parent modular space.
+		mform`M := M;
+		
+		// for display purposes
+		K_f := BaseRing(vec);
+		if Type(K_f) ne FldRat then
+		    AssignNames(~K_f, [Sprintf("a_%o", i)]);
+		end if;
+		// Assign vector.
+		mform`vec := vec;
+
+		// If the weight is non-trivial all forms are cuspidal
+		// !!! TODO - do the general case, we might have some
+		// multiplicity of the trivial representation
+		if not IsTrivial(Weight(M)) then
+		    mform`IsCuspidal := true;
+		else
+		    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+					    i in [1..#wts]] eq 0;
+		end if;
+		
+		// Cusp forms are not Eistenstein.
+		mform`IsEisenstein := not mform`IsCuspidal;
+		
+		// This shouldn't happen if we fully decomposed the space.
+		// This is an eigenform if and only if the size
+		//  of the subspace has dimension 1.
+		mform`IsEigenform := not i in reducible;
+
+		// Add to list.
+		Append(~eigenforms, mform);
+		
+		// Store the Eisenstein series in memory.
+		if mform`IsEisenstein then
+		    M`Hecke`EisensteinSeries := mform;
+		end if;
+	    end for;
 	end for;
 
 	// Assign Hecke eigenforms.
@@ -459,10 +489,14 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
        */
 	// In order to support positive characteristic we leave the coordinates
 	// not normalized by weights.
+	
+	// require Dimension(M`W) eq 1 :
+	require IsTrivial(M`W) : 
+			 "Cannot create Eisenstein series for non-trivial weight";
 
-	require Dimension(M`W) eq 1 :
-		"Cannot create Eisenstein series for nontrivial weight!";
-	vec := Vector([1 : i in [1..Dimension(M)]]);
+	require Dimension(M) gt 0 :
+				  "There are no Eisenstein Series in a 0-dimensional space";
+	vec := Vector(BaseRing(M`W), [1 : i in [1..Dimension(M)]]);
 	
 	// Create the modular form corresponding to the Eisenstein series.
 	mform := New(ModFrmAlgElt);
@@ -1110,7 +1144,173 @@ intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt
   R<q> := PuiseuxSeriesRing(BaseRing(v));
   dim := Degree(v);
   reps := Representatives(Genus(f`M));
-  aut := [#AutomorphismGroup(r) : r in reps];
+  aut := [#AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M)) : r in reps];
   invs := [R | Invariant(r : Precision := Precision) : r in reps];
   return &+[aut[i]^-1*v[i]*invs[i] : i in [1..#reps]];
 end intrinsic;
+
+// This one is to make sure we got it all correctly
+intrinsic ShimuraLift(f::RngSerPowElt, k::RngIntElt,
+					  N::RngIntElt : Precision := 25) -> RngSerPowElt
+	  {return the Shimura Lift of f in the space M_k(N) with precision q^prec.}
+    keys := PrimesUpTo(Precision-1);
+    eigenvalues := AssociativeArray(keys);
+    for p in keys do
+	chi1 := p eq 2 select 0 else (-1)^(((p-1) div 2)*(k div 2));
+	eigenvalues[p] := Coefficient(f, p^2)+ chi1 * p^(k div 2 - 1);
+    end for;
+    R<q> := Parent(f);
+    a := [BaseRing(R) | 1 : n in [1..Precision-1]];
+    for n in [2..Precision-1] do
+	if IsPrime(n) then
+	    a[n] := eigenvalues[n];
+	else
+	    is_prime_power, p, e := IsPrimePower(n);
+	    if is_prime_power then
+		// Is n div p or p^(e-1) faster?
+		a[n] := a[p]*a[p^(e-1)];
+		if (N mod p ne 0) then
+		    a[n] -:= p^(k-1) * a[p^(e-2)];
+		end if;
+	    else
+		// Enough to find one divisor, is there a function to that?
+		fac := Factorization(n);
+		p_e := fac[1][1]^fac[1][2];
+		m := n div p_e;
+		a[n] := a[m]*a[p_e];
+	    end if;
+	end if;
+    end for;
+    lift := &+[a[n]*q^n : n in [1..Precision-1]] + O(q^Precision);
+    return lift;
+end intrinsic;
+
+// This is a temporary fix that only works for spherical polynomial representations,
+// namely for weights of the form [k,0]
+function embed_v_in_rep(v)
+    return &cat[[v[i]] cat [0 : j in [1..Degree(v)-1]] : i in [1..Degree(v)]];
+end function;
+
+function MatrixSquareRoot(Q)
+    f_Q<x> := CharacteristicPolynomial(Q);
+    K<a> := SplittingField(Evaluate(f_Q, x^2));
+    Q_K := ChangeRing(Q,K);
+    evs := [x[1] : x in Eigenvalues(Q_K)];
+    V := Matrix(&cat[Basis(Eigenspace(Q_K,ev)) : ev in evs]);
+    D := V*Q*V^(-1);
+    sqrt_D := DiagonalMatrix([Sqrt(x) : x in Diagonal(D)]);
+    sqrt_Q := V^(-1)*sqrt_D*V;
+    assert sqrt_Q^2 eq Q;
+    return sqrt_Q;
+end function;
+
+// This does not include the constant coefficient, coming from the 0 vector
+intrinsic Theta1(f::ModFrmAlgElt : Precision := 25) -> RngSerPowElt
+	  {Return the theta lift of f of genus 1 - we return the normalized cuspform for GL2.}
+    v := f`vec;
+    h_dims := [Dimension(h) : h in f`M`H];
+    h_dimsum := [&+h_dims[1..i] : i in [0..#h_dims]];
+    v_h := [Eltseq(v)[h_dimsum[i]+1..h_dimsum[i+1]] : i in [1..#f`M`H]];
+    H := [ChangeRing(h, FieldOfFractions(BaseRing(v))) : h in f`M`H];
+    vecs := [* &+[v_h[j][i]*H[j]`embedding(H[j].i) : i in [1..Dimension(H[j])]]
+	     : j in [1..#H] *];
+    if IsTrivial(f`M`W) then
+	n := Rank(InnerForm(f`M));
+	all_polys := [* [PolynomialRing(BaseRing(v),n^2)!1] : vec in vecs *];
+    else
+	all_polys := [* Names(Parent(vec)`M) : vec in vecs *];
+    end if;
+    vecvec := [* vec`m`vec : vec in vecs *];
+    polys := [*&+[vecvec[j][i]*all_polys[j][i] : i in [1..#all_polys[j]]]
+	      : j in [1..#all_polys]*];
+    _<q> := PowerSeriesRing(BaseRing(v));
+    reps := Representatives(Genus(f`M));
+    aut := [#AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M)) : r in reps];
+    fs := [];
+    assert #reps eq #H;
+    for i in [1..#reps] do
+	r := reps[i];
+	shortvecs := ShortVectors(ZLattice(r), 2*(Precision-1));
+	shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
+	// Here we divide by 2 to obtain the actual modular form
+	// (which could be of half integral weight, when the rank is odd)
+	f_r := &+[Evaluate(polys[i], embed_v_in_rep(v[1]))*q^(Integers()!v[2] div 2)
+		  : v in shortvecs];
+	Append(~fs, f_r);
+    end for;
+    theta := &+[aut[i]^-1*fs[i] : i in [1..#reps]] + O(q^Precision);
+    // We return a normalized eigenform
+    nonzero := exists(pivot){i : i in [1..Precision-1] | Coefficient(theta,i) ne 0};
+    if nonzero then
+	theta := Coefficient(theta,pivot)^(-1)*theta;
+    end if;
+    return theta;
+end intrinsic;
+
+// Here there is a question by what do we bound the vectors,
+// as we do not have control on all entries of the Gram matrix
+// (maybe we can do this, but requires adaptation of LLL)
+// For now we bound the norm of both vectors (and not bound their inner product)
+intrinsic Theta2(f::ModFrmAlgElt : Precision := 25) -> Assoc
+{return the theta lift of f to GSp(4). Result is returned as an associative array
+	with exponents of the variables as keys, and coefficients as values.}
+    v := f`vec;
+    // we no longer use the power series ring, because we have negative powers,
+    // and this forces some cumbersome operations.
+    // Instead we use a hash table mapping the exponents to the coefficient
+    coeffs := AssociativeArray();
+    reps := Representatives(Genus(f`M));
+    for i in [1..#reps] do
+	r := reps[i];
+	shortvecs := ShortVectors(ZLattice(r), Precision);
+	shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
+	num_auts := #AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M));
+	wt := num_auts^-1*v[i];
+	for v1,v2 in shortvecs do
+	    if (v1[1] eq v2[1]) or (v1[1] eq -v2[1]) then
+		continue;
+	    end if;
+	    key := <v1[2], (v1[1], v2[1]), v2[2]>;
+	    if not IsDefined(coeffs, key) then
+		coeffs[key] := 0;
+	    end if;
+	    coeffs[key] +:= wt;
+	end for;
+    end for;
+    return coeffs;
+end intrinsic;
+
+// This is the general theta series.
+// For g = 1,2 it is slower than the implementations above
+intrinsic ThetaSiegel(f::ModFrmAlgElt, g::RngIntElt : Precision := 25) -> Assoc
+{return the theta lift of f to GSp(4). Result is returned as an associative array
+        with exponents of the variables as keys, and coefficients as values.}
+    v := f`vec;
+    // we no longer use the power series ring, because we have negative powers,                
+    // and this forces some cumbersome operations in magma                                     
+    // Instead we use a hash table mapping the exponents to the coefficient
+    coeffs := AssociativeArray();
+    reps := Representatives(Genus(f`M));
+    for i in [1..#reps] do
+        r := reps[i];
+        shortvecs := ShortVectors(ZLattice(r), Precision);
+        shortvecs cat:= [<-v[1],v[2]> : v in shortvecs];
+	num_auts := #AutomorphismGroup(r : Special := IsSpecialOrthogonal(f`M));
+        wt := num_auts^-1*v[i];
+	subseqs := Subsequences(Set(shortvecs), g);
+	for xs in subseqs do
+	    vecs := [x[1] : x in xs];
+	    mat := Matrix(vecs);
+            if (Rank(mat) ne g) then
+                continue;
+            end if;
+            key := &cat[[(vecs[i], vecs[j]) : j in [1..i]] : i in [1..g]];
+            if not IsDefined(coeffs, key) then
+                coeffs[key] := 0;
+            end if;
+            coeffs[key] +:= wt;
+        end for;
+    end for;
+    return coeffs;
+end intrinsic;
+

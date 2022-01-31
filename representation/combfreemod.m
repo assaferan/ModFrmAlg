@@ -182,7 +182,7 @@ intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
 end intrinsic;
 
 intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
-			  v::ModTupFldElt[FldOrd[FldRat]]) -> CombFreeModElt
+			  v::ModTupFldElt[Fld]) -> CombFreeModElt
 {Construct an element of CFM whose underlying vector is v.}
   elt := New(CombFreeModElt);
   elt`vec := v;
@@ -191,8 +191,9 @@ intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
   elt`name := createElementString(Eltseq(v), CFM`names);
 
   return elt;
-end intrinsic;
-
+  end intrinsic;
+  
+/*
 intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
 			  v::ModTupFldElt[FldNum[FldRat]]) -> CombFreeModElt
 {Construct an element of CFM whose underlying vector is v.}
@@ -216,6 +217,7 @@ intrinsic CombinatorialFreeModuleElement(CFM::CombFreeMod,
 
   return elt;
 end intrinsic;
+*/
 
 /* access */
 
@@ -273,6 +275,9 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
       elif Type(BaseRing(U2)) eq FldRat then
 	is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
         if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)| 1 >; end if;
+      elif Type(BaseRing(U1)) eq FldFin then
+	  if Type(BaseRing(U2)) ne FldFin then return false; end if;
+	  return BaseRing(U1) eq BaseRing(U2);
       else
 	is_isom, psi := IsIsomorphic(BaseRing(U1), BaseRing(U2));
       end if;
@@ -280,14 +285,10 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
       if not is_isom or Ngens(U1) ne Ngens(U2) then
 	  return false;
       end if;
-//if (U1 ne U2) then
-        phi := hom<U1 -> U2 | psi, GeneratorsSequence(U2)>;
-//        phi := hom< U1 -> U2 | [U2.i : i in [1..Ngens(U2)]]>;
-        return &and[phi(M1`names[i]) eq M2`names[i] : i in [1..#M1`names]];
-//     end if;
+      phi := hom<U1 -> U2 | psi, GeneratorsSequence(U2)>;
+      return &and[phi(M1`names[i]) eq M2`names[i] : i in [1..#M1`names]];
   end if;
   if #M1`names ne #M2`names then return false; end if;
-// return &and[M1`names[i] eq M2`names[i] : i in [1..#M1`names]];
   return &and[&cat Split(M1`names[i], " \n") eq &cat Split(M2`names[i], " \n")
 	    : i in [1..#M1`names]];
 end intrinsic;

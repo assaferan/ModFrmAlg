@@ -23,7 +23,6 @@ freeze;
 
 // imports
 
-import "../unitary/fieldaut.m" : getFieldAutomorphism;
 // Should fix that to be able to use the same command for the symmetric case.
 import "../unitary/stdbasis.m" : ReflexiveForm, OrthogonalizeForm;
 
@@ -155,15 +154,13 @@ intrinsic Print(R::RfxSpace, level::MonStgElt)
 	  printf "AmbientReflexiveSpace(%m, %m)", InnerForm(R), Involution(R);
       end if;
   else
-  K := NumberField(MaximalOrder(BaseRing(R`V)));
-  // For display purposes
-  _<x> := Parent(DefiningPolynomial(K));
-// now we want to distinguish whether we work over QNF or not
-/*
-      if Degree(K) eq 1 then
-	K := Rationals();
+      K := BaseRing(R`V);
+      if Type(K) ne FldFin then
+	  K := NumberField(MaximalOrder(K));
       end if;
-*/
+      // For display purposes
+      _<x> := Parent(DefiningPolynomial(K));
+
       if SpaceType(R) eq "Symmetric" then
         printf "quadratic space of dimension %o over %o", Rank(R`V), K;
       elif SpaceType(R) eq "Hermitian" then
@@ -171,7 +168,6 @@ intrinsic Print(R::RfxSpace, level::MonStgElt)
       elif SpaceType(R) eq "Alternating" then
 	printf "symplectic space of dimension %o over %o", Rank(R`V), K;
       end if;
-      // printf "%o", R`V;
   end if;
 end intrinsic;
 
@@ -258,7 +254,9 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt) -> RfxSpace
   // The field of fractions of the maximal order of our number field.
   F := FieldOfFractions(R);
 
-  alpha := FieldAutomorphism(F, AutomorphismGroup(F)!1);
+  // This doesn't work for finite fields
+  //  alpha := FieldAutomorphism(F, AutomorphismGroup(F)!1);
+  alpha := IdentityAutomorphism(F);
 
   return AmbientReflexiveSpace(innerForm, alpha);
 end intrinsic;
@@ -282,21 +280,14 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
       // Determine field of fractions.
       if IsField(R) then
 
-/*
-	  if R cmpeq Rationals() then
-	    R := RationalsAsNumberField();
-	  end if;
-*/
 	  // Make sure we're dealing with a number field.
-	  require IsNumberField(R) or (Type(R) eq FldOrd) or Type(R) eq FldRat:
-	          "Base ring must be a number field or number ring.";
-	  // The maximal order of our number field.
-	  R := Integers(R);
-/*
-      elif R cmpeq Integers() then
-	  // Convert to a maximal order format.
-	  R := Integers(RationalsAsNumberField());
-*/
+//	  require IsNumberField(R) or (Type(R) eq FldOrd) or Type(R) eq FldRat:
+//	          "Base ring must be a number field or number ring.";
+	  if  IsNumberField(R) or (Type(R) eq FldOrd) or Type(R) eq FldRat then
+	      // The maximal order of our number field.
+	      R := Integers(R);
+	  end if;
+
       end if;
 
       // The field of fractions of the maximal order of our number field.
@@ -353,7 +344,11 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
 
   // Assign the reflexive space.
   if SpaceType(rfxSpace) eq "Symmetric" then
-      rfxSpace`V := QuadraticSpace(innerForm / 2);
+      if IsInvertible(F!2) then
+	  rfxSpace`V := QuadraticSpace(innerForm / 2);
+      else
+	  rfxSpace`V := QuadraticSpace(innerForm);
+      end if;
   elif SpaceType(rfxSpace) eq "Alternating" then
       rfxSpace`V := SymplecticSpace(innerForm);
   elif SpaceType(rfxSpace) eq "Hermitian" then
@@ -373,7 +368,6 @@ intrinsic AmbientReflexiveSpace(innerForm::AlgMatElt, alpha::FldAut) -> RfxSpace
   rfxSpace`dim := Nrows(innerForm);
 
   // Assign the standard lattice for this reflexive space.
-  
   if Type(F) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
       rfxSpace`stdLat := StandardLattice(rfxSpace);
   end if;

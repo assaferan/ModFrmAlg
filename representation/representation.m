@@ -1407,8 +1407,8 @@ end intrinsic;
 
 forward my_prod;
 
-intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
-				   name := "x") -> GrpRep
+intrinsic SpinorNormRepresentationOld(G::GrpRed, d::RngIntElt :
+				      name := "x") -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);
@@ -1767,18 +1767,19 @@ function get_hw_basis_gl(lambda, F, n)
   return B, x;
 end function;
 
-function get_hw_basis_so(lambda, Q)
+function get_hw_basis_so(lambda, Q : Dual := true)
   F := BaseRing(Q);
   n := Degree(Parent(Q));
   B, x := get_hw_basis_gl(lambda, F, n);
-  laplacians := [[&+[Q[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
-			: i,j in [1..n]] : f in B] : p,q in [1..n]];
+  Q_lap := Dual select Q^(-1) else Q;
+  laplacians := [[&+[Q_lap[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
+		     : i,j in [1..n]] : f in B] : p,q in [1..n]];
   kers := [get_lap_kernel(lap) : lap in laplacians];
   ker := &meet kers;
   return [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
 end function;
 
-function get_hw_rep_poly(lambda, B, n)
+function get_hw_rep_poly(lambda, B, n : Dual := false)
   R := Universe(B);
   F := BaseRing(R);
   M := CombinatorialFreeModule(F, {@ b : b in B@});
@@ -1793,6 +1794,7 @@ function get_hw_rep_poly(lambda, B, n)
   hw_vdw_data := [* degs, [Eltseq(v) : v in vecs] *];
   // !!! TODO - this is still inefficient
   // can change construction of vec_g to not need multiplication
+  g_R_str := Dual select Sprintf("g^(-1)") else Sprintf("Transpose(g)");
   action_desc := Sprintf("           
   	      function action(g, m, V)
 	      	      B := Names(V`M);
@@ -1801,9 +1803,9 @@ function get_hw_rep_poly(lambda, B, n)
                       gens := GeneratorsSequence(R);
                       x := Matrix([[gens[n*i+j+1] 
                             : j in [0..n-1]] : i in [0..n-1]]);
-                      g_R := ChangeRing(g, R);
+                      g_R := ChangeRing(%o, R);
                       f := B[m];
-                      f_g := Evaluate(f, Eltseq(Transpose(g_R)*x));
+                      f_g := Evaluate(f, Eltseq(g_R*x));
                       deg_rev := V`hw_vdw_rev;
                       F := BaseRing(R);
                       mon_vs := VectorSpace(F, #deg_rev);
@@ -1824,7 +1826,7 @@ function get_hw_rep_poly(lambda, B, n)
                                  Solution(basis_mat, vec_g));
   	      end function;
   	      return action;
-	      ", n);
+	      ", n, g_R_str);
   
   V := GroupRepresentation(GL(n, F), M, action_desc :
 			   params := [* <"HW_VDW", <hw_vdw_data, lambda> > *]);
@@ -1861,7 +1863,7 @@ function getSOHighestWeightRepresentationPolys(lambda, Q)
   n := Degree(Parent(Q));
   B := get_hw_basis_so(lambda, Q);
 
-  return get_hw_rep_poly(lambda, B, n);
+  return get_hw_rep_poly(lambda, B, n : Dual);
 end function;
 
 // This is for debugging purposes
@@ -1883,7 +1885,10 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
 {returns the irreducible representation with highest weight lambda.}
   require #InnerForms(G) eq 1 : "Highest weight representation for G is currently not supported";
   Q := InnerForm(InnerForms(G)[1]);
-  F := NumberField(MaximalOrder(BaseRing(Q)));
+  F := BaseRing(Q);
+  if Type(F) ne FldFin then
+      F := NumberField(MaximalOrder(F));
+  end if;
   Q := ChangeRing(Q, F);
   if IsOrthogonal(G) then
     V := getSOHighestWeightRepresentationPolys(lambda, Q);
@@ -1906,37 +1911,44 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
 {new method of constructing the spinor norm representations. }
   L := StandardLattice(InnerForm(G,1));
   n := Dimension(L);
-  pR := Factorization(ideal<Integers() | p>)[1][1];
+  pR := Factorization(ideal<BaseRing(L) | p>)[1][1];
   nProc := BuildNeighborProc(L, pR, 1);
   // we use the fact that in our standard decomposition,
   // the radical is in the end
-  rad := Transpose(L`Vpp[pR]`V`Basis)[n];
-  assert (rad*L`Vpp[pR]`V`GramMatrix, rad) eq 0;
+  Vpp := L`Vpp[pR]`V;
+  rad := Matrix(Transpose(Vpp`Basis)[n-Vpp`RadDim+1..n]);
   basis := L`pMaximal[pR][2];
-  rad_lift := Vector([Integers()!rad[i] : i in [1..n]]);
-/*
-  temp := rad_lift * basis * ChangeRing(Q, Integers());
-  assert &and[temp[i] mod p eq 0 : i in [1..n]];
-*/
-  Fp := ResidueClassField(pR);
+  ZF := Order(pR);
+  ZF_p := Completion(ZF, pR);
+  Fp := ResidueClassField(ZF_p);
   rad := rad * ChangeRing(basis, Fp);
+  pRdata := [Eltseq(x) : x in Generators(pR)];
   a := Sprintf("
     function action(g,m,V)
           rad := %m;
           n := %m;
           Fp := BaseRing(rad);
-          g_p := Transpose(MatrixAlgebra(Fp,n)!g);
-          assert (rad*g_p eq rad) or (rad*g_p eq -rad);
-          return (rad*g_p eq rad) select (V`M).m else (-1)*(V`M).m;
+          ZF := Integers(BaseRing(g));
+          pRdata := %m;
+          pR := ideal<ZF | [ZF!x : x in pRdata]>;
+	  ZF_p := Completion(ZF, pR);
+          dummy, redp := ResidueClassField(ZF_p);
+          assert Fp eq dummy;
+          redp_mat := hom<MatrixAlgebra(ZF_p, n) -> MatrixAlgebra(Fp,n) | redp>;
+          // g_p := Transpose(MatrixAlgebra(Fp,n)!g);
+          g_p := Transpose(redp_mat(g));
+          scalar := Determinant(Solution(rad,rad*g_p));
+          scalar := (scalar eq 1) select Integers()!1 else -Integers()!1;
+          return scalar*(V`M).m; 
     end function;
     return action;
-  ", rad, n);
-  M := CombinatorialFreeModule(Rationals(), ["v"]);
-  return GroupRepresentation(GL(n,Rationals()), M, a);
+  ", rad, n, pRdata);
+  M := CombinatorialFreeModule(BaseRing(G), ["v"]);
+  return GroupRepresentation(GL(n,BaseRing(G)), M, a);
 end intrinsic;
 
 // Something here is off
-intrinsic SpinorNormRepresentationFast(G::GrpRed, d::RngIntElt) -> GrpRep
+intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt) -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);

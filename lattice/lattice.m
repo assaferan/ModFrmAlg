@@ -277,9 +277,9 @@ intrinsic StandardLattice(rfxSpace::RfxSpace) -> ModDedLat
   
   // Build the standard lattice.
   L := LatticeWithBasis(rfxSpace, basis);
-	
+
   require IsIntegral(L) :
-		    "Standard Lattice is not integral for reflexive space!" ; 
+    "Standard Lattice is not integral for reflexive space!" ;
 
   // Assign the ZLattice.
   L`ZLattice := ZLattice(L : Standard := true);
@@ -812,6 +812,16 @@ intrinsic Scale(lat::ModDedLat) -> RngOrdFracIdl
 
   // Return the scale.
   return lat`Scale;
+end intrinsic;
+
+// TODO - check that we have the right thing for number fields
+// We actually return an isometric lattice 
+intrinsic ScaledLattice(lat::ModDedLat, alpha::FldElt) -> ModDedLat
+{The lattice similar to L with Gram matrix scaled by alpha.}
+  gram := GramMatrixOfBasis(lat : Half := false);
+  form := alpha * gram;
+  V_new := AmbientReflexiveSpace(form); 
+  return StandardLattice(V_new);
 end intrinsic;
 
 intrinsic ElementaryDivisors(lambda::ModDedLat, pi::ModDedLat) -> SeqEnum
@@ -1587,7 +1597,11 @@ end intrinsic;
 
 intrinsic IsIntegral(L::ModDedLat) -> BoolElt
 {.}
-  return &and[IsIntegral(L,p) : p in BadPrimes(L)];
+  R := BaseRing(L);
+  above_2 := {p[1] : p in Factorization(ideal<R|2>)};
+  bad_primes := BadPrimes(L) join above_2;
+  //  return &and[IsIntegral(L,p) : p in BadPrimes(L)];
+  return &and[IsIntegral(L,p) : p in bad_primes];
 end intrinsic;
 
 intrinsic IsMaximalIntegral(L::ModDedLat, p::RngIntElt) -> BoolElt, ModDedLat
@@ -1667,7 +1681,8 @@ function is_maximal_integral(L,p)
     end if;
     x:= Next(PP);
   end while;
-  if IsIdentity(a) then
+  // This should work but apparently does not work in the even case
+  if IsIdentity(a) and IsOdd(Rank(L)) then
       assert GuessMaxDet(L, p) eq Valuation(Discriminant(L), p);
   end if;
   return true, _;
@@ -1690,9 +1705,11 @@ intrinsic IsMaximalIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt, ModDedLat
 end intrinsic;
 
 intrinsic BadPrimes(L::ModDedLat) -> []
-{The list of prime ideals at which L is not unimodular or which are even}
+// {The list of prime ideals at which L is not unimodular or which are even}
+{The list of prime ideals at which L is not unimodular}
   disc := Discriminant(L);
   scale := Scale(L);
+  ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(disc) };
 /*
   if Type(disc) eq FldRatElt then
     disc := Integers()!disc;
@@ -1701,7 +1718,7 @@ intrinsic BadPrimes(L::ModDedLat) -> []
     scale := Integers()!scale;  
   end if;
 */
-  ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(2*disc) };
+  // ret := { f[1] : f in Factorization(scale) } join { f[1] : f in Factorization(2*disc) };
 /*
   if Type(BaseRing(L)) eq RngInt then
     ret := {ideal<Integers()| p> : p in ret};
@@ -1710,13 +1727,68 @@ intrinsic BadPrimes(L::ModDedLat) -> []
   return ret;
 end intrinsic;  
 
+intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
+{Convert to the (now existing) magma built in type for number field lattices.}
+  // We might need a GramFactor here in general, check it out.
+  gram := 1/2*InnerForm(ReflexiveSpace(L));
+  pb := PseudoBasis(L);
+  ideals := [x[1] : x in pb];
+  F := BaseRing(gram);
+  if Type(F) eq FldRat then
+      // currently this functionality only exists over a number field
+      F := QNF();
+      ideals := [ideal<Integers(F) | Norm(I)> : I in ideals];
+  end if;
+  basis := [Vector(NumberField(Order(F)), x[2]) : x in pb];
+  nfl := NumberFieldLattice(basis : Gram := gram, Ideals := ideals);
+  return nfl;
+end intrinsic;
+
+// The standard GramFactor here is set to 1 beacuse this is the
+// default in the magma built in package.
+intrinsic LatticeFromLatNF(L::LatNF : GramFactor := 1) -> ModDedLat
+{Convert from the (now existing) magma built in type for number field lattices.}
+  // The inner form.
+  innerForm := (2/GramFactor) * PseudoGramMatrix(L);
+
+  // The ambient reflexive space.
+  Q := AmbientReflexiveSpace(innerForm);
+
+  // The basis for the lattice.
+  basis := ChangeRing(Matrix(PseudoBasis(L)), BaseRing(Q));
+  ideals := CoefficientIdeals(L);
+
+  // Build the lattice and return it.
+  return LatticeWithBasis(Q, basis, ideals);
+end intrinsic;
+
+// This is buggy!! Especially over 2
+// We replace it by the stable version from the NumberFieldLattice package, at least for quadratic lattices
+// (Eventually, all this file should be replaced by it)
 intrinsic IsMaximalIntegral(L::ModDedLat) -> BoolElt, ModDedLat
 {Checks whether L is maximal integral. If not, a minimal integral over-lattice is returned}
-  for p in BadPrimes(L) do
+
+  if IsQuadratic(L) then
+    // converting to number field lattice
+    nfl := NumberFieldLattice(L);
+
+    ok, LL := IsMaximalIntegral(nfl);
+  
+    if not ok then return false, LatticeFromLatNF(LL); end if;
+
+    return true, _;
+  end if;
+
+  R := BaseRing(L);
+  above_2 := {p[1] : p in Factorization(ideal<R|2>)};
+  bad_primes := BadPrimes(L) join above_2;
+  // for p in BadPrimes(L) do
+  for p in bad_primes do
     ok, LL:= IsMaximalIntegral(L, p);
     if not ok then return false, LL; end if;
   end for;
   return true, _;
+
 end intrinsic;
 
 intrinsic MaximalIntegralLattice(L::ModDedLat, p::RngOrdIdl) -> ModDedLat
@@ -1738,7 +1810,11 @@ intrinsic MaximalIntegralLattice(L::ModDedLat) -> ModDedLat
   require not IsZero(L) and IsIntegral(Norm(L)) :
     "The lattice must be integral and non-zero";
 
-  for p in BadPrimes(L) do
+  R := BaseRing(L);
+  above_2 := {p[1] : p in Factorization(ideal<R|2>)};
+  bad_primes := BadPrimes(L) join above_2;
+  // for p in BadPrimes(L) do
+  for p in bad_primes do
     ok, LL:= IsMaximalIntegral(L, p);
     while not ok do 
       L:= LL;    

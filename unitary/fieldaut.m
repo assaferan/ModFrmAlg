@@ -107,6 +107,12 @@ intrinsic FieldAutomorphism(L::Fld, g::GrpPermElt) -> FldAut
   return alpha; 
 end intrinsic;
 
+intrinsic IdentityAutomorphism(L::Fld) -> FldAut
+{.}
+  gal, _, _ := fullAutomorphismGroup(L);
+  return FieldAutomorphism(L, gal!1);
+end intrinsic;
+
 // This is needed because HasComplexConjugate can return a UserProgram
 intrinsic FieldAutomorphism(L::Fld, f::UserProgram) -> FldAut
 {.}

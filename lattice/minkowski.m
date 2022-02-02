@@ -393,7 +393,7 @@ intrinsic TernaryQuadraticLattices(d::RngIntElt) -> SeqEnum[AlgMatElt]
       end for;
     end for;
    end for;
-   printf "Checked %o forms.\n", cnt;
+   vprintf AlgebraicModularForms, 1 : "Checked %o forms.\n", cnt;
    return forms;
 end intrinsic;
 
@@ -670,6 +670,22 @@ function isReduced(vec, constraints)
   end for;
   return true, _;
 end function;
+
+function QuaternaryLatticeOfPrimeDiscriminant(p)
+    K<sqrtp> := QuadraticField(p);
+    sigma := Automorphisms(K)[2];
+    D := QuaternionAlgebra(K, -1, -1);
+    R := MaximalOrder(D);
+    Z_K<omega> := Integers(K);
+    basis_R := Basis(R) cat [omega*b : b in Basis(R)];
+    tmp := [Eltseq(R!(D![sigma(x) : x in Eltseq(b)] - Conjugate(b))) : b in basis_R];
+    M := Matrix([&cat[Eltseq(x) : x in tmp[i]] : i in [1..8]]);
+    ker := Kernel(M);
+    basis_ker := [&+[b[i]*basis_R[i] : i in [1..8]] : b in Basis(ker)];
+    Q := Matrix([[Norm(x+y)-Norm(x)-Norm(y) : x in basis_ker] : y in basis_ker]);
+    return Q;
+end function;
+
 /*
 function MinkowskiReduction(A)
   assert IsPositiveDefinite(A);
@@ -749,7 +765,7 @@ function closestLatticeVectorMinkowskiReduced(b, t, gram)
   return min_x_t*Matrix(b), min_g;
 end function;
 
-function magmaKohelReduction(M)
+function magmaKohelReduction(M : FindAuts := false)
     auts := [];
     deg := Degree(Parent(M));
     ZMat := MatrixAlgebra(Integers(),deg);
@@ -813,18 +829,15 @@ function magmaKohelReduction(M)
     end if;
     repeat
         M0, T1, aut1 := PermutationReduction(M0);
-        M0, T2, aut2 := SignNormalization(M0);
+        M0, T2, aut2 := SignNormalization(M0 : FindAuts);
         M0, T3, aut3 := NeighborReduction(M0);
-        auts cat:= [T^(-1)*g*T : g in aut1];
-// print "Permutations";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-        auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
-//     print "Signs";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-        auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
-//      print "Neighbors";
-        assert &and[g*M*Transpose(g) eq M : g in auts];
-	T1 := T3*T2*T1; 
+        if FindAuts then
+	  auts cat:= [T^(-1)*g*T : g in aut1];
+          auts cat:= [(T1*T)^(-1)*g*(T1*T) : g in aut2];
+          auts cat:= [(T2*T1*T)^(-1)*g*(T2*T1*T) : g in aut3];
+          assert &and[g*M*Transpose(g) eq M : g in auts];
+        end if;
+        T1 := T3*T2*T1;
 	T := T1*T;
     until T1 eq I;
     return Parent(M) ! (c * M0), T, auts;
@@ -1222,7 +1235,8 @@ function PermutationOrbit(QF)
     G := CoordinatePermutationGroup([ QF[i,i] : i in [1..dim] ]);
     for g in G do 
 	P := PermutationMatrix(g);
-        _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+// _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+        Q1 := P*QF*Transpose(P);
         Include(~orbit, Q1);
     end for;
     return orbit;
@@ -1240,7 +1254,8 @@ function SignOrbit(QF)
     for i in [1..dim] do
       P[i,i] := signs[i];
     end for;
-    _,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+//_,_,Q1 := GreedyReductionSimple(Rows(U),P*QF*Transpose(P));
+    Q1 := P*QF*Transpose(P);
     Include(~orbit, Q1);
   end for;
   return orbit;
@@ -1318,21 +1333,28 @@ function NeighborOrbit(QF)
     for C in NeighborSpace do
 	B0 := Matrix(C); 
 	if Abs(Determinant(B0)) eq 1 then
-	  _, _, Q := GreedyReductionSimple(Rows(I), B0*QF*Transpose(B0));
-          Include(~orbit, Q); 
+	  // _, _, Q := GreedyReductionSimple(Rows(I), B0*QF*Transpose(B0));
+          Q := B0*QF*Transpose(B0);
+// Include(~orbit, Q);
+          orbit join:= SignOrbit(Q);
 	end if;
     end for;
     return orbit;
 end function;
 
-function generate_orbit(QF)
+function GenerateOrbit(QF)
   num := 0;
   qs := {QF};
   while num lt #qs do
     num := #qs;
     qs := &join[PermutationOrbit(q) : q in qs];
     qs := &join[SignOrbit(q) : q in qs];
-//   qs := &join[NeighborOrbit(q) : q in qs];
+    qs := &join[NeighborOrbit(q) : q in qs];
   end while;
-  return qs;
+  orbit := {};
+  for q in qs do
+    _,_,q_red := GreedyReductionSimple(Rows(MatrixAlgebra(Rationals(),5)!1),q);
+    Include(~orbit, q_red);
+  end for;
+  return orbit;
 end function;

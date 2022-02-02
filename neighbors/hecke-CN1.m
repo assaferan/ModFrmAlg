@@ -69,10 +69,13 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
 				 Weight := 1,
 				 Special := false,
 				 ComputeGenus := false,
-				 ThetaPrec := 25)
+				ThetaPrec := 25,
+				Perestroika := false)
   // Build the neighbor lattice corresponding to the
   //  current state of nProc.
-  nLat := BuildNeighbor(nProc : BeCareful := BeCareful, UseLLL := UseLLL);
+  nLat := BuildNeighbor(nProc : BeCareful := BeCareful,
+			UseLLL := UseLLL,
+			Perestroika := Perestroika);
 
   if GetVerbose("AlgebraicModularForms") ge 2 then
     printf "Processing neighbor corresponding to isotropic subspace ";
@@ -242,7 +245,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 Estimate := true,
 				 ComputeGenus := false,
 				 LowMemory := false,
-				 ThetaPrec := 25)
+				 ThetaPrec := 25,
+				 Perestroika := false)
     L := reps[idx];
     // !! TODO - get this out of here
 
@@ -328,7 +332,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 					  Weight := w,
 				          Special := IsSpecialOrthogonal(M),
 				      ThetaPrec := ThetaPrec,
-				      ComputeGenus := ComputeGenus);
+				      ComputeGenus := ComputeGenus,
+				      Perestroika := Perestroika);
                 // Update nProc in preparation for the next neighbor
                 //  lattice.
 	        GetNextNeighbor(~nProc : BeCareful := BeCareful);
@@ -354,8 +359,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
           nNbrs := NumberOfNeighbors(M, pR, k);
-          vprintf AlgebraicModularForms, 1 :
-	    "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
+	  if nNbrs ne 0 then
+              vprintf AlgebraicModularForms, 1 :
+		  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
+	  end if;
           loopCount := fullCount - nNbrs + #isoOrbits * #F^nProc`skewDim;
           orb_start := Realtime();
 	  for orbit in isoOrbits do
@@ -386,7 +393,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				      Weight := w,
 				      Special := IsSpecialOrthogonal(M),
 				      ThetaPrec := ThetaPrec,
-				      ComputeGenus := ComputeGenus);
+				      ComputeGenus := ComputeGenus,
+				      Perestroika := Perestroika);
 		// Update nProc in preparation for the next neighbor
 		//  lattice.
 		GetNextNeighbor(~nProc
@@ -412,7 +420,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				  UseLLL := UseLLL,
 				  Special := IsSpecialOrthogonal(M),
 				  ComputeGenus := ComputeGenus,
-				  ThetaPrec := ThetaPrec);
+				  ThetaPrec := ThetaPrec,
+				  Perestroika := Perestroika);
 	    // Update nProc in preparation for the next neighbor
 	    //  lattice.
 	    GetNextNeighbor(~nProc
@@ -426,10 +435,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
    
     vprintf AlgebraicModularForms, 1 :
       "time spent on neighbors is %o sec.\n", nbr_tm;
-    if Orbits then
+    if Orbits and not LowMemory and #isoOrbits gt 0 then
       vprintf AlgebraicModularForms, 1 :
        "time spent per orbit is %o sec.\n", nbr_tm / #isoOrbits;
-    else
+    elif fullCount gt 0 then 
       vprintf AlgebraicModularForms, 1 :
        "time spent per neighbor is %o sec.\n", nbr_tm / fullCount;
     end if;
@@ -463,6 +472,8 @@ function finalizeHecke(M, hecke, idxs)
   return ret;
 end function;
 
+forward fillHeckeFromRelations;
+
 function HeckeOperatorCN1(M, pR, k
 			  : BeCareful := false,
 			    UseLLL := false,
@@ -470,7 +481,8 @@ function HeckeOperatorCN1(M, pR, k
 			    Orbits := true,
 			    ComputeGenus := false,
 			    LowMemory := false,
-			    ThetaPrec := 25)
+			    ThetaPrec := 25,
+			    Perestroika := false)
     if ComputeGenus then
       L := Module(M);
       reps := [L];
@@ -506,8 +518,12 @@ function HeckeOperatorCN1(M, pR, k
     start := Realtime();
 
     idx := 1;
+    other_hecke_computed := (#HeckeOperators(M) gt 0);
+    is_filled := false;
+    // max_idx := (#HeckeOperators(M) gt 0) select 1 else #M`H;
     while (idx le #M`H) do
-      HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
+    //while (idx le max_idx) do
+        HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			     start, ~count, ~elapsed, fullCount :
 			     BeCareful := BeCareful,
 			     Orbits := Orbits,
@@ -515,8 +531,18 @@ function HeckeOperatorCN1(M, pR, k
 			     Estimate := Estimate,
 			     ComputeGenus := ComputeGenus,
 			     LowMemory := LowMemory,
-			     ThetaPrec := ThetaPrec);
-      idx +:= 1;
+			     ThetaPrec := ThetaPrec,
+			     Perestroika := Perestroika);
+        if (other_hecke_computed) and (idx lt #M`H) then
+            tmp := finalizeHecke(M, hecke, [1..#M`H]);
+            column := Transpose(tmp);
+            indices := [1..idx];
+            is_filled, ret := fillHeckeFromRelations(M, column, indices, idx);
+            if (is_filled) then
+                break;
+            end if;
+        end if;
+        idx +:= 1;
     end while;
 
     if ComputeGenus then
@@ -527,7 +553,11 @@ function HeckeOperatorCN1(M, pR, k
       M`genus`RepresentativesAssoc := invs;
     end if;
 
-    return finalizeHecke(M, hecke, [1..#M`H]); 
+    if (not is_filled) then
+        ret := finalizeHecke(M, hecke, [1..#M`H]);
+    end if;
+
+    return ret;
 end function;
 
 // compute T_p(e_{i,j}) where i = space_idx, j = vec_idx
@@ -537,7 +567,8 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				       Estimate := true,
 				       Orbits := true,
 				       LowMemory := false,
-				       ThetaPrec := 25)
+				     ThetaPrec := 25,
+				     Perestroika := false)
 
     assert 1 le idx and idx le #M`H;
     // The genus representatives.
@@ -570,7 +601,8 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 			     UseLLL := UseLLL,
 			     Estimate := Estimate,
 			     LowMemory := LowMemory,
-			     ThetaPrec := ThetaPrec);
+			   ThetaPrec := ThetaPrec,
+			   Perestroika := Perestroika);
    
     return finalizeHecke(M, hecke, [idx]);
 end function;
@@ -581,7 +613,8 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 				  Estimate := true,
 				  Orbits := true,
 				  LowMemory := false,
-				  ThetaPrec := ThetaPrec)
+				ThetaPrec := ThetaPrec,
+				Perestroika := false)
     ret := [* KMatrixSpace(BaseRing(M`H[1]),Dimension(M),Dimension(h))!0 :
 	    h in M`H *];
     for tup in s do
@@ -595,7 +628,8 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 					       Estimate := Estimate,
 					       Orbits := Orbits,
 					       LowMemory := LowMemory,
-					       ThetaPrec := ThetaPrec);
+				      ThetaPrec := ThetaPrec,
+				      Perestroika := Perestroika);
 	ret[space_idx] +:= hecke;
     end for;
     return ret;
@@ -612,3 +646,226 @@ intrinsic HeckeInitializeInvs(M::ModFrmAlg, ThetaPrec::RngIntElt) -> Assoc
   end if;
   return invs;
 end intrinsic;
+
+function getIndices(M, dim)
+    // Retrieve the Hecke eigenforms for this space.
+    fs := HeckeEigenforms(M);
+
+    // Prioritize the isometry class indices which allow us to reconstruct
+    //  the Hecke matrix from a single list of neighbors.
+    good := [ i : i in [1..dim]
+        | &*[ Eltseq(f`vec)[i] eq 0 select 0 else 1 : f in fs ] eq 1 ];
+
+    // Return a full list of indices in the order we will compute.
+    return good cat [ i : i in [1..dim] | not i in good ];
+end function;
+
+// The involution alpha induces a permutation on the
+// genus representatives, which is an ingredient in computing the
+// invariant unitary form
+// !! TODO !! - This could be just called once, remembering the information
+function alpha_permutation(M)
+    V := ReflexiveSpace(Module(M));
+    alpha := Involution(V);
+    F := BaseField(alpha);
+    reps := Representatives(Genus(M));
+    perm := [];
+    for lat in reps do
+	pb := PseudoBasis(lat);
+	idls := [b[1] : b in pb];
+	vecs := [b[2] : b in pb];
+	alpha_idls := [alpha(x) : x in idls];
+	alpha_vecs := [alpha(Vector(F,v)) : v in vecs];
+	if Type(F) eq FldRat then
+	    alpha_lat := LatticeWithBasis(V, Matrix(alpha_vecs));
+	else
+	    alpha_pmat := PseudoMatrix(alpha_idls, Matrix(alpha_vecs));
+	    alpha_lat := LatticeWithPseudobasis(V, alpha_pmat);
+	end if;
+	// !! TODO !! use invariants to make thi faster.
+	// can also use the fact that this is order 2 to do half the work
+	for idx in [1..#reps] do
+	    lat_prime := reps[idx];
+	    if IsIsometric(lat_prime, alpha_lat) then
+		Append(~perm, idx);
+		break;
+	    end if;
+	end for;
+    end for;
+    return perm;
+end function;
+
+function fillHeckeFromRelations(M, column, indices, ind)
+    // We will now recover the entire Hecke operator from the data
+    //  we just computed by using some tricks involving the
+    //  structure of the Hecke operators as well as some linear
+    //  algebra.
+    vprintf AlgebraicModularForms, 2 :
+        "Attempting to build Hecke matrix (attempt #%o)...\n", ind;
+
+    dim := Dimension(M);
+
+    // The number of initial free variables.
+    freevars := Binomial(dim - ind + 1, 2) - (dim - ind);
+
+    // The sizes of the automorphism groups.
+    aut := [ #AutomorphismGroup(L : Special := IsSpecialOrthogonal(M))
+	     : L in M`genus`Representatives ];
+
+    // spreading them according to the spaces
+    // !! TODO !! - Is this the correct thing to do?
+    // Is it the natural unitary form?
+    aut := &cat[[aut[i] : j in [1..Dimension(M`H[i])]] : i in [1..#M`H]];
+
+    perm := alpha_permutation(M);
+
+    h_dims := [Dimension(h) : h in M`H];
+    space_idxs := [&+h_dims[1..i] : i in [0..#M`H-1]];
+    perm := &cat[[space_idxs[perm[i]]+j : j in [1..Dimension(M`H[i])]] : i in [1..#M`H]];
+    
+    // add free variables in nonzero characteristic
+    for j in [1..dim] do
+        for i in [1..dim] do
+            denom := BaseRing(Weight(M))!Denominator(aut[i]/aut[j]);
+            if (denom eq 0) and (perm[i] notin indices[1..ind]) then
+                freevars +:= 1;
+            end if;
+        end for;
+    end for;
+
+    // The polynomial ring under consideration.
+    Z := PolynomialRing(BaseRing(Weight(M)), freevars);
+
+    // We now construct the entire Hecke operator from the first
+    //  column.
+    hecke := Zero(MatrixRing(Z, dim));
+
+    // Fill in the entries from the values we've already computed.
+    kk := 0;
+    for j in indices[1..ind] do
+        for i in [1..dim] do
+            hecke[j,i] := column[j][i];
+            denom := BaseRing(Weight(M))!Denominator(aut[i]/aut[j]);
+            if (denom ne 0) then
+                hecke[perm[i],perm[j]] := aut[i] / aut[j] * column[j][i];
+	    elif perm[i] notin indices[1..ind] then
+                kk +:= 1;
+                hecke[perm[i],perm[j]] := Z.kk;
+            end if;
+        end for;
+    end for;
+    
+    // Count the number of neighbors computed.
+    neighbors := &+Eltseq(column[indices[ind]]);
+
+    // Let's fill out the hecke matrix first.
+    for i in [1..dim] do
+        // Skip the indices we've already computed.
+        if i in indices[1..ind] then continue; end if;
+
+        for j in [i..dim] do
+            // Skip the indices we've already computed.
+            if (perm[j] in indices[1..ind]) or
+	       (j eq perm[i] or perm[j] lt i) then continue; end if;
+
+            kk +:= 1;
+            hecke[i,j] := Z.kk;
+            denom := BaseRing(Weight(M))!Denominator(aut[j]/aut[i]);
+            if (denom ne 0) then
+                hecke[perm[j],perm[i]] := aut[j] / aut[i] * Z.kk;
+            else
+                kk +:= 1;
+		hecke[perm[j],perm[i]] := Z.kk;
+            end if;
+        end for;
+    end for;
+
+    // Need to fill in the diagonal entries so that the row sums
+    //  match.
+    rows := Rows(hecke);
+    for i in [1..dim] do
+        // Skip the indices we've already computed.
+        if i in indices[1..ind] then continue; end if;
+
+        hecke[i,perm[i]] := neighbors - &+Eltseq(rows[i]);
+    end for;
+
+    // Now we transpose so that column sums are constant.
+    hecke := Transpose(hecke);
+
+    // If the dimension of the Hecke operator is 1 or 2, then we
+    //  don't need to do any extra work.
+    if dim le 2 then return true, ChangeRing(hecke, BaseRing(Weight(M))); end if;
+
+    list := {};
+
+    // Retrieve Hecke operators that has already been computed.
+    // !! TODO : Do we want to limit the number of Hecke operators for efficiency reasons?
+    for T_Q in HeckeOperators(M) do
+        T := ChangeRing(T_Q, Z);
+
+        // The commutator matrix must be zero, so we end up with
+        // additional linear relations that need to be resolved.
+        comm := hecke * T - T * hecke;
+
+        // The distinct linear relations.
+        list join:= Set([ Normalize(x) : x in Eltseq(comm) | x ne 0 ]);
+        
+    end for;
+
+    // A list of lists that will be turned into a matrix encoding
+    //  the linear relations we seek.
+    mat := [];
+
+    for x in list do
+        // The list of coefficients of each term.
+        c := Coefficients(x);
+
+        // The monomials associated to each coefficient above.
+        m := Monomials(x);
+
+        // A sequence of coefficnets.
+        coeff := [ BaseRing(Weight(M))!0^^(freevars+1) ];
+
+        // A pointer to the current term we're considering.
+        ptr := 1;
+        for i in [1..freevars] do
+            if ptr le #m and m[ptr] eq Z.i then
+                // Update the coefficients and move on.
+                coeff[i] := c[ptr];
+                ptr +:= 1;
+            end if;
+        end for;
+
+        // Include the constant coefficient.
+        coeff[freevars+1] := -Evaluate(x, [ 0^^freevars ]);
+
+        // Add coefficients to our list.
+        Append(~mat, coeff);
+    end for;
+
+    if #mat ne 0 then
+        // Construct a matrix from the coefficients we extracted
+        //  from the relation.
+        mat := Matrix(mat);
+
+        // Compute the echelon form of this matrix.
+        mat := EchelonForm(mat);
+
+        // Extract the nonzero rows from this matrix.
+        mat := Matrix([ row :
+            row in Rows(mat) | not IsZero(row) ]);
+
+        if #Rows(mat) eq freevars then
+            // print "Success!";
+            // The values of the free variables.
+            evs := Rows(Transpose(mat))[freevars+1];
+            return true, ChangeRing(Evaluate(hecke, Eltseq(evs)),
+                BaseRing(Weight(M)));
+        else
+            return false,_;
+        end if;
+    end if;
+
+    return false, _;
+end function;

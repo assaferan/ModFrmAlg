@@ -155,7 +155,8 @@ end intrinsic;
 
 // internal function for several of the interfaces below
 function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
-		       ComputeGenus, LowMemory, ThetaPrec)
+		       ComputeGenus, LowMemory, ThetaPrec :
+		       Perestroika := false)
   // Initialize the space of algebraic modular forms, if needed.
   if not ComputeGenus then
     ModFrmAlgInit(M : BeCareful := BeCareful,
@@ -204,7 +205,8 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
   hecke := HeckeOperatorCN1(M, pR, k : BeCareful := BeCareful,
 			    UseLLL := use_LLL, Estimate := Estimate,
 			    Orbits := Orbits, ComputeGenus := ComputeGenus,
-			    LowMemory := LowMemory, ThetaPrec := ThetaPrec);
+			    LowMemory := LowMemory, ThetaPrec := ThetaPrec,
+			    Perestroika := Perestroika);
 
 
   // Sets the Hecke operator in the internal data structure for this
@@ -231,10 +233,32 @@ intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl, k::RngIntElt
 		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 
+intrinsic PerestroikaOperator(M::ModFrmAlg, pR::RngOrdIdl
+			      : BeCareful := false,
+			      Force := false,
+			      Estimate := true,
+			      UseLLL := true,
+			      Orbits := true,
+			      ComputeGenus := false,
+			      LowMemory := false,
+			      ThetaPrec := 25) -> AlgMatElt
+{Computes the Perestroika Hecke operator.}
+  // TOOD : Should we check that V splits at p ?
+  // Verify that the supplied ideal is prime.
+  require IsPrime(pR): "Provided ideal must be prime.";
+  require IsOrthogonal(M): "Perestroika operator only exists for orthogonal groups.";
+  n := Rank(Module(M));
+  require IsEven(n) : "Perestroika operator only exists in even rank.";
+  k := n div 2;
+  return internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec : Perestroika);
+end intrinsic;
+			      
+
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngOrdIdl
 			: BeCareful := false,
 			  Force := false,
-			  Estimate := false,
+			  Estimate := true,
 			  UseLLL := true,
 			  Orbits := true,
 			  LowMemory := false,
@@ -255,9 +279,9 @@ end intrinsic;
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt, k::RngIntElt
 			: BeCareful := false,
 			  Force := false,
-			  Estimate := false,
+			  Estimate := true,
 			  UseLLL := true,
-			  Orbits := false,
+			  Orbits := true,
 			  LowMemory := false,
 			  ComputeGenus := false,
 			  ThetaPrec := 25) -> AlgMatElt
@@ -269,10 +293,32 @@ number field is the rationals. }
 		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 
+intrinsic PerestroikaOperator(M::ModFrmAlg, pR::RngInt
+			      : BeCareful := false,
+			      Force := false,
+			      Estimate := true,
+			      UseLLL := true,
+			      Orbits := true,
+			      ComputeGenus := false,
+			      LowMemory := false,
+			      ThetaPrec := 25) -> AlgMatElt
+{Computes the Perestroika Hecke operator, under the assumption that the base
+number field is the rationals. }
+  // TOOD : Should we check that V splits at p ?
+  // Verify that the supplied ideal is prime.
+  require IsPrime(pR): "Provided ideal must be prime.";
+  require IsOrthogonal(M): "Perestroika operator only exists for orthogonal groups.";
+  n := Rank(Module(M));
+  require IsEven(n) : "Perestroika operator only exists in even rank.";
+  k := n div 2;
+  return internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec : Perestroika);
+end intrinsic;
+
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
 			: BeCareful := false,
 			  Force := false,
-			  Estimate := false,
+			  Estimate := true,
 			  UseLLL := true,
 			  Orbits := true,
 			  LowMemory := false,
@@ -301,8 +347,7 @@ intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt, k::RngIntElt
 			  LowMemory := false,
 			  ComputeGenus := false,
 			  ThetaPrec := 25) -> AlgMatElt
-{ Computes the requested Hecke operator under the assumption that the base
-number field is the rationals. }
+{ Computes a Hecke operator at a prime above p. }
         pR := Factorization(ideal< BaseRing(Module(M)) | p >)[1][1];
         return HeckeOperator(M, pR, k
 			     : BeCareful := BeCareful,
@@ -314,6 +359,29 @@ number field is the rationals. }
 			       ComputeGenus := ComputeGenus,
 			       ThetaPrec := ThetaPrec);
 end intrinsic;
+
+intrinsic PerestroikaOperator(M::ModFrmAlg, p::RngIntElt
+			      : BeCareful := false,
+			      Force := false,
+			      Estimate := true,
+			      UseLLL := true,
+			      Orbits := true,
+			      ComputeGenus := false,
+			      LowMemory := false,
+			      ThetaPrec := 25) -> AlgMatElt
+{Computes the Perestroika Hecke operator, at a prime above p.}
+  pR := Factorization(ideal< BaseRing(Module(M)) | p >)[1][1];
+  return PerestroikaOperator(M, pR
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Orbits := Orbits,
+			       LowMemory := LowMemory,
+			       ComputeGenus := ComputeGenus,
+			       ThetaPrec := ThetaPrec);
+end intrinsic;
+
 
 intrinsic HeckeOperator(M::ModFrmAlg, p::RngIntElt
 			: BeCareful := false,
@@ -377,7 +445,8 @@ end function;
 
 // This will be used for both versions of HeckeImages
 function internalHeckeImages(M, i, prec, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec)
+			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec
+			     : Perestroika := false)
    assert 1 le i and i le Dimension(M);
    if not assigned M`Hecke`standard_images then
        M`Hecke`standard_images :=
@@ -428,11 +497,12 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
    for p in new_ps do
 	 sp_hec := HeckeOperatorCN1Sparse(M, p, k, s, invs :
 					  BeCareful := BeCareful,
-						     Estimate := Estimate,
-						     Orbits := Orbits,
-					             UseLLL := UseLLL,
-					             LowMemory := LowMemory,
-					             ThetaPrec := ThetaPrec);
+					  Estimate := Estimate,
+					  Orbits := Orbits,
+					  UseLLL := UseLLL,
+					  LowMemory := LowMemory,
+					  ThetaPrec := ThetaPrec,
+					  Perestroika := Perestroika);
        sp_mat := sp_hec[space_idx];
        for j in [start_idx..end_idx] do
 	   M`Hecke`standard_images[j][k][p] :=

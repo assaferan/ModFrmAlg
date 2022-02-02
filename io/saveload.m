@@ -290,7 +290,7 @@ intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> Mod
 
         if IsDefined(array, "LEVEL") then
 	   L := ChangeRing(L, K);
-           M := AlgebraicModularForms(G, W, L);
+           M := AlgebraicModularForms(G, W, L : GramFactor := IsQuadratic(L) select 2 else 1);
         else
            M := AlgebraicModularForms(G, W);
         end if;

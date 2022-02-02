@@ -151,31 +151,67 @@ intrinsic ParseNippDisc(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
   return genera;
 end intrinsic;
 
-intrinsic NippToForm(nipp_entry::Rec) -> AlgMatElt
-{.}
+intrinsic ParseNippDiscQuaternary(fname::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
+{Extract the records of a certain discrminant from a file in the Nipp database of quaternary lattices.}
+  r := Read(fname);
+  r_lines := Split(r, "\n");
+  split_lines := [Split(line, "\t ") : line in r_lines];
+  split_lines_disc := [line : line in split_lines |
+		       (#line ne 0) and (eval line[1]) eq d];
+  genera := [];
+  latGen := rec<latticeGenus_RF | >;
+  latGen`D := d;
+  latGen`genus := 1;
+  latGen`lattices := [];
+  num_hasse := #PrimeDivisors(2*d);
+  for line in split_lines_disc do
+      genus := eval line[2];
+      if (genus gt latGen`genus) then
+	  Append(~genera, latGen);
+	  latGen`genus := genus;
+	  latGen`lattices := [];
+      end if;
+      lattice := rec<lattice_RF | >;
+      lattice`form := [eval line[j] : j in [3..12]];
+      hasse_chars := [[line[i][j] : j in [1..#line[i]]] : i in [13..#line-4]];
+      hasse_strs := [&cat[(x eq "-") select " -" else x : x in hasse_char]
+		     : hasse_char in hasse_chars];
+      hasse_sym := &cat [[eval(y) : y in Split(hasse_str, " ")] : hasse_str in hasse_strs];
+      assert num_hasse eq #hasse_sym;
+      latGen`HasseSym := hasse_sym;
+      lattice`numAut := eval line[#line-2];
+      latGen`mass := (eval line[#line-1])/(eval line[#line]);
+      Append(~latGen`lattices, lattice);
+  end for;
+  Append(~genera, latGen);
+  return genera;
+end intrinsic;
+
+intrinsic NippToForm(nipp_entry::Rec : Rank := 5) -> AlgMatElt
+{Convert an entry from the Nipp database to a symmetric matrix.}
   // We take the first lattice, but it doesn't matter to us
   a := nipp_entry`lattices[1]`form;
-  off_diag := [x / 2 : x in a[6..#a]];
-  triangular := [j*(j-1) div 2 : j in [1..5]];
+  off_diag := a[Rank+1..#a];
+  triangular := [j*(j-1) div 2 : j in [1..Rank]];
   columns := [[]];
-  columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..4]];
-  a_magma := &cat[columns[i] cat [a[i]] : i in [1..5]];
+  columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..Rank-1]];
+  a_magma := &cat[columns[i] cat [2*a[i]] : i in [1..Rank]];
   return SymmetricMatrix(a_magma);
 end intrinsic;
 
-intrinsic NippToForms(nipp_entry::Rec) -> AlgMatElt
+intrinsic NippToForms(nipp_entry::Rec : Rank := 5) -> AlgMatElt
 {Convert a record in the Nipp database of quinary lattices to a sequence of matrices represting the forms in the genus.}
   forms := [];
   as := [lat`form : lat in nipp_entry`lattices];
-  triangular := [j*(j-1) div 2 : j in [1..5]];
+  triangular := [j*(j-1) div 2 : j in [1..Rank]];
   for a in as do
-    off_diag := a[6..#a];
+    off_diag := a[Rank+1..#a];
     columns := [[]];
-    columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..4]];
-    a_magma := &cat[columns[i] cat [2*a[i]] : i in [1..5]];
+    columns cat:= [off_diag[triangular[j]+1..triangular[j+1]] : j in [1..Rank-1]];
+    a_magma := &cat[columns[i] cat [2*a[i]] : i in [1..Rank]];
     Append(~forms, SymmetricMatrix(a_magma));
   end for;
-  return forms; 
+  return forms;
 end intrinsic;
 
 // Should change this, right now only works for small discs (up to 256)
@@ -209,6 +245,14 @@ intrinsic QuinaryQuadraticLattices(d::RngIntElt) -> SeqEnum[SeqEnum[AlgMatElt]]
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
   nipps := ParseNippDisc(nipp_fname, d);
   return [NippToForms(nipp) : nipp in nipps];
+end intrinsic;
+
+intrinsic QuaternaryQuadraticLattices(d::RngIntElt) -> SeqEnum[SeqEnum[AlgMatElt]]
+{Return representatives for all genera of positive definite quinary quadratic forms of discrimi
+nant d. Currently uses Nipp database and only works for d up to 457.}
+  nipp_fname := "lattice_db/nipp_4_4-457.txt";
+  nipps := ParseNippDiscQuaternary(nipp_fname, d);
+  return [NippToForms(nipp : Rank := 4) : nipp in nipps];
 end intrinsic;
 
 intrinsic QuinaryQuadraticLattices(table_idx::RngIntElt,

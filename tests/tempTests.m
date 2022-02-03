@@ -194,9 +194,9 @@ end function;
 // intervals := [make_intervals(B, num) : num in nums];
 // heckes := [[HeckePivot(M, nProc, pivot_idx, ThetaPrec, hecke_idx, I[1], I[2]) :
 //             I in intervals[pivot_idx]] : pivot_idx in [1..npivots]];
+//  omf_name := "rank_8_d_53";
 
-procedure write_single_batch(M, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaPrec)
-    omf_name := "rank_8_d_53";
+procedure write_single_batch(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaPrec)
     batch_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.m", Norm(pR), k, pivot_idx, start, upTo);
     output_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.out", Norm(pR), k, pivot_idx, start, upTo);
     output := ["AttachSpec(\"ModFrmAlg.spec\")"];
@@ -209,14 +209,15 @@ procedure write_single_batch(M, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaP
     Append(~output, "exit;");
 end procedure;
 
-procedure write_batch_files(M, p, k, pivot : ThetaPrec := 5, B := 10^5)
+procedure write_batch_files(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
+    M := AlgebraicModularForms(omf_name + ".omf");
     pR := ideal<Integers() | p>;
     nProc, nPivots := InitPivots(M, pR, k, pivot);
     nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
     intervals := [make_intervals(B, num) : num in nums];
     for pivot_idx in [1..nPivots] do
 	for I in intervals[pivot_idx] do
-	    write_single_batch(M, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
+	    write_single_batch(omf_name, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
 	end for;
     end for;
 end procedure;

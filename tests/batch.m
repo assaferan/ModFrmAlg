@@ -375,8 +375,10 @@ end function;
 
 
 function createHeckeBatchFile(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaPrec)
-  batch_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o_%o.m", Norm(pR), k, hecke_idx, pivot_idx, start, upTo);
-  output_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o_%o.out", Norm(pR), k, hecke_idx, pivot_idx, start, upTo);
+  batch_dir := "batch_files/";
+  name := omf_name cat Sprintf("_%o_%o_%o_%o_%o_%o", Norm(pR), k, hecke_idx, pivot_idx, start, upTo);
+  batch_fname := batch_dir cat name cat ".m";
+  output_fname := batch_dir cat name cat ".out";
   f := Open(batch_fname, "w");
   output_str := "GetSeed();\n";
   output_str cat:= "AttachSpec(\"ModFrmAlg.spec\");\n";
@@ -410,7 +412,7 @@ end function;
 
 procedure prepareHeckeBatchFile(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
   cmds := createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := ThetaPrec, B := B);
-  fname := omf_name cat Sprintf("_%o_%o_%o.sh", p, k, pivot);
+  fname := "batch_files/" cat omf_name cat Sprintf("_%o_%o_%o.sh", p, k, pivot);
   f := Open(fname, "w");
   output_str := "#!/bin/bash\n";
   all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  

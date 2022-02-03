@@ -393,7 +393,7 @@ function createHeckeBatchFile(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx
 end function;
 
 function createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
-    M := AlgebraicModularForms(omf_name + ".omf");
+    M := AlgebraicModularForms(omf_name cat ".omf");
     pR := ideal<Integers() | p>;
     nProc, nPivots := InitPivots(M, pR, k, pivot);
     nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];

@@ -181,47 +181,6 @@ function otherStuff()
 	     IsCoercible(Rationals(), coeffs[i] / b)] : b in basis_B];
 end function;
 
-function make_intervals(batch_size, num)
-    num_batches := (num-1) div batch_size + 1;
-    batches := [[batch_size*(j-1), batch_size*j] : j in [1..num_batches-1]];
-    Append(~batches, [batch_size*(num_batches-1), num]);
-    return batches;
-end function;
-
-// e.g.
-// nProc, nPivots := InitPivots(M, pR, k, hecke_idx);
-// nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
-// intervals := [make_intervals(B, num) : num in nums];
-// heckes := [[HeckePivot(M, nProc, pivot_idx, ThetaPrec, hecke_idx, I[1], I[2]) :
-//             I in intervals[pivot_idx]] : pivot_idx in [1..npivots]];
-//  omf_name := "rank_8_d_53";
-
-procedure write_single_batch(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaPrec)
-    batch_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.m", Norm(pR), k, pivot_idx, start, upTo);
-    output_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.out", Norm(pR), k, pivot_idx, start, upTo);
-    output := ["AttachSpec(\"ModFrmAlg.spec\")"];
-    Append(~output, Sprintf("M := AlgebraicModularForms(\"%o\");", omf_name cat ".omf"));
-    Append(~output, Sprintf("pR := %m;",pR));
-    Append(~output, Sprintf("nProc := InitPivots(M, pR, %o, %o);", k, hecke_idx));
-    Append(~output, Sprintf("hecke := HeckePivot(M, nProc, %o, %o, %o, %o, %o);",
-			    pivot_idx, ThetaPrec, hecke_idx, start, upTo));
-    Append(~output, Sprintf("Write(\"%o\", Eltseq(hecke));", output_fname));
-    Append(~output, "exit;");
-end procedure;
-
-procedure write_batch_files(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
-    M := AlgebraicModularForms(omf_name + ".omf");
-    pR := ideal<Integers() | p>;
-    nProc, nPivots := InitPivots(M, pR, k, pivot);
-    nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
-    intervals := [make_intervals(B, num) : num in nums];
-    for pivot_idx in [1..nPivots] do
-	for I in intervals[pivot_idx] do
-	    write_single_batch(omf_name, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
-	end for;
-    end for;
-end procedure;
-
 
 // currently not working
 /*

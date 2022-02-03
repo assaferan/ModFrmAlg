@@ -355,3 +355,73 @@ procedure prepareAutGrpBatchFile(start, upto)
   // we will run it from outside
   // System("./" cat fname);
 end procedure;
+
+// Adding batch files for parallel Hecke operators
+
+function make_intervals(batch_size, num)
+    num_batches := (num-1) div batch_size + 1;
+    batches := [[batch_size*(j-1), batch_size*j] : j in [1..num_batches-1]];
+    Append(~batches, [batch_size*(num_batches-1), num]);
+    return batches;
+end function;
+
+// e.g.
+// nProc, nPivots := InitPivots(M, pR, k, hecke_idx);
+// nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
+// intervals := [make_intervals(B, num) : num in nums];
+// heckes := [[HeckePivot(M, nProc, pivot_idx, ThetaPrec, hecke_idx, I[1], I[2]) :
+//             I in intervals[pivot_idx]] : pivot_idx in [1..npivots]];
+//  omf_name := "rank_8_d_53";
+
+
+function createHeckeBatchFile(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaPrec)
+  batch_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.m", Norm(pR), k, pivot_idx, start, upTo);
+  output_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.out", Norm(pR), k, pivot_idx, start, upTo);
+  f := Open(batch_fname, "w");
+  output_str := "GetSeed();\n";
+  output_str cat:= "AttachSpec(\"ModFrmAlg.spec\");\n";
+  output_str cat:= Sprintf("M := AlgebraicModularForms(\"%o\");\n", omf_name cat ".omf"));
+  output_str cat:= Sprintf("pR := %m;\n",pR));
+  output_str cat:= Sprintf("nProc := InitPivots(M, pR, %o, %o);\n", k, hecke_idx));
+  output_str cat:= Sprintf("hecke := HeckePivot(M, nProc, %o, %o, %o, %o, %o);\n",
+			    pivot_idx, ThetaPrec, hecke_idx, start, upTo));
+  output_str cat:= Sprintf("Write(\"%o\", Eltseq(hecke));\n", output_fname));
+  output_str cat:= "exit;\n";
+  fprintf f, output_str;
+  delete f;
+  return batch_fname;
+end function;
+
+function createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
+    M := AlgebraicModularForms(omf_name + ".omf");
+    pR := ideal<Integers() | p>;
+    nProc, nPivots := InitPivots(M, pR, k, pivot);
+    nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
+    intervals := [make_intervals(B, num) : num in nums];
+    fnames := [];
+    for pivot_idx in [1..nPivots] do
+	for I in intervals[pivot_idx] do
+	    f := createHeckeBatchFile(omf_name, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
+	    Append(~fnames, f);
+	end for;
+    end for;
+    return fnames;
+end function;
+
+procedure prepareHeckeBatchFile(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
+  cmds := createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := ThetaPrec, B := B);
+  fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.sh", Norm(pR), k, pivot_idx, start, upTo);
+  f := Open(fname, "w");
+  output_str := "#!/bin/bash\n";
+  all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  
+  output_str cat:= "PROCESSES_TO_RUN=(" cat all_cmds cat ")\n";
+  output_str cat:= "for i in ${PROCESSES_TO_RUN[@]}; do\n";
+  output_str cat:= "\t magma -b ${i%%/*}/./${i##*/} > ${i}.log 2>&1 &\n";
+  output_str cat:= "done\n";
+  fprintf f, output_str;
+  delete f;
+  chmod_cmd := Sprintf("chmod +x %o", fname);
+  System(chmod_cmd);
+  // we will run it from outside
+  // System("./" cat fname);
+end procedure;

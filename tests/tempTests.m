@@ -180,3 +180,284 @@ function otherStuff()
     v := [&+[(coeffs[i]/b)*mons[i] : i in [1..#coeffs] |
 	     IsCoercible(Rationals(), coeffs[i] / b)] : b in basis_B];
 end function;
+
+import "../neighbors/isotropic.m" : __initializePivot, __pivots;
+import "../neighbors/neighbor-CN1.m" : BuildNeighborProc, SkipToNeighbor, GetNextNeighbor, LiftSubspace;
+import "../neighbors/hecke-CN1.m" : processNeighborWeight, finalizeHecke;
+import "../utils/helper.m" : printEstimate;
+
+procedure GetNextNeighborNoSkew(~nProc : BeCareful := false)
+	// The affine data.
+	Vpp := nProc`L`Vpp[nProc`pR];
+
+	// The isotropic dimension we're interested in.
+	k := nProc`k;
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "Currently space = %o, running NextIsotropicSubspace...\n",
+		   nProc`isoSubspace;
+	end if;
+
+	// get the next isotropic subspace modulo pR.
+	nProc`isoSubspace := NextIsotropicSubspace(Vpp`V, k);
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "After NextIsotropicSubspace = %o, running lifting...\n",
+		   nProc`isoSubspace;
+	end if;
+	
+	// Lift the subspace if we haven't reached the end of the list.
+	    
+	nProc`X, nProc`Z, nProc`U :=
+	    LiftSubspace(nProc : BeCareful := BeCareful);
+
+	// Checking if we could lift modulo pR * alpha(pR)
+	while IsEmpty(nProc`X) and (not IsEmpty(nProc`isoSubspace)) do
+	    nProc`isoSubspace := NextIsotropicSubspace(Vpp`V, k);
+	    nProc`X, nProc`Z, nProc`U :=
+		LiftSubspace(nProc : BeCareful := BeCareful);
+	end while;
+	
+	nProc`X_skew := [ x : x in nProc`X ];
+	
+end procedure;
+
+function init_pivots(M, pR, k, hecke_idx)
+    reps := Representatives(Genus(M));
+    L := reps[hecke_idx];
+    nProc := BuildNeighborProc(L, pR, k);
+    V := nProc`L`Vpp[nProc`pR]`V;
+    if not IsDefined(V`ParamArray, k) then
+	data := New(IsoParam);
+	data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+	data`PivotPtr := 0;
+	data`Params := [];
+	V`ParamArray[k] := data;
+    end if;
+    data := V`ParamArray[k];
+    return nProc, #data`Pivots;
+end function;
+
+function log_num_pivot_nbrs(nProc, pivot_idx)
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    __initializePivot(V, k);
+    return #data`FreeVars;
+end function;
+
+procedure update_params(~params, V, nFreeVars)
+    // The current position in the parameterization.
+    pos := 0;
+
+    // Terminate loop once we found the next new subspace, or we
+    //  hit the end of the list.
+    repeat
+	// Increment position.
+	pos +:= 1;
+	
+	if V`Symbolic then
+	    // Increment value.
+	    params[pos] +:= 1;
+	    
+	    // Check to see if we've rolled over.
+	    if (params[pos] mod #V`S) eq 0 then
+		// Reset value if so.
+		params[pos] := 0;
+	    end if;
+	else
+	    // Manually move to the next element.
+	    if IsPrime(#BaseRing(V)) then
+		params[pos] +:= 1;
+	    elif params[pos] eq 0 then
+		params[pos] := V`PrimitiveElement;
+	    elif params[pos] eq 1 then
+		params[pos] := 0;
+	    else
+		params[pos] *:= V`PrimitiveElement;
+	    end if;
+	end if;
+    until pos eq nFreeVars or params[pos] ne 0;
+end procedure;
+
+// not including upTo
+function hecke_pivot(M, nProc, pivot_idx, ThetaPrec, hecke_idx, start_idx, upTo :
+		     BeCareful := false, Estimate := true)
+
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+	       : h in M`H];
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    p := #BaseRing(V);
+    log_num_nbrs := log_num_pivot_nbrs(nProc, pivot_idx);
+    num := start_idx;
+    // right now, we only support trivial skew
+    for i in [1..log_num_nbrs] do
+	data`Params[i] := num mod p;
+	num div:= p;
+    end for;
+    evalList := [* 0 : i in [1..Dimension(V)*k] *];
+    for i in [1..#data`Params] do
+	evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
+    end for;
+    space := Rows(Evaluate(data`IsotropicParam, [ x : x in evalList]));
+    skew := nProc`skew;
+    // update params, so GetNextNeighbor would work. 
+    if #data`FreeVars ne 0 then
+	update_params(~data`Params, V, #data`FreeVars);
+    end if;
+
+    // If we've hit the end of the list, indicate we need to move on to the
+    //  next pivot.
+    if &and[ x eq 0 : x in data`Params ] then data`Params := []; end if;
+    SkipToNeighbor(~nProc, space, skew);
+    fullCount := #BaseRing(V)^(nProc`skewDim) * (upTo-start_idx);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+ 
+    for i in [1..fullCount] do
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H :
+			      ThetaPrec := ThetaPrec);
+	// Update nProc in preparation for the next neighbor
+	//  lattice.
+	GetNextNeighbor(~nProc
+			: BeCareful := BeCareful);
+	if Estimate then
+	    printEstimate(start, ~count, ~elapsed,
+			  fullCount, Sprintf("T_%o^%o", Norm(nProc`pR), k));
+	end if;
+    end for;
+ 
+    return finalizeHecke(M, hecke, [hecke_idx]);
+end function;
+
+function make_intervals(batch_size, num)
+    num_batches := (num-1) div batch_size + 1;
+    batches := [[batch_size*(j-1), batch_size*j] : j in [1..num_batches-1]];
+    Append(~batches, [batch_size*(num_batches-1), num]);
+    return batches;
+end function;
+
+// e.g.
+// nProc, nPivots := init_pivots(M, pR, k, hecke_idx);
+// nums := [p^log_num_pivot_nbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
+// intervals := [make_intervals(B, num) : num in nums];
+// heckes := [[hecke_pivot(M, nProc, pivot_idx, ThetaPrec, hecke_idx, I[1], I[2]) :
+//             I in intervals[pivot_idx]] : pivot_idx in [1..npivots]];
+
+procedure write_single_batch(M, pR, k, pivot_idx, start, upTo, hecke_idx, ThetaPrec)
+    omf_name := "rank_8_d_53";
+    batch_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.m", Norm(pR), k, pivot_idx, start, upTo);
+    output_fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.out", Norm(pR), k, pivot_idx, start, upTo);
+    output := ["AttachSpec(\"ModFrmAlg.spec\")"];
+    Append(~output, Sprintf("M := AlgebraicModularForms(\"%o\");", omf_name cat ".omf"));
+    Append(~output, Sprintf("pR := %m;",pR));
+    Append(~output, Sprintf("nProc := init_pivots(M, pR, %o, %o);", k, hecke_idx));
+    Append(~output, Sprintf("hecke := hecke_pivot(M, nProc, %o, %o, %o, %o, %o);",
+			    pivot_idx, ThetaPrec, hecke_idx, start, upTo));
+    Append(~output, Sprintf("Write(\"%o\", Eltseq(hecke));", output_fname));
+    Append(~output, "exit;");
+end procedure;
+
+procedure write_batch_files(M, p, k, pivot : ThetaPrec := 5, B := 10^5)
+    pR := ideal<Integers() | p>;
+    nProc, nPivots := init_pivots(M, pR, k, pivot);
+    nums := [p^log_num_pivot_nbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
+    intervals := [make_intervals(B, num) : num in nums];
+    for pivot_idx in [1..nPivots] do
+	for I in intervals[pivot_idx] do
+	    write_single_batch(M, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
+	end for;
+    end for;
+end procedure;
+
+
+// currently not working
+/*
+function hecke_pivot_skew(M, nProc, skew_idx, pivot_idx, ThetaPrec, hecke_idx :
+			  BeCareful := false, Estimate := true)
+
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+	       : h in M`H];
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    __initializePivot(V, k);
+    evalList := [* 0 : i in [1..Dimension(V)*k] *];
+    for i in [1..#data`Params] do
+	evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
+    end for;
+    space := Rows(Evaluate(data`IsotropicParam, [ x : x in evalList]));
+    skew := Matrix(BaseRing(V), [[skew_idx,0], [0,-skew_idx]]);
+    // update params, so GetNextNeighbor would work. 
+    if #data`FreeVars ne 0 then
+	// The current position in the parameterization.
+	pos := 0;
+
+	// Terminate loop once we found the next new subspace, or we
+	//  hit the end of the list.
+	repeat
+	    // Increment position.
+	    pos +:= 1;
+	    
+	    if V`Symbolic then
+		// Increment value.
+		data`Params[pos] +:= 1;
+		
+		// Check to see if we've rolled over.
+		if (data`Params[pos] mod #V`S) eq 0 then
+		    // Reset value if so.
+		    data`Params[pos] := 0;
+		end if;
+	    else
+		// Manually move to the next element.
+		if IsPrime(#BaseRing(V)) then
+		    data`Params[pos] +:= 1;
+		elif data`Params[pos] eq 0 then
+		    data`Params[pos] := V`PrimitiveElement;
+		elif data`Params[pos] eq 1 then
+		    data`Params[pos] := 0;
+		else
+		    data`Params[pos] *:= V`PrimitiveElement;
+		end if;
+	    end if;
+	until pos eq #data`FreeVars or data`Params[pos] ne 0;
+    end if;
+
+    // If we've hit the end of the list, indicate we need to move on to the
+    //  next pivot.
+    if &and[ x eq 0 : x in data`Params ] then data`Params := []; end if;
+    SkipToNeighbor(~nProc, space, skew);
+    fullCount := #BaseRing(V)^(#data`FreeVars);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+    //while nProc`isoSubspace ne [] do
+    for i in [1..fullCount] do
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H :
+			      ThetaPrec := ThetaPrec);
+	// Update nProc in preparation for the next neighbor
+	//  lattice.
+	GetNextNeighborNoSkew(~nProc
+			      : BeCareful := BeCareful);
+	if Estimate then
+	    printEstimate(start, ~count, ~elapsed,
+			  fullCount, Sprintf("T_%o^%o", Norm(nProc`pR), k));
+	end if;
+    end for;
+    //end while;
+    // return fullCount;
+    //return count;
+    return finalizeHecke(M, hecke, [hecke_idx]);
+end function;
+*/

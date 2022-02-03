@@ -391,7 +391,7 @@ function createHeckeBatchFile(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx
   output_str cat:= "exit;\n";
   fprintf f, output_str;
   delete f;
-  return batch_fname;
+  return batch_fname, output_fname;
 end function;
 
 function createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
@@ -401,17 +401,19 @@ function createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5
     nums := [p^LogNumPivotNbrs(nProc, pivot_idx) : pivot_idx in [1..nPivots]];
     intervals := [make_intervals(B, num) : num in nums];
     fnames := [];
+    outfnames := [];
     for pivot_idx in [1..nPivots] do
 	for I in intervals[pivot_idx] do
-	    f := createHeckeBatchFile(omf_name, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
+	    f, outf := createHeckeBatchFile(omf_name, pR, k, pivot_idx, I[1], I[2], pivot, ThetaPrec);
 	    Append(~fnames, f);
+	    Append(~outfnames, outf);
 	end for;
     end for;
-    return fnames;
+    return fnames, outfnames;
 end function;
 
-procedure prepareHeckeBatchFile(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
-  cmds := createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := ThetaPrec, B := B);
+function prepareHeckeBatchFile(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
+  cmds, outfnames := createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := ThetaPrec, B := B);
   fname := "batch_files/" cat omf_name cat Sprintf("_%o_%o_%o.sh", p, k, pivot);
   f := Open(fname, "w");
   output_str := "#!/bin/bash\n";
@@ -426,4 +428,13 @@ procedure prepareHeckeBatchFile(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^
   System(chmod_cmd);
   // we will run it from outside
   // System("./" cat fname);
-end procedure;
+  return outfnames;
+end function;
+
+function collectHecke(outfnames)
+    vecs := [];
+    for f in outfnames do
+	Append(~vecs, Vector(eval("return" cat Read(f) cat ";")));
+    end for;
+    return &+vecs;
+end function;

@@ -434,7 +434,8 @@ end function;
 function collectHecke(outfnames)
     vecs := [];
     for f in outfnames do
-	Append(~vecs, Vector(eval("return" cat Read(f) cat ";")));
+	seq := eval("return" cat Read(f) cat ";");
+	Append(~vecs, Vector(seq));
     end for;
     return &+vecs;
 end function;

@@ -937,9 +937,9 @@ procedure update_params(~params, V, nFreeVars)
 end procedure;
 
 // not including upTo
-intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt, ThetaPrec::RngIntElt,
+intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
 			hecke_idx::RngIntElt, start_idx::RngIntElt, upTo::RngIntElt :
-		    BeCareful := false, Estimate := true) -> ModMatFldElt
+		     BeCareful := false, Estimate := true, ThetaPrec := 25) -> ModMatFldElt
 {.}
     invs := HeckeInitializeInvs(M, ThetaPrec);
     hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]

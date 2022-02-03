@@ -950,7 +950,7 @@ intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
     data := V`ParamArray[k];
     data`PivotPtr := pivot_idx;
     p := #BaseRing(V);
-    log_num_nbrs := log_num_pivot_nbrs(nProc, pivot_idx);
+    log_num_nbrs := LogNumPivotNbrs(nProc, pivot_idx);
     num := start_idx;
     // right now, we only support trivial skew
     for i in [1..log_num_nbrs] do

@@ -410,7 +410,7 @@ end function;
 
 procedure prepareHeckeBatchFile(omf_name, p, k, pivot : ThetaPrec := 5, B := 10^5)
   cmds := createHeckeBatchFiles(omf_name, p, k, pivot : ThetaPrec := ThetaPrec, B := B);
-  fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.sh", Norm(pR), k, pivot_idx, start, upTo);
+  fname := omf_name cat Sprintf("_%o_%o_%o_%o_%o.sh", p, k, pivot_idx, start, upTo);
   f := Open(fname, "w");
   output_str := "#!/bin/bash\n";
   all_cmds := &cat[ "\"" cat cmd cat "\" \\ \n" : cmd in cmds];  

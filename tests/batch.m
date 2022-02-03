@@ -385,7 +385,7 @@ function createHeckeBatchFile(omf_name, pR, k, pivot_idx, start, upTo, hecke_idx
   output_str cat:= Sprintf("M := AlgebraicModularForms(\"%o\");\n", omf_name cat ".omf");
   output_str cat:= Sprintf("pR := %m;\n",pR);
   output_str cat:= Sprintf("nProc := InitPivots(M, pR, %o, %o);\n", k, hecke_idx);
-  output_str cat:= Sprintf("hecke := HeckePivot(M, nProc, %o, %o, %o, %o, %o : ThetaPrec := %o);\n",
+  output_str cat:= Sprintf("hecke := HeckePivot(M, nProc, %o, %o, %o, %o : ThetaPrec := %o);\n",
 			    pivot_idx, hecke_idx, start, upTo, ThetaPrec);
   output_str cat:= Sprintf("Write(\"%o\", Eltseq(hecke));\n", output_fname);
   output_str cat:= "exit;\n";

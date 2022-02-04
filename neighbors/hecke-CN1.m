@@ -77,6 +77,13 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
 			UseLLL := UseLLL,
 			Perestroika := Perestroika);
 
+  if Perestroika then
+    isom_scale := BasisMatrix(Module(nLat));
+    Vpp := nProc`L`Vpp[nProc`pR];
+    pi := Vpp`pElt;
+    nLat := ScaledLattice(nLat, 1/pi);
+  end if;
+
   if GetVerbose("AlgebraicModularForms") ge 2 then
     printf "Processing neighbor corresponding to isotropic subspace ";
     printf "indexed by %o.\n", nProc`isoSubspace;
@@ -140,7 +147,11 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
         if GetVerbose("AlgebraicModularForms") ge 2 then
 	  printf "Neighbor is isometric to genus %o.\n", space_idx;
         end if;
-	   
+
+        if Perestroika then
+          g := g * ChangeRing(isom_scale, BaseRing(g));
+        end if;
+
         gg := W`G!ChangeRing(Transpose(g), BaseRing(W`G));
 
         if GetVerbose("AlgebraicModularForms") ge 2 then

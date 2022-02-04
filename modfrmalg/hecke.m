@@ -96,7 +96,12 @@ declare attributes ModHecke:
 // set methods
 
 // We use this function for several intrinsic interfaces below
-procedure internalSetHecke(~M, T, pR, k)
+procedure internalSetHecke(~M, T, pR, k : Perestroika := false)
+
+  if Perestroika then
+    k := 0;
+  end if;
+
   // If assocative array does not exist for this dimension, create one.
   if not IsDefined(M`Hecke`Ts, k) then
     M`Hecke`Ts[k] := AssociativeArray();
@@ -118,37 +123,38 @@ procedure internalSetHecke(~M, T, pR, k)
   end for;
 end procedure;
 
-intrinsic SetHeckeOperator(
-	M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl, k::RngIntElt)
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl,
+			   k::RngIntElt : Perestroika := false)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
-  internalSetHecke(~M, T, pR, k);
+  internalSetHecke(~M, T, pR, k : Perestroika := Perestroika);
 end intrinsic;
 
-intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR:RngOrdIdl)
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl :
+			   Perestroika := false)
 { Sets the 1-st order Hecke operator at the specified prime for this form. }
-  SetHeckeOperator(M, T, pR, 1);
-end intrinsic;
-
-intrinsic SetHeckeOperator(
-	M::ModFrmAlg, T::AlgMatElt, pR::RngInt, k::RngIntElt)
-{ Sets the k-th order Hecke operator at the specified prime for this form. }
-  internalSetHecke(~M, T, pR, k);
-end intrinsic;
-
-intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt)
-{ Sets the 1-st order Hecke operator at the specified prime for this form. }
-  SetHeckeOperator(M, T, pR, 1);
+  SetHeckeOperator(M, T, pR, 1 : Perestroika := Perestroika);
 end intrinsic;
 
 intrinsic SetHeckeOperator(
-	M::ModFrmAlg, T::AlgMatElt, p::RngIntElt, k::RngIntElt)
+			   M::ModFrmAlg, T::AlgMatElt, pR::RngInt, k::RngIntElt : Perestroika := false)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
-  SetHeckeOperator(M, T, ideal< Integers() | p >, k);
+  internalSetHecke(~M, T, pR, k : Perestroika := Perestroika);
 end intrinsic;
 
-intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, p::RngIntElt)
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt : Perestroika := false)
 { Sets the 1-st order Hecke operator at the specified prime for this form. }
-  SetHeckeOperator(M, T, p, 1);
+  SetHeckeOperator(M, T, pR, 1 : Perestroika := Perestroika);
+end intrinsic;
+
+intrinsic SetHeckeOperator(
+			   M::ModFrmAlg, T::AlgMatElt, p::RngIntElt, k::RngIntElt : Perestroika := false)
+{ Sets the k-th order Hecke operator at the specified prime for this form. }
+  SetHeckeOperator(M, T, ideal< Integers() | p >, k : Perestroika := Perestroika);
+end intrinsic;
+
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, p::RngIntElt : Perestroika := false)
+{ Sets the 1-st order Hecke operator at the specified prime for this form. }
+  SetHeckeOperator(M, T, p, 1 : Perestroika := Perestroika);
 end intrinsic;
 
 // get (computation) methods

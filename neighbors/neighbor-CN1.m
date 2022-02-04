@@ -771,9 +771,9 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
           nLat`ZLattice`basisR := Basis(lll_ZZ);
           nLat`ZLattice`basisZ := ChangeRing(BasisMatrix(lll_ZZ), Rationals());
 */
-	    if Perestroika then
-		nLat := ScaledLattice(nLat, 1/p);
-	    end if;
+//    if Perestroika then
+//		nLat := ScaledLattice(nLat, 1/p);
+//	    end if;
             return nLat;
 	  end if;
 
@@ -832,11 +832,12 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 	  nLat := LatticeWithBasis(Q, Matrix(basis));
         end if;
     end if;
-
+/*
     if Perestroika then
 	pi := Vpp`pElt;
 	nLat := ScaledLattice(nLat, 1/pi);
     end if;
+*/
     return nLat;
 end function;
 

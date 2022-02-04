@@ -869,3 +869,126 @@ function fillHeckeFromRelations(M, column, indices, ind)
 
     return false, _;
 end function;
+
+// TODO : Document better what's below and move some to isotropic.m
+
+import "isotropic.m" : __initializePivot, __pivots;
+
+intrinsic InitPivots(M::ModFrmAlg, pR::RngInt, k::RngIntElt, hecke_idx::RngIntElt) -> NeighborProc, RngIntElt
+{.}
+    reps := Representatives(Genus(M));
+    L := reps[hecke_idx];
+    nProc := BuildNeighborProc(L, pR, k);
+    V := nProc`L`Vpp[nProc`pR]`V;
+    if not IsDefined(V`ParamArray, k) then
+	data := New(IsoParam);
+	data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+	data`PivotPtr := 0;
+	data`Params := [];
+	V`ParamArray[k] := data;
+    end if;
+    data := V`ParamArray[k];
+    return nProc, #data`Pivots;
+end intrinsic;
+
+intrinsic LogNumPivotNbrs(nProc::NeighborProc, pivot_idx::RngIntElt) -> RngIntElt
+{.}
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    __initializePivot(V, k);
+    return #data`FreeVars;
+end intrinsic;
+
+procedure update_params(~params, V, nFreeVars)
+    // The current position in the parameterization.
+    pos := 0;
+
+    // Terminate loop once we found the next new subspace, or we
+    //  hit the end of the list.
+    repeat
+	// Increment position.
+	pos +:= 1;
+	
+	if V`Symbolic then
+	    // Increment value.
+	    params[pos] +:= 1;
+	    
+	    // Check to see if we've rolled over.
+	    if (params[pos] mod #V`S) eq 0 then
+		// Reset value if so.
+		params[pos] := 0;
+	    end if;
+	else
+	    // Manually move to the next element.
+	    if IsPrime(#BaseRing(V)) then
+		params[pos] +:= 1;
+	    elif params[pos] eq 0 then
+		params[pos] := V`PrimitiveElement;
+	    elif params[pos] eq 1 then
+		params[pos] := 0;
+	    else
+		params[pos] *:= V`PrimitiveElement;
+	    end if;
+	end if;
+    until pos eq nFreeVars or params[pos] ne 0;
+end procedure;
+
+// not including upTo
+intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
+			hecke_idx::RngIntElt, start_idx::RngIntElt, upTo::RngIntElt :
+		     BeCareful := false, Estimate := true, ThetaPrec := 25) -> ModMatFldElt
+{.}
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+	       : h in M`H];
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    p := #BaseRing(V);
+    log_num_nbrs := LogNumPivotNbrs(nProc, pivot_idx);
+    num := start_idx;
+    // right now, we only support trivial skew
+    for i in [1..log_num_nbrs] do
+	data`Params[i] := num mod p;
+	num div:= p;
+    end for;
+    evalList := [* 0 : i in [1..Dimension(V)*k] *];
+    for i in [1..#data`Params] do
+	evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
+    end for;
+    space := Rows(Evaluate(data`IsotropicParam, [ x : x in evalList]));
+    skew := nProc`skew;
+    // update params, so GetNextNeighbor would work. 
+    if #data`FreeVars ne 0 then
+	update_params(~data`Params, V, #data`FreeVars);
+    end if;
+
+    // If we've hit the end of the list, indicate we need to move on to the
+    //  next pivot.
+    if &and[ x eq 0 : x in data`Params ] then data`Params := []; end if;
+    SkipToNeighbor(~nProc, space, skew);
+    fullCount := #BaseRing(V)^(nProc`skewDim) * (upTo-start_idx);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+ 
+    for i in [1..fullCount] do
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H :
+			      ThetaPrec := ThetaPrec);
+	// Update nProc in preparation for the next neighbor
+	//  lattice.
+	GetNextNeighbor(~nProc
+			: BeCareful := BeCareful);
+	if Estimate then
+	    printEstimate(start, ~count, ~elapsed,
+			  fullCount, Sprintf("T_%o^%o", Norm(nProc`pR), k));
+	end if;
+    end for;
+ 
+    return finalizeHecke(M, hecke, [hecke_idx]);
+end intrinsic;

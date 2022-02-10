@@ -307,9 +307,9 @@ number field is the rationals. }
   require IsOrthogonal(M): "Perestroika operator only exists for orthogonal groups.";
   n := Rank(Module(M));
   require IsEven(n) : "Perestroika operator only exists in even rank.";
-  k := n div 2;
-  return internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
-		       ComputeGenus, LowMemory, ThetaPrec : Perestroika);
+  
+  return internalHecke(M, pR, 0, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
@@ -442,8 +442,8 @@ end function;
 
 // This will be used for both versions of HeckeImages
 function internalHeckeImages(M, i, prec, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec
-			     : Perestroika := false)
+			     Estimate, Orbits, UseLLL,
+			     LowMemory, ThetaPrec)
    assert 1 le i and i le Dimension(M);
    if not assigned M`Hecke`standard_images then
        M`Hecke`standard_images :=
@@ -498,8 +498,7 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
 					  Orbits := Orbits,
 					  UseLLL := UseLLL,
 					  LowMemory := LowMemory,
-					  ThetaPrec := ThetaPrec,
-					  Perestroika := Perestroika);
+					  ThetaPrec := ThetaPrec);
        sp_mat := sp_hec[space_idx];
        for j in [start_idx..end_idx] do
 	   M`Hecke`standard_images[j][k][p] :=
@@ -516,8 +515,7 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 		      Orbits := true,
 		      UseLLL := false,
 		      LowMemory := false,
-		      ThetaPrec := 25,
-		      Perestroika := false) -> SeqEnum
+		      ThetaPrec := 25) -> SeqEnum
 {The images of the ith standard basis vector
  under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
 These are computed using sparse methods that don't

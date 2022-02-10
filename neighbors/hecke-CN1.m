@@ -307,7 +307,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           orb_stab := is_solvable select orb_stab_pc else orb_stab_general;
           orb_reps := [];
           y := nProc`isoSubspace;
-          skew0 := Zero(MatrixRing(F, k));
+          skew0 := Zero(MatrixRing(F, kk));
           while y ne [] do
             gens_y := [ b * Transpose(V`Basis) : b in y ];
             W_y := sub<V | gens_y>;
@@ -352,7 +352,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	        GetNextNeighbor(~nProc : BeCareful := BeCareful);
                 if Estimate then
 	          printEstimate(start, ~count, ~elapsed,
-			  fullCount, Sprintf("T_%o^%o", Norm(pR), k)
+			  fullCount, Sprintf("T_%o^%o", Norm(pR), kk)
 			  : increment := #orb);
 	        end if;
               until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
@@ -367,11 +367,11 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           proj := map< G_conj -> GL(n,F) |
 	    g :-> [L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]>;
 
-          isoOrbits := IsotropicOrbits(V, G_conj, k,
+          isoOrbits := IsotropicOrbits(V, G_conj, kk,
 				       proj : Estimate := Estimate);
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
-          nNbrs := NumberOfNeighbors(M, pR, k);
+          nNbrs := NumberOfNeighbors(M, pR, kk);
 	  if nNbrs ne 0 then
               vprintf AlgebraicModularForms, 1 :
 		  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
@@ -379,7 +379,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           loopCount := fullCount - nNbrs + #isoOrbits * #F^nProc`skewDim;
           orb_start := Realtime();
 	  for orbit in isoOrbits do
-	    skew0 := Zero(MatrixRing(F, k));
+	    skew0 := Zero(MatrixRing(F, kk));
 	    // Skip to the neighbor associated to this orbit.
             tm := Realtime();
 	    SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
@@ -416,10 +416,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 		if Estimate then
 		  if IsTrivial(M`W) then
 		    printEstimate(orb_start, ~count, ~elapsed, loopCount,
-				  Sprintf("T_%o^%o", Norm(pR), k));
+				  Sprintf("T_%o^%o", Norm(pR), kk));
 		  else
 		    printEstimate(orb_start, ~count, ~elapsed,
-				  fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
+				  fullCount, Sprintf("T_%o^%o", Norm(pR), kk) :
 				  increment := #orbit[2]);
                   end if;
 		end if;
@@ -441,7 +441,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			    : BeCareful := BeCareful);
 	    if Estimate then
 		printEstimate(start, ~count, ~elapsed,
-			      fullCount, Sprintf("T_%o^%o", Norm(pR), k));
+			      fullCount, Sprintf("T_%o^%o", Norm(pR), kk));
 	    end if;
 	end while;
     end if;

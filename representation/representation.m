@@ -1753,13 +1753,17 @@ end function;
 
 function get_hw_basis_gl(lambda, F, n)
   mu := ConjugatePartition(lambda);
-  k := Maximum(mu);
+  k := Maximum(mu cat [0]);
   R := PolynomialRing(F, n*k);
   var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..k]] : i in [1..n]];
   AssignNames(~R, &cat var_names);
-  
-  x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
-		   : j in [1..k]]: i in [1..n]]);
+
+  if n*k eq 0 then
+      x := MatrixAlgebra(R,0)!1;
+  else
+      x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
+		    : j in [1..k]]: i in [1..n]]);
+  end if;
   // TableauxOfShape needs the exact partition, so we trim
   lam := [l : l in lambda | l gt 0];
   if IsEmpty(lam) then
@@ -1804,12 +1808,12 @@ function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
   lambda_gl[#lambda] := Abs(lambda[#lambda]);
   B, x := get_hw_basis_gl(lambda_gl, F, n);
   Q_lap := Dual select Q^(-1) else Q;
-  k := Maximum(ConjugatePartition(lambda_gl));
+  k := Maximum(ConjugatePartition(lambda_gl) cat [0]);
   laplacians := [[&+[Q_lap[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
 		     : i,j in [1..n]] : f in B] : p,q in [1..k]];
   kers := [get_lap_kernel(lap) : lap in laplacians];
   
-  ker := &meet kers;
+  ker := &meet (kers cat [VectorSpace(F, #B)]);
   basis := [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
   // In even rank, when lambda_n ne 0, the above gives a sum of two irreducibles.
   // We separate them out using the map tau, as described in [FultonHarris, p. 298]
@@ -1843,7 +1847,7 @@ function get_hw_rep_poly(lambda, B, n : Dual := false)
   // !!! TODO - this is still inefficient
   // can change construction of vec_g to not need multiplication
   g_R_str := Dual select Sprintf("g^(-1)") else Sprintf("Transpose(g)");
-  k := Maximum(ConjugatePartition(lambda[1..#lambda-1] cat [Abs(lambda[#lambda])]));
+  k := Maximum(ConjugatePartition(lambda[1..#lambda-1] cat [Abs(lambda[#lambda])]) cat [0]);
   action_desc := Sprintf("           
   	      function action(g, m, V)
 	      	      B := Names(V`M);

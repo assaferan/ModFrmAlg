@@ -625,8 +625,8 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 				  Estimate := true,
 				  Orbits := true,
 				  LowMemory := false,
-				ThetaPrec := ThetaPrec,
-				Perestroika := false)
+				  ThetaPrec := 25,
+				  Perestroika := false)
     ret := [* KMatrixSpace(BaseRing(M`H[1]),Dimension(M),Dimension(h))!0 :
 	    h in M`H *];
     for tup in s do

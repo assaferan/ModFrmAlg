@@ -190,7 +190,8 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
   end if;
 
   // Look for the requested Hecke operator.
-  ok, Ts := IsDefined(M`Hecke`Ts, k);
+  key := Perestroika select 0 else k; 
+  ok, Ts := IsDefined(M`Hecke`Ts, key);
   if ok and not Force then
     ok, T := IsDefined(Ts, pR);
     if ok then return T; end if;
@@ -217,7 +218,7 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
 
   // Sets the Hecke operator in the internal data structure for this
   //  algebraic modular form.
-  SetHeckeOperator(M, hecke, pR, k);
+  SetHeckeOperator(M, hecke, pR, k : Perestroika := Perestroika);
 
   // Returns the computed Hecke operator.
   return hecke;
@@ -463,10 +464,11 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
    start_idx := s[1][3];
    end_idx := start_idx + Dimension(M`H[space_idx]) - 1;
    assert start_idx le i and i le end_idx;
+   key := Perestroika select 0 else k;
    // Due to the nature of the computation, we compute an entire block together
-   if not IsDefined(M`Hecke`standard_images[i], k) then
+   if not IsDefined(M`Hecke`standard_images[i], key) then
        for j in [start_idx..end_idx] do
-	   M`Hecke`standard_images[j][k] := AssociativeArray();
+	   M`Hecke`standard_images[j][key] := AssociativeArray();
        end for;
    end if;
    // !!! TODO : maybe should restrict to one of each relevant norm
@@ -494,7 +496,7 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
        ps := [p : p in ps | alpha(p) ne p];
    end if;
    // generate more images..
-   new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][k])];
+   new_ps := [p : p in ps | p notin Keys(M`Hecke`standard_images[i][key])];
 
    // initialize the invariants
     
@@ -511,11 +513,11 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
 					  Perestroika := Perestroika);
        sp_mat := sp_hec[space_idx];
        for j in [start_idx..end_idx] do
-	   M`Hecke`standard_images[j][k][p] :=
+	   M`Hecke`standard_images[j][key][p] :=
 	       Transpose(sp_mat)[j-start_idx+1];
        end for;
    end for;
-   return M`Hecke`standard_images[i][k];  
+   return M`Hecke`standard_images[i][key];  
 end function;
 
 intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
@@ -525,13 +527,15 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 		      Orbits := true,
 		      UseLLL := false,
 		      LowMemory := false,
-		      ThetaPrec := 25) -> SeqEnum
+		      ThetaPrec := 25,
+		      Perestroika := false) -> SeqEnum
 {The images of the ith standard basis vector
  under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
 These are computed using sparse methods that don't
 require computing the full Hecke operator.}  
   return internalHeckeImages(M, i, n, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec);     
+			     Estimate, Orbits, UseLLL,
+			     LowMemory, ThetaPrec : Perestroika := Perestroika);
 end intrinsic;
 
 
@@ -542,11 +546,14 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 		      Orbits := true,
 		      UseLLL := false,
 		      LowMemory := false,
-		      ThetaPrec := 25) -> SeqEnum
+		      ThetaPrec := 25,
+		      Perestroika := false) -> SeqEnum
 {The images of the ith standard basis vector
  under the Hecke operators Tp^k for p good prime, such that Norm(p)<=n
 These are computed using sparse methods that don't
 require computing the full Hecke operator.}  
   return internalHeckeImages(M, i, ps, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec);   
+			     Estimate, Orbits, UseLLL,
+			     LowMemory, ThetaPrec :
+			     Perestroika := Perestroika);   
 end intrinsic;

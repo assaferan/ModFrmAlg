@@ -595,7 +595,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
     n := Dimension(Q);
 
     kk := k ne 0 select k else n div 2;
-    fullCount := NumberOfNeighbors(M, pR, k);
+    fullCount := NumberOfNeighbors(M, pR, kk);
     count := 0;
     elapsed := 0;
     start := Realtime();

@@ -266,7 +266,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 
     // Build neighboring procedure for this lattice.
     nProc := BuildNeighborProc(L, pR, k
-			       : BeCareful := BeCareful);
+			       : BeCareful := BeCareful,
+				 Perestroika := Perestroika);
 
     if GetVerbose("AlgebraicModularForms") ge 1 then
 	printf "Computing %o%o-neighbors for isometry class "

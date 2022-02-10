@@ -453,7 +453,8 @@ end function;
 
 // The initialization function
 
-function BuildNeighborProc(L, pR, k : BeCareful := false)
+function BuildNeighborProc(L, pR, k : BeCareful := false,
+				      Perestroika := false)
 	// Initialize the neighbor procedure.
 	nProc := New(NeighborProc);
 
@@ -580,6 +581,11 @@ function BuildNeighborProc(L, pR, k : BeCareful := false)
 	    nProc`skewDim := Integers()!(k*(k+1)/2);
 	else
 	    nProc`skewDim := Integers()!(k*(k-1)/2);
+	end if;
+	// For the Perestroika operator we only need the
+	// lagrangians mod p, not mod p^2
+	if Perestroika then
+	    nProc`skewDim := 0;
 	end if;
 	if nProc`skewDim ne 0 then
 	    nProc`skew := Zero(MatrixRing(Vpp`F, k));
@@ -952,12 +958,13 @@ procedure GetNextNeighbor(~nProc : BeCareful := false)
 	// Update the skew matrix
 	if nProc`skewDim ne 0 then
 	    UpdateSkewMatrix(~nProc, ~row, ~col, overflow);
-	end if;
+	    //	end if;
 
-	// If we haven't rolled over, update the skew space and return...
-	if (row+col lt overflow+1) then
-	    UpdateSkewSpace(~nProc : BeCareful := BeCareful);
-	    return;
+	    // If we haven't rolled over, update the skew space and return...
+	    if (row+col lt overflow+1) then
+		UpdateSkewSpace(~nProc : BeCareful := BeCareful);
+		return;
+	    end if;
 	end if;
 
 	if GetVerbose("AlgebraicModularForms") ge 2 then

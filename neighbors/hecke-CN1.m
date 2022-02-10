@@ -256,16 +256,17 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 Estimate := true,
 				 ComputeGenus := false,
 				 LowMemory := false,
-				 ThetaPrec := 25,
-				 Perestroika := false)
+				 ThetaPrec := 25)
     L := reps[idx];
     // !! TODO - get this out of here
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
+    kk := k ne 0 select k else n div 2;
+    Perestroika := k eq 0;
     // Build neighboring procedure for this lattice.
-    nProc := BuildNeighborProc(L, pR, k
+    nProc := BuildNeighborProc(L, pR, kk
 			       : BeCareful := BeCareful,
 				 Perestroika := Perestroika);
 
@@ -494,7 +495,7 @@ function HeckeOperatorCN1(M, pR, k
 			    ComputeGenus := false,
 			    LowMemory := false,
 			    ThetaPrec := 25,
-			    Perestroika := false)
+			    AutoFill := false)
     if ComputeGenus then
       L := Module(M);
       reps := [L];
@@ -524,7 +525,8 @@ function HeckeOperatorCN1(M, pR, k
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
-    fullCount := #M`H * NumberOfNeighbors(M, pR, k);
+    kk := k ne 0 select k else n div 2;
+    fullCount := #M`H * NumberOfNeighbors(M, pR, kk);
     count := 0;
     elapsed := 0;
     start := Realtime();
@@ -536,16 +538,15 @@ function HeckeOperatorCN1(M, pR, k
     while (idx le #M`H) do
     //while (idx le max_idx) do
         HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
-			     start, ~count, ~elapsed, fullCount :
-			     BeCareful := BeCareful,
-			     Orbits := Orbits,
-			     UseLLL := UseLLL,
-			     Estimate := Estimate,
-			     ComputeGenus := ComputeGenus,
-			     LowMemory := LowMemory,
-			     ThetaPrec := ThetaPrec,
-			     Perestroika := Perestroika);
-        if (other_hecke_computed) and (idx lt #M`H) then
+			       start, ~count, ~elapsed, fullCount :
+			       BeCareful := BeCareful,
+			       Orbits := Orbits,
+			       UseLLL := UseLLL,
+			       Estimate := Estimate,
+			       ComputeGenus := ComputeGenus,
+			       LowMemory := LowMemory,
+			       ThetaPrec := ThetaPrec);
+        if AutoFill and (other_hecke_computed) and (idx lt #M`H) then
             tmp := finalizeHecke(M, hecke, [1..#M`H]);
             column := Transpose(tmp);
             indices := [1..idx];
@@ -579,8 +580,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				       Estimate := true,
 				       Orbits := true,
 				       LowMemory := false,
-				     ThetaPrec := 25,
-				     Perestroika := false)
+				     ThetaPrec := 25)
 
     assert 1 le idx and idx le #M`H;
     // The genus representatives.
@@ -594,18 +594,12 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
+    kk := k ne 0 select k else n div 2;
     fullCount := NumberOfNeighbors(M, pR, k);
     count := 0;
     elapsed := 0;
     start := Realtime();
 
-/*
-    // moving it outside to hecke.m
-    // initialize the invariants
-    
-    invs := HeckeInitializeInvs(M, ThetaPrec);
-    
-*/
     HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			     start, ~count, ~elapsed, fullCount :
 			     BeCareful := BeCareful,
@@ -613,8 +607,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 			     UseLLL := UseLLL,
 			     Estimate := Estimate,
 			     LowMemory := LowMemory,
-			   ThetaPrec := ThetaPrec,
-			   Perestroika := Perestroika);
+			     ThetaPrec := ThetaPrec);
    
     return finalizeHecke(M, hecke, [idx]);
 end function;
@@ -625,8 +618,8 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 				  Estimate := true,
 				  Orbits := true,
 				  LowMemory := false,
-				  ThetaPrec := 25,
-				  Perestroika := false)
+				  ThetaPrec := 25)
+    
     ret := [* KMatrixSpace(BaseRing(M`H[1]),Dimension(M),Dimension(h))!0 :
 	    h in M`H *];
     for tup in s do
@@ -640,8 +633,7 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 					       Estimate := Estimate,
 					       Orbits := Orbits,
 					       LowMemory := LowMemory,
-				      ThetaPrec := ThetaPrec,
-				      Perestroika := Perestroika);
+					       ThetaPrec := ThetaPrec);
 	ret[space_idx] +:= hecke;
     end for;
     return ret;

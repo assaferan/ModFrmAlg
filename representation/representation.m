@@ -1758,8 +1758,8 @@ function get_hw_basis_gl(lambda, F, n)
   var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..k]] : i in [1..n]];
   AssignNames(~R, &cat var_names);
 
-  if n*k eq 0 then
-      x := MatrixAlgebra(R,0)!1;
+  if k eq 0 then
+      x := RMatrixSpace(R, n, 0)!0;
   else
       x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
 		    : j in [1..k]]: i in [1..n]]);
@@ -1855,8 +1855,12 @@ function get_hw_rep_poly(lambda, B, n : Dual := false)
                       n := %o;
 		      k := %o;
                       gens := GeneratorsSequence(R);
-                      x := Matrix([[gens[k*i+j+1] 
-                            : j in [0..k-1]] : i in [0..n-1]]);
+		      if k eq 0 then
+		      	 x := RMatrixSpace(R, n, 0)!0;
+		      else			 
+                         x := Matrix([[gens[k*i+j+1] 
+                                       : j in [0..k-1]] : i in [0..n-1]]);
+		      end if;
                       g_R := ChangeRing(%o, R);
                       f := B[m];
                       f_g := Evaluate(f, Eltseq(g_R*x));

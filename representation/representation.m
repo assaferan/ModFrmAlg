@@ -1837,7 +1837,7 @@ function get_hw_rep_poly(lambda, B, n : Dual := false)
   M := CombinatorialFreeModule(F, {@ b : b in B@});
   mons := &join([Set(Monomials(b)) : b in B]);
   mons := SetToSequence(mons);
-  degs := [[Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
+  degs := [[Integers() | Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
   mon_vs := VectorSpace(F, #mons);
   // This is somewhat long, optimize if needed
   vecs := [&+[Coefficients(b)[i]*

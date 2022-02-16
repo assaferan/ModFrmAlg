@@ -96,9 +96,11 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   if ThetaPrec eq -1 then
     inv := GreedyReduce(nLat);
   elif ThetaPrec eq -2 then
-    inv := GreedyReduce2(nLat);
+      inv := GreedyReduce2(nLat);
+  elif ThetaPrec eq 0 then
+      inv := Invariant(nLat : Precision := AbsolutePrecision(Random(Keys(invs)))-1);
   else
-    inv := Invariant(nLat : Precision := ThetaPrec);
+      inv := Invariant(nLat : Precision := ThetaPrec);
   end if;
 
   // Retrieve the array of isometry classes matching this invariant.
@@ -639,12 +641,17 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
     return ret;
 end function;
 
+forward get_best_prec;
+
 intrinsic HeckeInitializeInvs(M::ModFrmAlg, ThetaPrec::RngIntElt) -> Assoc
 {.}
   if ThetaPrec eq -1 then
     invs := createReducedInvs(Representatives(Genus(M)));
   elif ThetaPrec eq -2 then
-    invs := createReducedInvs2(Representatives(Genus(M)));
+      invs := createReducedInvs2(Representatives(Genus(M)));
+  elif ThetaPrec eq 0 then
+      prec := get_best_prec(Representatives(Genus(M)));
+      invs := createInvsWithPrecision(M, prec);
   else
     invs := createInvsWithPrecision(M, ThetaPrec);
   end if;
@@ -996,3 +1003,86 @@ intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
  
     return finalizeHecke(M, hecke, [hecke_idx]);
 end intrinsic;
+
+// Functions for automatic determination of theta precision
+
+function time_theta(N, lat, prec)
+    t := Cputime();
+    for i in [1..N] do
+	th := ThetaSeries(ZLattice(lat), prec);
+    end for;
+    return Cputime()-t;
+end function;
+
+function time_isom(N, lat)
+    t := Cputime();
+    for i in [1..N] do
+	_ := IsIsometric(lat,lat);
+    end for;
+    return Cputime()-t;
+end function;
+
+function binary_search_prec(thetas, num_distinct, start_prec)
+    L := 0;
+    R := start_prec;
+    _<q> := Universe(thetas);
+    while L le R do
+	prec := (L + R) div 2;
+	theta_pr := {th + O(q^(prec+1)) : th in thetas};
+	if #theta_pr ge num_distinct then
+	    R := prec-1;
+	else
+	    L := prec+1;
+	end if;
+    end while;
+    return prec;
+end function;
+
+// Currently we're applying a binary search heuristic.
+// Should be able to do better.
+function get_max_req_prec(lats : start_prec := 1)
+    // We first determine a precision for which all are different.
+    prec := start_prec;
+    done := false;
+    while not done do
+	prec *:= 2;
+	thetas := {ThetaSeries(ZLattice(lat), prec) : lat in lats};
+	if (#thetas eq #lats) then
+	    done := true;
+	end if;
+    end while;
+    /*
+    _<q> := Universe(thetas);
+    L := 0;
+    R := prec;
+    while L le R do
+	prec := (L + R) div 2;
+	theta_pr := {th + O(q^(prec+1)) : th in thetas};
+	if #theta_pr eq #lats then
+	    R := prec-1;
+	else
+	    L := prec+1;
+	end if;
+    end while;
+   */
+    prec := binary_search_prec(thetas, #lats, prec);
+    return prec, thetas;
+end function;
+
+function get_best_prec(lats)
+    L, thetas := get_max_req_prec(lats);
+    // see what are the correct N's to use for testing
+    t_full_th := &+[time_theta(10^3, lat, L) : lat in lats];
+    t_isom := &+[time_isom(10^3, lat) : lat in lats];
+    all_times := [<t_full_th, L>];
+    num_dist := #lats;
+    while (num_dist gt 1) do
+	num_dist -:= 1;
+	prec := binary_search_prec(thetas, num_dist, L);
+	t_th := &+[time_theta(10^3, lat, prec) : lat in lats];
+	avg_time := t_th + ((#lats) / num_dist-1) * t_isom;
+	Append(~all_times, <avg_time, prec>);
+    end while;
+    min_time, argmin := Minimum(all_times);
+    return min_time[2];
+end function;

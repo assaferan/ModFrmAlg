@@ -1024,10 +1024,16 @@ function SatakePolynomialInner(G, a, r, F)
     satake_t := &+[cfs[Index(betas, a)]*Monomial(R, a) : a in Set(abs_betas)];
     h := hom<R-> A | [A.i + A.(i+r) : i in [1..r]] >;
     assert h(satake_t) eq satake_mu;
-    b := S!ConstantTerm(satake_t);
-    lc := LeadingCoefficient(satake_t);
-    assert lc*ElementarySymmetricPolynomial(R, k)+b eq satake_t;
-    Append(~coeffs, (-1)^k*(c[k] - b)/lc);
+    is_sym, lin_comb := IsSymmetric(satake_t);
+    b := S!ConstantTerm(lin_comb);
+    sym_coeffs := [S!Coefficient(lin_comb, Parent(lin_comb).i, 1) : i in [1..k]];
+//    b := S!ConstantTerm(satake_t);
+//    lc := LeadingCoefficient(satake_t);
+    //    assert lc*ElementarySymmetricPolynomial(R, k)+b eq satake_t;
+    assert &+[sym_coeffs[i]*ElementarySymmetricPolynomial(R,i) : i in [1..k]] + b eq satake_t;
+    assert sym_coeffs[k] ne 0;
+    s := &+([0] cat [sym_coeffs[i] * (-1)^i * coeffs[i] : i in [1..k-1]]);
+    Append(~coeffs, (-1)^k*(c[k] - b - s)/sym_coeffs[k]);
   end for;
   _<t> := PolynomialRing(RR);
   t_poly :=  t^r;
@@ -1049,14 +1055,16 @@ function SatakePolynomial(f, p : d := Infinity())
   // This is not the most efficient way - we could first check if the
   // group is split at p or not (compute r) and then compute only up to r
   // plugging in the eigenvalues
-  evs, _ := [HeckeEigensystem(f, k : Precision := [BaseRing(L)!!p])[1] :
+  pR := (Type(BaseRing(L)) eq RngInt) select ideal<Integers() | p> else
+	BaseRing(L)!!p;
+  evs, _ := [HeckeEigensystem(f, k : Precision := [pR])[1] :
 			       k in [1..n_evs]];
   if n_evs lt n div 2 then
     evs cat:= [0 : i in [n_evs+1..n div 2]];
   end if;
   evs_fld := Universe(evs);
   evs_fld_x<x> := PowerSeriesRing(evs_fld); 
-  V := L`Vpp[p]`V;
+  V := L`Vpp[pR]`V;
   // This is to determine splitting or non-splitting.
   a := V`AnisoDim;
   r := V`WittIndex;
@@ -1068,7 +1076,7 @@ function SatakePolynomial(f, p : d := Infinity())
     if (a + 2*r eq n) then
       x_poly *:= (1-x)*(1+x);
     else // ramified case, take extra care
-      eps := WittInvariant(L, BaseRing(L)!!p);
+      eps := WittInvariant(L, pR);
       x_poly *:= 1 + (eps/sqrt_p^(n-2))*x;
     end if;
   end if;
@@ -1094,6 +1102,13 @@ function SatakePolynomial(f, p : d := Infinity())
   end if;
   return ret + O(x^(d+1));
 end function;
+
+procedure testSatake(Q, upTo)
+    M := OrthogonalModularForms(LatticeWithGram(Q));
+    fs := HeckeEigenforms(M);
+    assert &and[&and[SatakePolynomial(f,p) eq LPolynomial(f,p) : p in PrimesUpTo(upTo) | 
+		     Determinant(Q) mod p ne 0] : f in fs];
+end procedure;
 
 function SatakeLSeries(f : Precision := 0)
   function local_factor(p,d)

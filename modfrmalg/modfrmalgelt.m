@@ -1049,7 +1049,9 @@ function SatakePolynomial(f, p : d := Infinity())
   // This is not the most efficient way - we could first check if the
   // group is split at p or not (compute r) and then compute only up to r
   // plugging in the eigenvalues
-  evs, _ := [HeckeEigensystem(f, k : Precision := [BaseRing(L)!!p])[1] :
+  R := BaseRing(L);
+  pR := ideal<R | p>;
+  evs, _ := [HeckeEigensystem(f, k : Precision := [pR])[1] :
 			       k in [1..n_evs]];
   if n_evs lt n div 2 then
     evs cat:= [0 : i in [n_evs+1..n div 2]];

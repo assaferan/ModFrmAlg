@@ -1093,7 +1093,12 @@ function SatakePolynomial(f, p : d := Infinity())
   S_x<x> := PolynomialRing(S);
   ev_hom_poly := hom<RR_x -> S_x | ev_hom, [x] >;
   // now we plug in sqrt(p) back again into the polynomial
-  K<sqrtp> := QuadraticField(p);
+  // K<sqrtp> := QuadraticField(p);
+  C := BaseRing(f`vec);
+  C_x<x> := PolynomialRing(C);
+  // K<sqrtp> := ext<C | x^2-p>;
+  K, rts := SplittingField(x^2-p);
+  sqrtp := rts[1];
   ev := hom<S -> K | sqrtp>;
   K_x<x> := PolynomialRing(K);
   ev_poly := hom<S_x -> K_x | ev, [x]>;

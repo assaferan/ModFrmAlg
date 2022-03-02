@@ -1058,7 +1058,7 @@ function SatakePolynomial(f, p : d := Infinity())
   end if;
   evs_fld := Universe(evs);
   evs_fld_x<x> := PowerSeriesRing(evs_fld); 
-  V := L`Vpp[p]`V;
+  V := L`Vpp[pR]`V;
   // This is to determine splitting or non-splitting.
   a := V`AnisoDim;
   r := V`WittIndex;
@@ -1070,7 +1070,7 @@ function SatakePolynomial(f, p : d := Infinity())
     if (a + 2*r eq n) then
       x_poly *:= (1-x)*(1+x);
     else // ramified case, take extra care
-      eps := WittInvariant(L, BaseRing(L)!!p);
+      eps := WittInvariant(L, pR);
       x_poly *:= 1 + (eps/sqrt_p^(n-2))*x;
     end if;
   end if;
@@ -1114,7 +1114,7 @@ function SatakeLSeries(f : Precision := 0)
   M := f`M;
   L := Module(M);
   n := Dimension(ReflexiveSpace(L));
-  D := Integers()!(Norm(Discriminant(L : GramFactor := 2)));
+  D := Integers()!(Norm(Discriminant(L)));
 
   if assigned Weight(M)`lambda then
     lambda := Weight(M)`lambda;

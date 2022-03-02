@@ -1055,8 +1055,8 @@ function SatakePolynomial(f, p : d := Infinity())
   // This is not the most efficient way - we could first check if the
   // group is split at p or not (compute r) and then compute only up to r
   // plugging in the eigenvalues
-  pR := (Type(BaseRing(L)) eq RngInt) select ideal<Integers() | p> else
-	BaseRing(L)!!p;
+  R := BaseRing(L);
+  pR := ideal<R | p>;
   evs, _ := [HeckeEigensystem(f, k : Precision := [pR])[1] :
 			       k in [1..n_evs]];
   if n_evs lt n div 2 then
@@ -1127,7 +1127,7 @@ function SatakeLSeries(f : Precision := 0)
   M := f`M;
   L := Module(M);
   n := Dimension(ReflexiveSpace(L));
-  D := Integers()!(Norm(Discriminant(L : GramFactor := 2)));
+  D := Integers()!(Norm(Discriminant(L)));
 
   if assigned Weight(M)`lambda then
     lambda := Weight(M)`lambda;

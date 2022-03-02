@@ -97,6 +97,7 @@ declare attributes ModHecke:
 
 // We use this function for several intrinsic interfaces below
 procedure internalSetHecke(~M, T, pR, k)
+
   // If assocative array does not exist for this dimension, create one.
   if not IsDefined(M`Hecke`Ts, k) then
     M`Hecke`Ts[k] := AssociativeArray();
@@ -118,19 +119,19 @@ procedure internalSetHecke(~M, T, pR, k)
   end for;
 end procedure;
 
-intrinsic SetHeckeOperator(
-	M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl, k::RngIntElt)
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl,
+			   k::RngIntElt)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
   internalSetHecke(~M, T, pR, k);
 end intrinsic;
 
-intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR:RngOrdIdl)
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngOrdIdl)
 { Sets the 1-st order Hecke operator at the specified prime for this form. }
   SetHeckeOperator(M, T, pR, 1);
 end intrinsic;
 
 intrinsic SetHeckeOperator(
-	M::ModFrmAlg, T::AlgMatElt, pR::RngInt, k::RngIntElt)
+			   M::ModFrmAlg, T::AlgMatElt, pR::RngInt, k::RngIntElt)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
   internalSetHecke(~M, T, pR, k);
 end intrinsic;
@@ -140,8 +141,8 @@ intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt)
   SetHeckeOperator(M, T, pR, 1);
 end intrinsic;
 
-intrinsic SetHeckeOperator(
-	M::ModFrmAlg, T::AlgMatElt, p::RngIntElt, k::RngIntElt)
+intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt,
+					    p::RngIntElt, k::RngIntEl)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
   SetHeckeOperator(M, T, ideal< Integers() | p >, k);
 end intrinsic;
@@ -155,8 +156,7 @@ end intrinsic;
 
 // internal function for several of the interfaces below
 function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
-		       ComputeGenus, LowMemory, ThetaPrec :
-		       Perestroika := false)
+		       ComputeGenus, LowMemory, ThetaPrec)
   // Initialize the space of algebraic modular forms, if needed.
   if not ComputeGenus then
     ModFrmAlgInit(M : BeCareful := BeCareful,
@@ -184,6 +184,7 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
   end if;
 
   // Look for the requested Hecke operator.
+  
   ok, Ts := IsDefined(M`Hecke`Ts, k);
   if ok and not Force then
     ok, T := IsDefined(Ts, pR);
@@ -201,13 +202,10 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
    use_LLL := false;
   end if;
 
-  
   hecke := HeckeOperatorCN1(M, pR, k : BeCareful := BeCareful,
 			    UseLLL := use_LLL, Estimate := Estimate,
 			    Orbits := Orbits, ComputeGenus := ComputeGenus,
-			    LowMemory := LowMemory, ThetaPrec := ThetaPrec,
-			    Perestroika := Perestroika);
-
+			    LowMemory := LowMemory, ThetaPrec := ThetaPrec);
 
   // Sets the Hecke operator in the internal data structure for this
   //  algebraic modular form.
@@ -249,9 +247,8 @@ intrinsic PerestroikaOperator(M::ModFrmAlg, pR::RngOrdIdl
   require IsOrthogonal(M): "Perestroika operator only exists for orthogonal groups.";
   n := Rank(Module(M));
   require IsEven(n) : "Perestroika operator only exists in even rank.";
-  k := n div 2;
-  return internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
-		       ComputeGenus, LowMemory, ThetaPrec : Perestroika);
+  return internalHecke(M, pR, 0, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 			      
 
@@ -310,9 +307,9 @@ number field is the rationals. }
   require IsOrthogonal(M): "Perestroika operator only exists for orthogonal groups.";
   n := Rank(Module(M));
   require IsEven(n) : "Perestroika operator only exists in even rank.";
-  k := n div 2;
-  return internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
-		       ComputeGenus, LowMemory, ThetaPrec : Perestroika);
+  
+  return internalHecke(M, pR, 0, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
@@ -445,8 +442,8 @@ end function;
 
 // This will be used for both versions of HeckeImages
 function internalHeckeImages(M, i, prec, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec
-			     : Perestroika := false)
+			     Estimate, Orbits, UseLLL,
+			     LowMemory, ThetaPrec)
    assert 1 le i and i le Dimension(M);
    if not assigned M`Hecke`standard_images then
        M`Hecke`standard_images :=
@@ -501,8 +498,7 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
 					  Orbits := Orbits,
 					  UseLLL := UseLLL,
 					  LowMemory := LowMemory,
-					  ThetaPrec := ThetaPrec,
-					  Perestroika := Perestroika);
+					  ThetaPrec := ThetaPrec);
        sp_mat := sp_hec[space_idx];
        for j in [start_idx..end_idx] do
 	   M`Hecke`standard_images[j][k][p] :=
@@ -525,7 +521,8 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 These are computed using sparse methods that don't
 require computing the full Hecke operator.}  
   return internalHeckeImages(M, i, n, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec);     
+			     Estimate, Orbits, UseLLL,
+			     LowMemory, ThetaPrec);
 end intrinsic;
 
 
@@ -542,5 +539,6 @@ intrinsic HeckeImages(M::ModFrmAlg, i::RngIntElt,
 These are computed using sparse methods that don't
 require computing the full Hecke operator.}  
   return internalHeckeImages(M, i, ps, k, BeCareful,
-			     Estimate, Orbits, UseLLL, LowMemory, ThetaPrec);   
+			     Estimate, Orbits, UseLLL,
+			     LowMemory, ThetaPrec);   
 end intrinsic;

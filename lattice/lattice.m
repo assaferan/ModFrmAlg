@@ -1739,7 +1739,7 @@ intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
       F := QNF();
       ideals := [ideal<Integers(F) | Norm(I)> : I in ideals];
   end if;
-  basis := [Vector(NumberField(Order(F)), x[2]) : x in pb];
+  basis := [Vector(NumberField(Integers(F)), x[2]) : x in pb];
   nfl := NumberFieldLattice(basis : Gram := gram, Ideals := ideals);
   return nfl;
 end intrinsic;

@@ -180,3 +180,123 @@ function otherStuff()
     v := [&+[(coeffs[i]/b)*mons[i] : i in [1..#coeffs] |
 	     IsCoercible(Rationals(), coeffs[i] / b)] : b in basis_B];
 end function;
+
+
+// currently not working
+/*
+procedure GetNextNeighborNoSkew(~nProc : BeCareful := false)
+	// The affine data.
+	Vpp := nProc`L`Vpp[nProc`pR];
+
+	// The isotropic dimension we're interested in.
+	k := nProc`k;
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "Currently space = %o, running NextIsotropicSubspace...\n",
+		   nProc`isoSubspace;
+	end if;
+
+	// get the next isotropic subspace modulo pR.
+	nProc`isoSubspace := NextIsotropicSubspace(Vpp`V, k);
+
+	if GetVerbose("AlgebraicModularForms") ge 2 then
+	    printf "After NextIsotropicSubspace = %o, running lifting...\n",
+		   nProc`isoSubspace;
+	end if;
+	
+	// Lift the subspace if we haven't reached the end of the list.
+	    
+	nProc`X, nProc`Z, nProc`U :=
+	    LiftSubspace(nProc : BeCareful := BeCareful);
+
+	// Checking if we could lift modulo pR * alpha(pR)
+	while IsEmpty(nProc`X) and (not IsEmpty(nProc`isoSubspace)) do
+	    nProc`isoSubspace := NextIsotropicSubspace(Vpp`V, k);
+	    nProc`X, nProc`Z, nProc`U :=
+		LiftSubspace(nProc : BeCareful := BeCareful);
+	end while;
+	
+	nProc`X_skew := [ x : x in nProc`X ];
+	
+end procedure;
+
+function hecke_pivot_skew(M, nProc, skew_idx, pivot_idx, ThetaPrec, hecke_idx :
+			  BeCareful := false, Estimate := true)
+
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+	       : h in M`H];
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    __initializePivot(V, k);
+    evalList := [* 0 : i in [1..Dimension(V)*k] *];
+    for i in [1..#data`Params] do
+	evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
+    end for;
+    space := Rows(Evaluate(data`IsotropicParam, [ x : x in evalList]));
+    skew := Matrix(BaseRing(V), [[skew_idx,0], [0,-skew_idx]]);
+    // update params, so GetNextNeighbor would work. 
+    if #data`FreeVars ne 0 then
+	// The current position in the parameterization.
+	pos := 0;
+
+	// Terminate loop once we found the next new subspace, or we
+	//  hit the end of the list.
+	repeat
+	    // Increment position.
+	    pos +:= 1;
+	    
+	    if V`Symbolic then
+		// Increment value.
+		data`Params[pos] +:= 1;
+		
+		// Check to see if we've rolled over.
+		if (data`Params[pos] mod #V`S) eq 0 then
+		    // Reset value if so.
+		    data`Params[pos] := 0;
+		end if;
+	    else
+		// Manually move to the next element.
+		if IsPrime(#BaseRing(V)) then
+		    data`Params[pos] +:= 1;
+		elif data`Params[pos] eq 0 then
+		    data`Params[pos] := V`PrimitiveElement;
+		elif data`Params[pos] eq 1 then
+		    data`Params[pos] := 0;
+		else
+		    data`Params[pos] *:= V`PrimitiveElement;
+		end if;
+	    end if;
+	until pos eq #data`FreeVars or data`Params[pos] ne 0;
+    end if;
+
+    // If we've hit the end of the list, indicate we need to move on to the
+    //  next pivot.
+    if &and[ x eq 0 : x in data`Params ] then data`Params := []; end if;
+    SkipToNeighbor(~nProc, space, skew);
+    fullCount := #BaseRing(V)^(#data`FreeVars);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+    //while nProc`isoSubspace ne [] do
+    for i in [1..fullCount] do
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H :
+			      ThetaPrec := ThetaPrec);
+	// Update nProc in preparation for the next neighbor
+	//  lattice.
+	GetNextNeighborNoSkew(~nProc
+			      : BeCareful := BeCareful);
+	if Estimate then
+	    printEstimate(start, ~count, ~elapsed,
+			  fullCount, Sprintf("T_%o^%o", Norm(nProc`pR), k));
+	end if;
+    end for;
+    //end while;
+    // return fullCount;
+    //return count;
+    return finalizeHecke(M, hecke, [hecke_idx]);
+end function;
+*/

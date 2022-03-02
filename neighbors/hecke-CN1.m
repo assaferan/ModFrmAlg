@@ -77,6 +77,13 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
 			UseLLL := UseLLL,
 			Perestroika := Perestroika);
 
+  if Perestroika then
+    isom_scale := BasisMatrix(Module(nLat));
+    Vpp := nProc`L`Vpp[nProc`pR];
+    pi := Vpp`pElt;
+    nLat := ScaledLattice(nLat, 1/pi);
+  end if;
+
   if GetVerbose("AlgebraicModularForms") ge 2 then
     printf "Processing neighbor corresponding to isotropic subspace ";
     printf "indexed by %o.\n", nProc`isoSubspace;
@@ -89,9 +96,11 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   if ThetaPrec eq -1 then
     inv := GreedyReduce(nLat);
   elif ThetaPrec eq -2 then
-    inv := GreedyReduce2(nLat);
+      inv := GreedyReduce2(nLat);
+  elif ThetaPrec eq 0 then
+      inv := Invariant(nLat : Precision := AbsolutePrecision(Random(Keys(invs)))-1);
   else
-    inv := Invariant(nLat : Precision := ThetaPrec);
+      inv := Invariant(nLat : Precision := ThetaPrec);
   end if;
 
   // Retrieve the array of isometry classes matching this invariant.
@@ -140,7 +149,11 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
         if GetVerbose("AlgebraicModularForms") ge 2 then
 	  printf "Neighbor is isometric to genus %o.\n", space_idx;
         end if;
-	   
+
+        if Perestroika then
+          g := g * ChangeRing(isom_scale, BaseRing(g));
+        end if;
+
         gg := W`G!ChangeRing(Transpose(g), BaseRing(W`G));
 
         if GetVerbose("AlgebraicModularForms") ge 2 then
@@ -245,17 +258,19 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 Estimate := true,
 				 ComputeGenus := false,
 				 LowMemory := false,
-				 ThetaPrec := 25,
-				 Perestroika := false)
+				 ThetaPrec := 25)
     L := reps[idx];
     // !! TODO - get this out of here
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
+    kk := k ne 0 select k else n div 2;
+    Perestroika := k eq 0;
     // Build neighboring procedure for this lattice.
-    nProc := BuildNeighborProc(L, pR, k
-			       : BeCareful := BeCareful);
+    nProc := BuildNeighborProc(L, pR, kk
+			       : BeCareful := BeCareful,
+				 Perestroika := Perestroika);
 
     if GetVerbose("AlgebraicModularForms") ge 1 then
 	printf "Computing %o%o-neighbors for isometry class "
@@ -294,7 +309,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           orb_stab := is_solvable select orb_stab_pc else orb_stab_general;
           orb_reps := [];
           y := nProc`isoSubspace;
-          skew0 := Zero(MatrixRing(F, k));
+          skew0 := Zero(MatrixRing(F, kk));
           while y ne [] do
             gens_y := [ b * Transpose(V`Basis) : b in y ];
             W_y := sub<V | gens_y>;
@@ -339,7 +354,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	        GetNextNeighbor(~nProc : BeCareful := BeCareful);
                 if Estimate then
 	          printEstimate(start, ~count, ~elapsed,
-			  fullCount, Sprintf("T_%o^%o", Norm(pR), k)
+			  fullCount, Sprintf("T_%o^%o", Norm(pR), kk)
 			  : increment := #orb);
 	        end if;
               until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
@@ -354,11 +369,11 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           proj := map< G_conj -> GL(n,F) |
 	    g :-> [L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]>;
 
-          isoOrbits := IsotropicOrbits(V, G_conj, k,
+          isoOrbits := IsotropicOrbits(V, G_conj, kk,
 				       proj : Estimate := Estimate);
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
-          nNbrs := NumberOfNeighbors(M, pR, k);
+          nNbrs := NumberOfNeighbors(M, pR, kk);
 	  if nNbrs ne 0 then
               vprintf AlgebraicModularForms, 1 :
 		  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
@@ -366,7 +381,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           loopCount := fullCount - nNbrs + #isoOrbits * #F^nProc`skewDim;
           orb_start := Realtime();
 	  for orbit in isoOrbits do
-	    skew0 := Zero(MatrixRing(F, k));
+	    skew0 := Zero(MatrixRing(F, kk));
 	    // Skip to the neighbor associated to this orbit.
             tm := Realtime();
 	    SkipToNeighbor(~nProc, Basis(orbit[1]), skew0);
@@ -403,10 +418,10 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 		if Estimate then
 		  if IsTrivial(M`W) then
 		    printEstimate(orb_start, ~count, ~elapsed, loopCount,
-				  Sprintf("T_%o^%o", Norm(pR), k));
+				  Sprintf("T_%o^%o", Norm(pR), kk));
 		  else
 		    printEstimate(orb_start, ~count, ~elapsed,
-				  fullCount, Sprintf("T_%o^%o", Norm(pR), k) :
+				  fullCount, Sprintf("T_%o^%o", Norm(pR), kk) :
 				  increment := #orbit[2]);
                   end if;
 		end if;
@@ -428,7 +443,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			    : BeCareful := BeCareful);
 	    if Estimate then
 		printEstimate(start, ~count, ~elapsed,
-			      fullCount, Sprintf("T_%o^%o", Norm(pR), k));
+			      fullCount, Sprintf("T_%o^%o", Norm(pR), kk));
 	    end if;
 	end while;
     end if;
@@ -482,7 +497,7 @@ function HeckeOperatorCN1(M, pR, k
 			    ComputeGenus := false,
 			    LowMemory := false,
 			    ThetaPrec := 25,
-			    Perestroika := false)
+			    AutoFill := false)
     if ComputeGenus then
       L := Module(M);
       reps := [L];
@@ -512,7 +527,8 @@ function HeckeOperatorCN1(M, pR, k
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
-    fullCount := #M`H * NumberOfNeighbors(M, pR, k);
+    kk := k ne 0 select k else n div 2;
+    fullCount := #M`H * NumberOfNeighbors(M, pR, kk);
     count := 0;
     elapsed := 0;
     start := Realtime();
@@ -524,16 +540,15 @@ function HeckeOperatorCN1(M, pR, k
     while (idx le #M`H) do
     //while (idx le max_idx) do
         HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
-			     start, ~count, ~elapsed, fullCount :
-			     BeCareful := BeCareful,
-			     Orbits := Orbits,
-			     UseLLL := UseLLL,
-			     Estimate := Estimate,
-			     ComputeGenus := ComputeGenus,
-			     LowMemory := LowMemory,
-			     ThetaPrec := ThetaPrec,
-			     Perestroika := Perestroika);
-        if (other_hecke_computed) and (idx lt #M`H) then
+			       start, ~count, ~elapsed, fullCount :
+			       BeCareful := BeCareful,
+			       Orbits := Orbits,
+			       UseLLL := UseLLL,
+			       Estimate := Estimate,
+			       ComputeGenus := ComputeGenus,
+			       LowMemory := LowMemory,
+			       ThetaPrec := ThetaPrec);
+        if AutoFill and (other_hecke_computed) and (idx lt #M`H) then
             tmp := finalizeHecke(M, hecke, [1..#M`H]);
             column := Transpose(tmp);
             indices := [1..idx];
@@ -567,8 +582,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				       Estimate := true,
 				       Orbits := true,
 				       LowMemory := false,
-				     ThetaPrec := 25,
-				     Perestroika := false)
+				     ThetaPrec := 25)
 
     assert 1 le idx and idx le #M`H;
     // The genus representatives.
@@ -582,18 +596,12 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
-    fullCount := NumberOfNeighbors(M, pR, k);
+    kk := k ne 0 select k else n div 2;
+    fullCount := NumberOfNeighbors(M, pR, kk);
     count := 0;
     elapsed := 0;
     start := Realtime();
 
-/*
-    // moving it outside to hecke.m
-    // initialize the invariants
-    
-    invs := HeckeInitializeInvs(M, ThetaPrec);
-    
-*/
     HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			     start, ~count, ~elapsed, fullCount :
 			     BeCareful := BeCareful,
@@ -601,8 +609,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 			     UseLLL := UseLLL,
 			     Estimate := Estimate,
 			     LowMemory := LowMemory,
-			   ThetaPrec := ThetaPrec,
-			   Perestroika := Perestroika);
+			     ThetaPrec := ThetaPrec);
    
     return finalizeHecke(M, hecke, [idx]);
 end function;
@@ -613,8 +620,8 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 				  Estimate := true,
 				  Orbits := true,
 				  LowMemory := false,
-				ThetaPrec := ThetaPrec,
-				Perestroika := false)
+				  ThetaPrec := 25)
+    
     ret := [* KMatrixSpace(BaseRing(M`H[1]),Dimension(M),Dimension(h))!0 :
 	    h in M`H *];
     for tup in s do
@@ -628,19 +635,23 @@ function HeckeOperatorCN1Sparse(M, pR, k, s, invs
 					       Estimate := Estimate,
 					       Orbits := Orbits,
 					       LowMemory := LowMemory,
-				      ThetaPrec := ThetaPrec,
-				      Perestroika := Perestroika);
+					       ThetaPrec := ThetaPrec);
 	ret[space_idx] +:= hecke;
     end for;
     return ret;
 end function;
+
+forward get_best_prec;
 
 intrinsic HeckeInitializeInvs(M::ModFrmAlg, ThetaPrec::RngIntElt) -> Assoc
 {.}
   if ThetaPrec eq -1 then
     invs := createReducedInvs(Representatives(Genus(M)));
   elif ThetaPrec eq -2 then
-    invs := createReducedInvs2(Representatives(Genus(M)));
+      invs := createReducedInvs2(Representatives(Genus(M)));
+  elif ThetaPrec eq 0 then
+      prec := get_best_prec(Representatives(Genus(M)));
+      invs := createInvsWithPrecision(M, prec);
   else
     invs := createInvsWithPrecision(M, ThetaPrec);
   end if;
@@ -868,4 +879,210 @@ function fillHeckeFromRelations(M, column, indices, ind)
     end if;
 
     return false, _;
+end function;
+
+// TODO : Document better what's below and move some to isotropic.m
+
+import "isotropic.m" : __initializePivot, __pivots;
+
+intrinsic InitPivots(M::ModFrmAlg, pR::RngInt, k::RngIntElt, hecke_idx::RngIntElt) -> NeighborProc, RngIntElt
+{.}
+    reps := Representatives(Genus(M));
+    L := reps[hecke_idx];
+    nProc := BuildNeighborProc(L, pR, k);
+    V := nProc`L`Vpp[nProc`pR]`V;
+    if not IsDefined(V`ParamArray, k) then
+	data := New(IsoParam);
+	data`Pivots := __pivots(Dimension(V) - V`RadDim, V`AnisoDim, k);
+	data`PivotPtr := 0;
+	data`Params := [];
+	V`ParamArray[k] := data;
+    end if;
+    data := V`ParamArray[k];
+    return nProc, #data`Pivots;
+end intrinsic;
+
+intrinsic LogNumPivotNbrs(nProc::NeighborProc, pivot_idx::RngIntElt) -> RngIntElt
+{.}
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    __initializePivot(V, k);
+    return #data`FreeVars;
+end intrinsic;
+
+procedure update_params(~params, V, nFreeVars)
+    // The current position in the parameterization.
+    pos := 0;
+
+    // Terminate loop once we found the next new subspace, or we
+    //  hit the end of the list.
+    repeat
+	// Increment position.
+	pos +:= 1;
+	
+	if V`Symbolic then
+	    // Increment value.
+	    params[pos] +:= 1;
+	    
+	    // Check to see if we've rolled over.
+	    if (params[pos] mod #V`S) eq 0 then
+		// Reset value if so.
+		params[pos] := 0;
+	    end if;
+	else
+	    // Manually move to the next element.
+	    if IsPrime(#BaseRing(V)) then
+		params[pos] +:= 1;
+	    elif params[pos] eq 0 then
+		params[pos] := V`PrimitiveElement;
+	    elif params[pos] eq 1 then
+		params[pos] := 0;
+	    else
+		params[pos] *:= V`PrimitiveElement;
+	    end if;
+	end if;
+    until pos eq nFreeVars or params[pos] ne 0;
+end procedure;
+
+// not including upTo
+intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
+			hecke_idx::RngIntElt, start_idx::RngIntElt, upTo::RngIntElt :
+		     BeCareful := false, Estimate := true, ThetaPrec := 25) -> ModMatFldElt
+{.}
+    invs := HeckeInitializeInvs(M, ThetaPrec);
+    hecke := [ [ [* M`W!0 : hh in M`H *] : vec_idx in [1..Dimension(h)]]
+	       : h in M`H];
+    V := nProc`L`Vpp[nProc`pR]`V;
+    k := nProc`k;
+    // Retrieve the parameters for the requested dimension.
+    data := V`ParamArray[k];
+    data`PivotPtr := pivot_idx;
+    p := #BaseRing(V);
+    log_num_nbrs := LogNumPivotNbrs(nProc, pivot_idx);
+    num := start_idx;
+    // right now, we only support trivial skew
+    for i in [1..log_num_nbrs] do
+	data`Params[i] := num mod p;
+	num div:= p;
+    end for;
+    evalList := [* 0 : i in [1..Dimension(V)*k] *];
+    for i in [1..#data`Params] do
+	evalList[data`FreeVars[i]] := V`S[data`Params[i]+1];
+    end for;
+    space := Rows(Evaluate(data`IsotropicParam, [ x : x in evalList]));
+    skew := nProc`skew;
+    // update params, so GetNextNeighbor would work. 
+    if #data`FreeVars ne 0 then
+	update_params(~data`Params, V, #data`FreeVars);
+    end if;
+
+    // If we've hit the end of the list, indicate we need to move on to the
+    //  next pivot.
+    if &and[ x eq 0 : x in data`Params ] then data`Params := []; end if;
+    SkipToNeighbor(~nProc, space, skew);
+    fullCount := #BaseRing(V)^(nProc`skewDim) * (upTo-start_idx);
+    count := 0;
+    elapsed := 0;
+    start := Realtime();
+ 
+    for i in [1..fullCount] do
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H :
+			      ThetaPrec := ThetaPrec);
+	// Update nProc in preparation for the next neighbor
+	//  lattice.
+	GetNextNeighbor(~nProc
+			: BeCareful := BeCareful);
+	if Estimate then
+	    printEstimate(start, ~count, ~elapsed,
+			  fullCount, Sprintf("T_%o^%o", Norm(nProc`pR), k));
+	end if;
+    end for;
+ 
+    return finalizeHecke(M, hecke, [hecke_idx]);
+end intrinsic;
+
+// Functions for automatic determination of theta precision
+
+function time_theta(N, lat, prec)
+    t := Cputime();
+    for i in [1..N] do
+	th := ThetaSeries(ZLattice(lat), prec);
+    end for;
+    return Cputime()-t;
+end function;
+
+function time_isom(N, lat)
+    t := Cputime();
+    for i in [1..N] do
+	_ := IsIsometric(lat,lat);
+    end for;
+    return Cputime()-t;
+end function;
+
+function binary_search_prec(thetas, num_distinct, start_prec)
+    L := 0;
+    R := start_prec;
+    _<q> := Universe(thetas);
+    while L le R do
+	prec := (L + R) div 2;
+	theta_pr := {th + O(q^(prec+1)) : th in thetas};
+	if #theta_pr ge num_distinct then
+	    R := prec-1;
+	else
+	    L := prec+1;
+	end if;
+    end while;
+    return prec;
+end function;
+
+// Currently we're applying a binary search heuristic.
+// Should be able to do better.
+function get_max_req_prec(lats : start_prec := 1)
+    // We first determine a precision for which all are different.
+    prec := start_prec;
+    done := false;
+    while not done do
+	prec *:= 2;
+	thetas := {ThetaSeries(ZLattice(lat), prec) : lat in lats};
+	if (#thetas eq #lats) then
+	    done := true;
+	end if;
+    end while;
+    /*
+    _<q> := Universe(thetas);
+    L := 0;
+    R := prec;
+    while L le R do
+	prec := (L + R) div 2;
+	theta_pr := {th + O(q^(prec+1)) : th in thetas};
+	if #theta_pr eq #lats then
+	    R := prec-1;
+	else
+	    L := prec+1;
+	end if;
+    end while;
+   */
+    prec := binary_search_prec(thetas, #lats, prec);
+    return prec, thetas;
+end function;
+
+function get_best_prec(lats)
+    L, thetas := get_max_req_prec(lats);
+    // see what are the correct N's to use for testing
+    t_full_th := &+[time_theta(10^3, lat, L) : lat in lats];
+    t_isom := &+[time_isom(10^3, lat) : lat in lats];
+    all_times := [<t_full_th, L>];
+    num_dist := #lats;
+    while (num_dist gt 1) do
+	num_dist -:= 1;
+	prec := binary_search_prec(thetas, num_dist, L);
+	t_th := &+[time_theta(10^3, lat, prec) : lat in lats];
+	avg_time := t_th + ((#lats) / num_dist-1) * t_isom;
+	Append(~all_times, <avg_time, prec>);
+    end while;
+    min_time, argmin := Minimum(all_times);
+    return min_time[2];
 end function;

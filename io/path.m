@@ -2,4 +2,3 @@
 function path()
   return "/Users/eranassaf/Documents/Code/ModFrmAlg/data/";
 end function;
-

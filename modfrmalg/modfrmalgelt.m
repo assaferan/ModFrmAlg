@@ -918,7 +918,7 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0,
   // Change this to correspond to the correct weight
   // should be (??)
   // LSeries(2*n+4, [-n-1,-n,0,1], D) ?? doesn't make sense. look more closely
-  return LSeries(2*w+4, [-w-1+j,-w+j,j,j+1], D, local_factor :
+  return LSeries(2*w+n-1, [-w-1+j,-w+j,j,j+1], D, local_factor :
 		 Sign := (-1)^w*nu(D,d), Precision := Precision);
 end intrinsic;
 
@@ -946,7 +946,10 @@ function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
   rho := 1/2*&+alphas;
   W := WeylGroup(G);
   sum := 0;
-  for w in W do
+  W_elts := [w : w in W];
+  vprintf AlgebraicModularForms, 1 : "Computing Satake transform for k = %o, #W = %o\n i = ", k, #W;
+  for i->w in W_elts do
+    vprintf AlgebraicModularForms, 1 : "%o ", i;
     w_mu := CorootAction(W)(mu, w);
     // This might need handling of a denominator in general
     w_mu := ChangeRing(w_mu, Integers());
@@ -1132,9 +1135,8 @@ function SatakeLSeries(f : Precision := 0)
   if assigned Weight(M)`lambda then
     lambda := Weight(M)`lambda;
     lambda := lambda[1..n div 2];
-    // Does this eork in general?
+    // Does this work in general?
     w := (#lambda gt 1) select lambda[1]-lambda[2] else lambda[1];
-    k := (n div 2)*(w+2);
     sign := 1;
     gammas := (#lambda gt 1) select [x + lambda[2]
 				       : x in [-w-1,-w,0,1]] else [0,w+1];
@@ -1143,11 +1145,17 @@ function SatakeLSeries(f : Precision := 0)
      w := Weight(M)`weight[2];
      j := Weight(M)`weight[3];
      sign := (-1)^w*nu(D,d);
-     k := 2*w+4;
      gammas := [-w-1+j,-w+j,j,j+1];
   else
-    error "LSeries parameters are unknown for this choice of weight.\n";
+    // In this case, we don't really know the weight.
+    // We guess it is trivial. Could we infer it from W?
+     d := 1;
+     w := 0;
+     j := 0;
+     sign := (-1)^w*nu(D,d);
+     gammas := [-w-1+j,-w+j,j,j+1];
   end if;
+  k := (n div 2)*(w+2) - ((n+1) mod 2);
   // We currently not include spinor norm
   return LSeries(k, gammas, D, local_factor :
 		 Sign := sign, Precision := Precision);

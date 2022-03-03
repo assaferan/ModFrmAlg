@@ -838,7 +838,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngInt, d::RngIntElt:
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
   require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
-  return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec, Satake := Satake);
+  return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := Satake);
 end intrinsic;
 
 intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,

@@ -19,6 +19,10 @@ freeze;
 // SatakePolynomial(f::ModFrmAlgElt, p::RngIntElt : d := Infinity()) -> .
 // SatakePolynomialBallot(r::RngIntElt, a::RngIntElt) -> RngUPolElt
 
+// imports
+
+import "../representation/representation.m" : nu;
+
 function DualRoot(alpha, G)
   return CoweightLattice(G)!(2/Norm(alpha) * alpha);
 end function;
@@ -101,6 +105,7 @@ function SatakePolynomialInner(G, a, r, F)
   // This is our patch for now to get the correct roots for the nonsplit case
   // Should do something more generic to get the structure of a reductive group
   cartan_type := CartanName(RootDatum(G`G0))[1];
+  n := 2*r + a;
   if (2*r ne n) then
 	  //cartan_type := (cartan_type eq "D") select "B" else "D";
     cartan_type := "B";
@@ -218,27 +223,27 @@ intrinsic SatakePolynomial(f::ModFrmAlgElt, p::RngIntElt : d := Infinity()) -> .
   a := V`AnisoDim;
   r := V`WittIndex;
   f := V`RadDim;
-  if (f eq 0) then
-      split := (a lt 2);
-      if split then
-	  if not assigned M`LPolynomialSplit then
-	      M`LPolynomialSplit := SatakePolynomialUnramified(M : Split);
-	  end if;
-	  x_poly := M`LPolynomialSplit;
-      else
-	  if not assigned M`LPolynomialNonSplit then
-	      M`LPolynomialNonSplit := SatakePolynomialUnramified(M);
-	  end if;
-	  x_poly := M`LPolynomialNonSplit;
-      end if;
-  else
-      // ramified case, take extra care
-      eps := WittInvariant(L, pR);
-      // !! TODO - check what is the correct thing to do in general
+  split := (a lt 2);
+  if split then
       if not assigned M`LPolynomialSplit then
 	  M`LPolynomialSplit := SatakePolynomialUnramified(M : Split);
       end if;
       x_poly := M`LPolynomialSplit;
+  else
+      if not assigned M`LPolynomialNonSplit then
+	  M`LPolynomialNonSplit := SatakePolynomialUnramified(M);
+      end if;
+      x_poly := M`LPolynomialNonSplit;
+  end if;
+  
+  RR_x<x> := Parent(x_poly);
+  RR<[c]> := BaseRing(RR_x);
+  S<sqrt_p> := BaseRing(RR);
+  
+  if (f gt 0) then
+      // ramified case, take extra care
+      eps := WittInvariant(L, pR);
+      // !! TODO  - this is wrong, should use a different poly here.
       x_poly *:= 1 + (eps/sqrt_p^(n-2))*x;
   end if;
   

@@ -662,27 +662,27 @@ end intrinsic;
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 		      Estimate := true, Orbits := true,
 		      LowMemory := false,
-		      ThetaPrec := 25) -> RngSerPowElt
+		      ThetaPrec := 25, Satake := false) -> RngSerPowElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
     pR := ideal<R | p>;
     return LPolynomial(f, pR, d
 		       : Estimate := Estimate, Orbits := Orbits,
-		       LowMemory := LowMemory, ThetaPrec := ThetaPrec);
+		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
 end intrinsic;
 
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
 		      Estimate := true, Orbits := true,
 		      LowMemory := false,
-		      ThetaPrec := 25) -> RngUPolElt
+		      ThetaPrec := 25, Satake := false) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
     pR := ideal<R | p>;
     return LPolynomial(f, pR 
 		       : Estimate := Estimate, Orbits := Orbits,
-		       LowMemory := LowMemory, ThetaPrec := ThetaPrec);
+		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
 end intrinsic;
 
 // used in the following intrinsics

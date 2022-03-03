@@ -686,7 +686,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
 end intrinsic;
 
 // used in the following intrinsics
-function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec)
+function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := false)
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
   R := BaseRing(L);
@@ -782,59 +782,63 @@ function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec)
 		    (evs[2]+p^5+p^4+1)*p*x^2 -
 		    evs[1]*x + 1);
           end if;
-   end case;
-   if d ge 2*(n div 2) then
+  end case;
+  if Satake then
+      L_poly<x> := SatakePolynomial(f,p : d := d);
+  end if;
+  if d ge 2*(n div 2) then
       K_x<x> := PolynomialRing(K);
       return K_x!Eltseq(L_poly);
-   end if;
-   return L_poly + O(x^(d+1));
+  end if;
+  return L_poly + O(x^(d+1));
 end function;
 
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl, d::RngIntElt :
 		      Estimate := true, Orbits := true,
-		      LowMemory := false, ThetaPrec := 25) -> RngSerPowElt
+		      LowMemory := false, ThetaPrec := 25, Satake := false) -> RngSerPowElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
-  require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
-  return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec);
+  require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
+  return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := Satake);
 end intrinsic;
 
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngOrdIdl :
 		      Estimate := true, Orbits := true,
-		      LowMemory := false, ThetaPrec := 25) -> RngUPolElt
+		      LowMemory := false, ThetaPrec := 25, Satake := false) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
-  return lpoly(f, p, n, Estimate, Orbits, LowMemory, ThetaPrec);
+  require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
+  return lpoly(f, p, n, Estimate, Orbits, LowMemory, ThetaPrec : Satake := Satake);
 end intrinsic;
 
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngInt :
 		      Estimate := true, Orbits := true,
-		      LowMemory := false, ThetaPrec := 25) -> RngUPolElt
+		      LowMemory := false, ThetaPrec := 25, Satake := false) -> RngUPolElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
-  require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
-  return lpoly(f, p, n, Estimate, Orbits, LowMemory, ThetaPrec);
+  require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
+  return lpoly(f, p, n, Estimate, Orbits, LowMemory, ThetaPrec : Satake := Satake);
 end intrinsic;
 
 // Currently only implemented for good L-factors
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngInt, d::RngIntElt:
 		      Estimate := true, Orbits := true,
-		      LowMemory := false, ThetaPrec := 25) -> RngSerPowElt
+		      LowMemory := false, ThetaPrec := 25, Satake := false) -> RngSerPowElt
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
-  require (3 le n) and (n le 8) : "Currently only implemented for 3<=n<=8";
-  return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec);
+  require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
+  return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec, Satake := Satake);
 end intrinsic;
 
 intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
@@ -921,292 +925,6 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0,
   return LSeries(2*w+n-1, [-w-1+j,-w+j,j,j+1], D, local_factor :
 		 Sign := (-1)^w*nu(D,d), Precision := Precision);
 end intrinsic;
-
-function DualRoot(alpha, G)
-  return CoweightLattice(G)!(2/Norm(alpha) * alpha);
-end function;
-
-function get_monomial(R, coweight)
-  exps := Eltseq(coweight);
-  pos := [Maximum(e, 0) : e in exps];
-  neg := [Maximum(-e, 0) : e in exps];
-  return Monomial(R, pos cat neg);
-end function;
-
-function p_binom(r, k, p)
-  res := 1;
-  for l in [1..k] do
-    res *:= (p^(r-l+1)-1) / (p^l - 1);
-  end for;
-  return res;
-end function;
-
-function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
-  alphas := PositiveRoots(G);
-  mults := [1 : alpha in alphas];
-  if (a eq 2) then
-      mults := [ (&+Eltseq(alpha) eq 1) select 2 else 1 : alpha in alphas];
-  end if;
-  rho := 1/2*&+[mults[j]*alphas[j] : j in [1..#alphas]];
-  W := WeylGroup(G);
-  sum := 0;
-  W_elts := [w : w in W];
-  vprintf AlgebraicModularForms, 1 : "Computing Satake transform for k = %o, #W = %o\n i = ", k, #W;
-  for i->w in W_elts do
-    vprintf AlgebraicModularForms, 1 : "%o ", i;
-    w_mu := CorootAction(W)(mu, w);
-    // This might need handling of a denominator in general
-    w_mu := ChangeRing(w_mu, Integers());
-    //    if (r eq 1) then w_mu := [w_mu[1]]; end if;
-    e_w_mu := get_monomial(A, w_mu);
-    prod := K!e_w_mu;
-    for j->alpha in alphas do
-      alpha_d := DualRoot(alpha, G);
-      w_alpha_d := CorootAction(W)(alpha_d, w);
-      w_alpha_d := ChangeRing(w_alpha_d, Integers());
-//      if (r eq 1) then w_alpha_d := [w_alpha_d[1]]; end if;
-      e_w_alpha_d := get_monomial(A, w_alpha_d);
-      // TODO : !! need some better way to determine the multiplicity of a root !
-      mult := mults[j];
-      prod *:= K!(1-sqrt_p^(2*mult)*e_w_alpha_d) / K!(1-e_w_alpha_d);
-    end for;
-    sum +:= prod;
-  end for;
-  den := Denominator(sum);
-  assert IsMonomial(R!den);
-  exps := Exponents(den);
-  den_inv := Monomial(A, exps[r+1..2*r] cat exps[1..r]);
-  assert den_inv * den eq 1;
-  A_sum := Numerator(sum)*den_inv;
-  assert K!A_sum eq sum;
-  // sqrt_q := (a eq 2) select sqrt_p^2 else sqrt_p;
-  // This should have worked in general, but W is not the same in the inert case.
-  // K_mod_I_other := &+[sqrt_p^(2*CoxeterLength(W,w)) : w in W];
-  K_mod_I := &*[(sqrt_p^(2*i) - 1) / (sqrt_p^2-1) : i in [1..r]];
-  K_mod_I *:= &*[sqrt_p^(2*i) + 1 : i in [Maximum(1,a)..r+a-1]];
-  // assert K_mod_I eq K_mod_I_other;
-  num_neighbors := sqrt_p^(k*(k-1)) * p_binom(r,k,sqrt_p^2);
-  min_i := Maximum(1, r+a-k);
-  num_neighbors *:= &*[sqrt_p^(2*i) + 1 : i in [min_i..r+a-1]];
-  p_exp := &+[mu[i]*rho[i] : i in [1..r]];
-  sqrt_p_exp := Integers()!(2*p_exp);
-  satake_mu := sqrt_p^(-sqrt_p_exp) * num_neighbors / K_mod_I * A_sum;
-  return satake_mu;
-end function;
-
-function SatakePolynomialInner(G, a, r, F)
-  S<sqrt_p> := FunctionField(F);
-  RR<[c]> := PolynomialRing(S, r);
-  RR_x<x> := PolynomialRing(RR);
-  if r eq 0 then
-    return RR_x!1;
-  end if;
-  // This is our patch for now to get the correct roots for the nonsplit case
-  // Should do something more generic to get the structure of a reductive group
-  cartan_type := CartanName(RootDatum(G`G0))[1];
-  if (2*r ne n) then
-	  //cartan_type := (cartan_type eq "D") select "B" else "D";
-    cartan_type := "B";
-  end if;
-  /*
-  if (r eq 1) and IsEven(Dimension(G)) then
-      // D1 is not supported but D1 = A1
-      G := GroupOfLieType("A1", BaseRing(G`G0));
-  else
-*/
-      G := GroupOfLieType(StandardRootDatum(cartan_type, r),
-			  BaseRing(G`G0));
- // end if;
-  
-  // We are doing it symbolically so that in the future we will be able to
-  // compute it once and then plug different ps
-  SS<[s]> := PolynomialRing(S, 2*r);
-  I := ideal<SS | [s[i]*s[i+r]-1 : i in [1..r]]>;
-  A := quo<SS|I>;
-  s := [Sprintf("s%o", i) : i in [1..r]];
-  s_inv := [Sprintf("s%o_inv", i) : i in [1..r]];
-  AssignNames(~A, s cat s_inv);
-  K := FieldOfFractions(A);
-  R<[t]> := PolynomialRing(S, r);
-  
-  coeffs := [];
-  for k in [1..r] do
-    mu_seq := [1 : i in [1..k]] cat [0 : i in [1..r-k]];
-    // if (r eq 1) then mu_seq := [1,-1]; end if;  
-    mu := CoweightLattice(G)!(mu_seq);
-    satake_mu := SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
-    if (k eq r) and (a eq 0) then
-	mu_seq := [1 : i in [1..r-1]] cat [-1];
-	// if (r eq 1) then mu_seq := [-1,1]; end if;
-	mu := CoweightLattice(G)!(mu_seq);
-	satake_mu +:= SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
-    end if;
-    cfs, mons := CoefficientsAndMonomials(satake_mu);
-    exps := [Exponents(mon) : mon in mons];
-    betas := [Eltseq(Vector(e[1..r]) - Vector(e[r+1..2*r])) : e in exps];
-    abs_betas := [[Abs(b) : b in beta] : beta in betas];
-    // Here we verify that this is a polynomial in s_i + s_i^(-1)
-    abs_betas_idxs := [Index(betas, a) : a in abs_betas];
-    assert &and[cfs[i] eq cfs[abs_betas_idxs[i]] : i in [1..#cfs]];
-    satake_t := &+[cfs[Index(betas, a)]*Monomial(R, a) : a in Set(abs_betas)];
-    h := hom<R-> A | [A.i + A.(i+r) : i in [1..r]] >;
-    assert h(satake_t) eq satake_mu;
-    is_sym, lin_comb := IsSymmetric(satake_t);
-    b := S!ConstantTerm(lin_comb);
-    sym_coeffs := [S!Coefficient(lin_comb, Parent(lin_comb).i, 1) : i in [1..k]];
-//    b := S!ConstantTerm(satake_t);
-//    lc := LeadingCoefficient(satake_t);
-    //    assert lc*ElementarySymmetricPolynomial(R, k)+b eq satake_t;
-    assert &+[sym_coeffs[i]*ElementarySymmetricPolynomial(R,i) : i in [1..k]] + b eq satake_t;
-    assert sym_coeffs[k] ne 0;
-    s := &+([0] cat [sym_coeffs[i] * (-1)^i * coeffs[i] : i in [1..k-1]]);
-    Append(~coeffs, (-1)^k*(c[k] - b - s)/sym_coeffs[k]);
-  end for;
-  _<t> := PolynomialRing(RR);
-  t_poly :=  t^r;
-  if (r gt 0) then
-     t_poly +:= &+[coeffs[i]*t^(r-i) : i in [1..r]];
-  end if;
-  x_poly := &+[Coefficient(t_poly, i)*x^(r-i)*(x^2+1)^i : i in [0..r]];
-  return x_poly;
-end function;
-
-function SatakePolynomialUnramified(G : Split := false)
-    n := Dimension(G);
-    if Split then
-	r := n div 2;
-    else
-	r := n div 2 - 1;
-    end if;
-    a := n - 2*r;
-    x_poly := SatakePolynomialInner(G, a, r, Rationals());
-    RR_x<x> := Parent(x_poly);
-    RR<[c]> := BaseRing(RR_x);
-    S<sqrt_p> := BaseRing(RR);
-    if not Split then
-	x_poly *:= (x+1)*(x-1);
-    end if;
-    return x_poly;
-end function;
-
-function SatakePolynomial(f, p : d := Infinity())
-  M := f`M;
-  G := M`G;
-  L := Module(M);
-  V := ReflexiveSpace(L);
-  n := Dimension(V);
-  // verify whether this is the number of eigenvalues we need.
-  n_evs := Minimum(d, n div 2);
-  // This is not the most efficient way - we could first check if the
-  // group is split at p or not (compute r) and then compute only up to r
-  // plugging in the eigenvalues
-  R := BaseRing(L);
-  pR := ideal<R | p>;
-  evs, _ := [HeckeEigensystem(f, k : Precision := [pR])[1] :
-			       k in [1..n_evs]];
-  if n_evs lt n div 2 then
-    evs cat:= [0 : i in [n_evs+1..n div 2]];
-  end if;
-  evs_fld := Universe(evs);
-  evs_fld_x<x> := PowerSeriesRing(evs_fld); 
-  V := L`Vpp[pR]`V;
-  // This is to determine splitting or non-splitting.
-  a := V`AnisoDim;
-  r := V`WittIndex;
-  x_poly := SatakePolynomialInner(G, a, r, Rationals());
-  RR_x<x> := Parent(x_poly);
-  RR<[c]> := BaseRing(RR_x);
-  S<sqrt_p> := BaseRing(RR);
-  if ((a gt 0) and IsEven(n)) then
-    if (a + 2*r eq n) then
-      x_poly *:= (x+1)*(x-1);
-    else // ramified case, take extra care
-      eps := WittInvariant(L, pR);
-      x_poly *:= 1 + (eps/sqrt_p^(n-2))*x;
-    end if;
-  end if;
-  // normalizing to have integral coefficients
-  nor_lp := Evaluate(x_poly, (sqrt_p)^(n-2) * x);
-  // in case it is too short
-  evs := evs cat [0 : i in [1..r - #evs]];
-  // in case it is too long
-  evs := evs[1..r];
-  ev_hom := hom< RR -> S | evs >;
-  S_x<x> := PolynomialRing(S);
-  ev_hom_poly := hom<RR_x -> S_x | ev_hom, [x] >;
-  // now we plug in sqrt(p) back again into the polynomial
-  // K<sqrtp> := QuadraticField(p);
-  C := BaseRing(f`vec);
-  C_x<x> := PolynomialRing(C);
-  // K<sqrtp> := ext<C | x^2-p>;
-  K, rts := SplittingField(x^2-p);
-  sqrtp := rts[1];
-  ev := hom<S -> K | sqrtp>;
-  K_x<x> := PolynomialRing(K);
-  ev_poly := hom<S_x -> K_x | ev, [x]>;
-  ret := evs_fld_x!ev_poly(ev_hom_poly(nor_lp));
-  _<x> := Parent(ret);
-  if d ge 2*(n div 2) then
-      evs_fld_x<x> := PolynomialRing(evs_fld);
-      return evs_fld_x!Eltseq(ret);
-  end if;
-  return ret + O(x^(d+1));
-end function;
-
-procedure testSatake(Q, upTo)
-    M := OrthogonalModularForms(LatticeWithGram(Q));
-    fs := HeckeEigenforms(M);
-    assert &and[&and[SatakePolynomial(f,p) eq LPolynomial(f,p) : p in PrimesUpTo(upTo) | 
-		     Determinant(Q) mod p ne 0] : f in fs];
-end procedure;
-
-function SatakeLSeries(f : Precision := 0)
-  function local_factor(p,d)
-    poly := SatakePolynomial(f, p : d := d);
-    CC := ComplexField();
-    CC_x := PowerSeriesRing(CC);
-    K := BaseRing(Parent(poly));
-    r := Roots(DefiningPolynomial(K),CC)[1][1];
-    if Type(K) eq FldRat then
-      h := hom<K -> CC|>;
-    else 
-      h := hom<K -> CC | r>;
-    end if;
-    return CC_x![h(c) : c in Eltseq(poly)];
-  end function;
-  M := f`M;
-  L := Module(M);
-  n := Dimension(ReflexiveSpace(L));
-  D := Integers()!(Norm(Discriminant(L)));
-
-  if assigned Weight(M)`lambda then
-    lambda := Weight(M)`lambda;
-    lambda := lambda[1..n div 2];
-    // Does this work in general?
-    w := (#lambda gt 1) select lambda[1]-lambda[2] else lambda[1];
-    sign := 1;
-    gammas := (#lambda gt 1) select [x + lambda[2]
-				       : x in [-w-1,-w,0,1]] else [0,w+1];
-  elif assigned Weight(M)`weight then
-     d := Weight(M)`weight[1];
-     w := Weight(M)`weight[2];
-     j := Weight(M)`weight[3];
-     sign := (-1)^w*nu(D,d);
-     gammas := [-w-1+j,-w+j,j,j+1];
-  else
-    // In this case, we don't really know the weight.
-    // We guess it is trivial. Could we infer it from W?
-     d := 1;
-     w := 0;
-     j := 0;
-     sign := (-1)^w*nu(D,d);
-     gammas := [-w-1+j,-w+j,j,j+1];
-  end if;
-  k := (n div 2)*(w+2) - ((n+1) mod 2);
-  // We currently not include spinor norm
-  return LSeries(k, gammas, D, local_factor :
-		 Sign := sign, Precision := Precision);
-end function;
 
 intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt
 {return the theta series associated to f.}
@@ -1383,4 +1101,3 @@ intrinsic ThetaSiegel(f::ModFrmAlgElt, g::RngIntElt : Precision := 25) -> Assoc
     end for;
     return coeffs;
 end intrinsic;
-

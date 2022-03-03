@@ -732,7 +732,7 @@ function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec)
 	    L_poly := p^4*x^4 - (evs[1]*p^2)*x^3 +
 		    ((2+evs[2])*p)*x^2 - evs[1]*x + 1;
           else
-       	    L_poly := (p*x-1)*(p*x+1)*(p^2*x^2-evs[1]*p*x+1);
+       	    L_poly := (p*x-1)*(p*x+1)*(p^2*x^2-evs[1]*x+1);
 	  end if;
       when 5:
           if D mod p ne 0 then
@@ -943,7 +943,11 @@ end function;
 
 function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
   alphas := PositiveRoots(G);
-  rho := 1/2*&+alphas;
+  mults := [1 : alpha in alphas];
+  if (a eq 2) then
+      mults := [ (&+Eltseq(alpha) eq 1) select 2 else 1 : alpha in alphas];
+  end if;
+  rho := 1/2*&+[mults[j]*alphas[j] : j in [1..#alphas]];
   W := WeylGroup(G);
   sum := 0;
   W_elts := [w : w in W];
@@ -953,14 +957,18 @@ function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
     w_mu := CorootAction(W)(mu, w);
     // This might need handling of a denominator in general
     w_mu := ChangeRing(w_mu, Integers());
+    //    if (r eq 1) then w_mu := [w_mu[1]]; end if;
     e_w_mu := get_monomial(A, w_mu);
     prod := K!e_w_mu;
-    for alpha in alphas do
+    for j->alpha in alphas do
       alpha_d := DualRoot(alpha, G);
       w_alpha_d := CorootAction(W)(alpha_d, w);
       w_alpha_d := ChangeRing(w_alpha_d, Integers());
+//      if (r eq 1) then w_alpha_d := [w_alpha_d[1]]; end if;
       e_w_alpha_d := get_monomial(A, w_alpha_d);
-      prod *:= K!(1-sqrt_p^2*e_w_alpha_d) / K!(1-e_w_alpha_d);
+      // TODO : !! need some better way to determine the multiplicity of a root !
+      mult := mults[j];
+      prod *:= K!(1-sqrt_p^(2*mult)*e_w_alpha_d) / K!(1-e_w_alpha_d);
     end for;
     sum +:= prod;
   end for;
@@ -971,7 +979,12 @@ function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
   assert den_inv * den eq 1;
   A_sum := Numerator(sum)*den_inv;
   assert K!A_sum eq sum;
-  K_mod_I := &+[sqrt_p^(2*CoxeterLength(W,w)) : w in W];
+  // sqrt_q := (a eq 2) select sqrt_p^2 else sqrt_p;
+  // This should have worked in general, but W is not the same in the inert case.
+  // K_mod_I_other := &+[sqrt_p^(2*CoxeterLength(W,w)) : w in W];
+  K_mod_I := &*[(sqrt_p^(2*i) - 1) / (sqrt_p^2-1) : i in [1..r]];
+  K_mod_I *:= &*[sqrt_p^(2*i) + 1 : i in [Maximum(1,a)..r+a-1]];
+  // assert K_mod_I eq K_mod_I_other;
   num_neighbors := sqrt_p^(k*(k-1)) * p_binom(r,k,sqrt_p^2);
   min_i := Maximum(1, r+a-k);
   num_neighbors *:= &*[sqrt_p^(2*i) + 1 : i in [min_i..r+a-1]];
@@ -991,12 +1004,19 @@ function SatakePolynomialInner(G, a, r, F)
   // This is our patch for now to get the correct roots for the nonsplit case
   // Should do something more generic to get the structure of a reductive group
   cartan_type := CartanName(RootDatum(G`G0))[1];
-  if IsOdd(a) then
+  if (2*r ne n) then
 	  //cartan_type := (cartan_type eq "D") select "B" else "D";
     cartan_type := "B";
   end if;
-  G := GroupOfLieType(StandardRootDatum(cartan_type, r),
-		      BaseRing(G`G0));
+  /*
+  if (r eq 1) and IsEven(Dimension(G)) then
+      // D1 is not supported but D1 = A1
+      G := GroupOfLieType("A1", BaseRing(G`G0));
+  else
+*/
+      G := GroupOfLieType(StandardRootDatum(cartan_type, r),
+			  BaseRing(G`G0));
+ // end if;
   
   // We are doing it symbolically so that in the future we will be able to
   // compute it once and then plug different ps
@@ -1011,11 +1031,15 @@ function SatakePolynomialInner(G, a, r, F)
   
   coeffs := [];
   for k in [1..r] do
-    mu := CoweightLattice(G)!([1 : i in [1..k]] cat [0 : i in [1..r-k]]);
+    mu_seq := [1 : i in [1..k]] cat [0 : i in [1..r-k]];
+    // if (r eq 1) then mu_seq := [1,-1]; end if;  
+    mu := CoweightLattice(G)!(mu_seq);
     satake_mu := SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
-    if (k eq r) and IsEven(a) then
-      mu := CoweightLattice(G)!([1 : i in [1..r-1]] cat [-1]);
-      satake_mu +:= SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
+    if (k eq r) and (a eq 0) then
+	mu_seq := [1 : i in [1..r-1]] cat [-1];
+	// if (r eq 1) then mu_seq := [-1,1]; end if;
+	mu := CoweightLattice(G)!(mu_seq);
+	satake_mu +:= SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, SS);
     end if;
     cfs, mons := CoefficientsAndMonomials(satake_mu);
     exps := [Exponents(mon) : mon in mons];
@@ -1047,6 +1071,24 @@ function SatakePolynomialInner(G, a, r, F)
   return x_poly;
 end function;
 
+function SatakePolynomialUnramified(G : Split := false)
+    n := Dimension(G);
+    if Split then
+	r := n div 2;
+    else
+	r := n div 2 - 1;
+    end if;
+    a := n - 2*r;
+    x_poly := SatakePolynomialInner(G, a, r, Rationals());
+    RR_x<x> := Parent(x_poly);
+    RR<[c]> := BaseRing(RR_x);
+    S<sqrt_p> := BaseRing(RR);
+    if not Split then
+	x_poly *:= (x+1)*(x-1);
+    end if;
+    return x_poly;
+end function;
+
 function SatakePolynomial(f, p : d := Infinity())
   M := f`M;
   G := M`G;
@@ -1071,13 +1113,13 @@ function SatakePolynomial(f, p : d := Infinity())
   // This is to determine splitting or non-splitting.
   a := V`AnisoDim;
   r := V`WittIndex;
-  x_poly := SatakePolynomialInner(G, a, r, evs_fld);
+  x_poly := SatakePolynomialInner(G, a, r, Rationals());
   RR_x<x> := Parent(x_poly);
   RR<[c]> := BaseRing(RR_x);
   S<sqrt_p> := BaseRing(RR);
-  if (a eq 2) then
+  if ((a gt 0) and IsEven(n)) then
     if (a + 2*r eq n) then
-      x_poly *:= (1-x)*(1+x);
+      x_poly *:= (x+1)*(x-1);
     else // ramified case, take extra care
       eps := WittInvariant(L, pR);
       x_poly *:= 1 + (eps/sqrt_p^(n-2))*x;

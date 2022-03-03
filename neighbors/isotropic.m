@@ -626,6 +626,27 @@ intrinsic AllIsotropicSubspaces(V::ModTupFld[FldFin], k::RngIntElt
 	return list;
 end intrinsic;
 
+function NumIsotropicSubspacesUnitary(q, n, f, k)
+    // formula from J.B.Derr
+    // "Stabilizers of isotropic subspaces in classical groups",
+    // Corollary 2 with d = 0, a,b,c = 0,k,0
+    n := n-f;
+    count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1))
+		: i in [0..k-1] ] div
+	     &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
+    count *:= q^(k*f);
+    return count;
+end function;
+
+function NumIsotropicSubspacesQuadratic(q, r, a, f, k)
+    // Compute the number of isotropic subspaces.
+    // This is from Murphy's thesis (also accounting for the radical)
+    count := q^(k*f) * &*[q^(r-i+1)-1 : i in [1..k]] *
+	     &*[q^(r+a-i)+1 : i in [1..k]] /
+	     &*[ q^i-1 : i in [1..k] ];
+    return count;
+end function;
+
 intrinsic NumberOfIsotropicSubspaces(V::ModTupFld[FldFin],
 				     k::RngIntElt) -> RngIntElt
 { Counts all isotropic subspaces of dimension k. }
@@ -639,23 +660,14 @@ intrinsic NumberOfIsotropicSubspaces(V::ModTupFld[FldFin],
         if IsUnitarySpace(V) then
 	  // V is a Hermitian space
 	  _, q := IsSquare(q);
-	  // formula from J.B.Derr
-          // "Stabilizers of isotropic subspaces in classical groups",
-	  // Corollary 2 with d = 0, a,b,c = 0,k,0
-          n := n-f;
-	  count := &*[q^(2*(n-i)-1) - q^(2*i) + (-1)^n*(q^n - q^(n-1))
-			 : i in [0..k-1] ] div
-			 &*[q^(2*k) - q^(2*i) : i in [0..k-1] ];
-          count *:= q^(k*f);
+	  count := NumIsotropicSubspacesUnitary(q, n, f, k);
         elif IsQuadraticSpace(V) then
 	  // in this case V is orthogonal
 	     
 	  // Compute the number of isotropic subspaces.
 	  // This is from Murphy's thesis (also accounting for the radical)
 	  
-	  count := q^(k*f) * &*[q^(r-i+1)-1 : i in [1..k]] *
-		         &*[q^(r+a-i)+1 : i in [1..k]] /
-			 &*[ q^i-1 : i in [1..k] ];
+	  count := NumIsotropicSubspacesQuadratic(q, r, a, f, k);
         else
 	  // This is a trivial reflexive space
 	  // return number of all k-dimensional subspaces
@@ -721,7 +733,8 @@ end intrinsic;
 intrinsic NumberOfNeighbors(M::ModFrmAlg, p::RngIntElt, k::RngIntElt)
 	-> RngIntElt
 { Determine the number of p^k-neighbor lattices. }
-  return NumberOfNeighbors(M, Integers(BaseRing(M))!!p, k);
+  pR := ideal<Integers(BaseRing(M)) | p>;
+  return NumberOfNeighbors(M, pR, k);
 end intrinsic;
 
 // This is an internal function, since the intrinsic interface requires

@@ -222,7 +222,7 @@ intrinsic SatakePolynomial(f::ModFrmAlgElt, p::RngIntElt : d := Infinity()) -> .
   // This is to determine splitting or non-splitting.
   a := V`AnisoDim;
   r := V`WittIndex;
-  f := V`RadDim;
+  rad := V`RadDim;
   split := (a lt 2);
   if split then
       if not assigned M`LPolynomialSplit then
@@ -240,7 +240,7 @@ intrinsic SatakePolynomial(f::ModFrmAlgElt, p::RngIntElt : d := Infinity()) -> .
   RR<[c]> := BaseRing(RR_x);
   S<sqrt_p> := BaseRing(RR);
   
-  if (f gt 0) then
+  if (rad gt 0) then
       // ramified case, take extra care
       eps := WittInvariant(L, pR);
       // !! TODO  - this is wrong, should use a different poly here.

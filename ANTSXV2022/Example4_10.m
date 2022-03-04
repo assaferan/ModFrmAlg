@@ -45,6 +45,7 @@ f1 := Newforms(ModularForms(67))[3][1];
 assert &and[HeckeEigenvalue(v,p) eq Norm(Coefficient(f1,p)) : p in PrimesUpTo(20)];
 
 // verifying that the L-polynomial of this vector is the Rankin-Selberg associated to f1 \otimes f2
+_<x> := Parent(LPolynomial(v,2));
 for p in PrimesUpTo(20) do
     ap := Coefficient(f1,p);
     // This is the Rankin-Selberg L-polynomial

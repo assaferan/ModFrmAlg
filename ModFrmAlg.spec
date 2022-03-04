@@ -12,10 +12,10 @@
 
   lattice_db/nipp_parse.m
 
-  modfrmalg/genus.m
-  modfrmalg/hecke.m
-  modfrmalg/modfrmalg.m
-  modfrmalg/modfrmalgelt.m
+  modfrmalg
+  {
+      +modfrmalg.spec
+  }
 
   neighbors/genus-CN1.m
   neighbors/hecke-CN1.m
@@ -39,3 +39,4 @@
 
   verbose/verbose.m
 }
+

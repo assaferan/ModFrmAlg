@@ -128,3 +128,5 @@ assert &and[HeckeEigenvalue(vs[3],p) eq Coefficient(f3,p)*(p+1) : p in PrimesUpT
 
 // verifying that the L-Polynomials of vs[3] is the Rankin-Selberg L-functions associated to E2 and f3
 assert &and[(1-Coefficient(f3,p)*x+p*x^2)*(1-p*Coefficient(f3,p)*x+p^3*x^2) eq LPolynomial(vs[3],p) : p in PrimesUpTo(20)];
+
+exit;

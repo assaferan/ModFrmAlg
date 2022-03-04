@@ -51,3 +51,5 @@ for p in PrimesUpTo(20) do
     lpoly := 1 - Norm(ap)*x + (-2*p^2 + p*(Trace(ap)^2-2*Norm(ap)))*x^2-p^2*Norm(ap)*x^3+p^4*x^4;
     assert lpoly eq LPolynomial(v,p);
 end for;
+
+exit;

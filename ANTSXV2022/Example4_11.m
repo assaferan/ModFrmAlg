@@ -55,3 +55,66 @@ for p in PrimesUpTo(20) do
     lambda_p := HeckeEigenvalue(vs[3],p);
     assert ap^2 + p*(1-chi(p)) eq h(lambda_p);
 end for;
+
+// verify also that the L-polynmoial is coming from the Doi-Naganuma lift
+assert &and[LPolynomial(vs[3],p) eq
+	    (1-p*x)*(chi(p)-p*x)*(1 - (HeckeEigenvalue(vs[3],p)-(1+chi(p))*p)*x + p^2*x^2) : p in PrimesUpTo(20)];
+
+// We turn to the remaining eigenvector
+evs := HeckeEigensystem(vs[2], 1 : Precision := 10);
+evs;
+/*
+[ -4, -4, 1, -2, -4, 1, -17, -14 ]
+*/
+
+// we create the corresponding Hilbert cusp form
+K := QuadraticField(193);
+ZK := Integers(K);
+f := Eigenforms(HilbertCuspForms(K, 1*ZK, [2,2]));
+f_evs := [[HeckeEigenvalue(f, P) : P in PrimeIdealsOverPrime(K,p)] : p in PrimesUpTo(10)];
+_<alpha> := Universe(f_evs[1]);
+assert (2*alpha-1)^2 eq 17;
+f_evs;
+/*
+[
+    [
+        alpha,
+        -alpha + 1
+    ],
+    [
+        -alpha + 1,
+        alpha
+    ],
+    [
+        1
+    ],
+    [
+        alpha + 1,
+        -alpha + 2
+    ]
+]
+*/
+
+// We verify that lambda_p = a_p a_p_bar at split primes and a_p at inert primes
+assert &and[HeckeEigenvalue(vs[2],p) eq &*[HeckeEigenvalue(f,P)
+					   : P in PrimeIdealsOverPrime(K,p)] : p in PrimesUpTo(20)];
+
+// We next verify that the L-polynomial is the Asai L-polynomial
+for p in PrimesUpTo(20) do
+    prod := &*[HeckeEigenvalue(f,P) : P in PrimeIdealsOverPrime(K,p)];
+    sum := &+[HeckeEigenvalue(f,P) : P in PrimeIdealsOverPrime(K,p)];
+    prod := Rationals()!prod;
+    sum := Rationals()!sum;
+    if chi(p) eq 1 then
+	// p is split
+	
+	// This is the polynomial at split primes
+	asai := 1 - prod*x + p*(sum^2-2*prod-2*p)*x^2-p^2*prod*x^3 + p^4*x^4;
+    else
+	// This is the polynomial at inert primes
+	asai := (1-p*x)*(-1-p*x)*(1-prod*x+p^2*x^2);
+    end if;
+    assert asai eq LPolynomial(vs[2],p);
+end for;
+
+exit;

@@ -57,8 +57,8 @@ Tp1;
 ]
 */
 // The eigenvectors
-vs := HeckeEigenforms(M);
-vs;
+v := HeckeEigenforms(M);
+v;
 /*
 [*
     Eisenstein eigenform given in coordinates by
@@ -72,7 +72,7 @@ vs;
 *]
 */
 // The first few eigenvalues of each
-evs := [HeckeEigensystem(v,1 : Precision := 10) :  v in vs];
+evs := [HeckeEigensystem(vec,1 : Precision := 10) :  vec in v];
 evs;
 /*
 [
@@ -84,11 +84,11 @@ evs;
 */
 
 // verifying that for v1, we have eigenvalues (1+p)^2
-assert &and[HeckeEigenvalue(vs[1],p) eq (1+p)^2 : p in PrimesUpTo(20)];
+assert &and[HeckeEigenvalue(v[1],p) eq (1+p)^2 : p in PrimesUpTo(20)];
 
 // verifying that for v1, the L-polynomial is (1-p^(-s))(1-p^(1-s))^2(1-p^(2-s))
-_<x> := Parent(LPolynomial(vs[1],2));
-assert &and[LPolynomial(vs[1],p) eq (1-x)*(1-p*x)^2*(1-p^2*x) : p in PrimesUpTo(20)];
+_<x> := Parent(LPolynomial(v[1],2));
+assert &and[LPolynomial(v[1],p) eq (1-x)*(1-p*x)^2*(1-p^2*x) : p in PrimesUpTo(20)];
 
 // Here the default Precision is 25, but can be set using the optional
 // parameter Precision, e.g.
@@ -116,17 +116,17 @@ q + q^3 - 2*q^4 - q^7 - 2*q^9 + 3*q^11 - 2*q^12 - 4*q^13 + 4*q^16 + 6*q^17 +
 assert qExpansion(Newforms(ModularForms(37))[2][1],25) eq f3;
 
 // verifying that the eigenvalues are the squares of the eigenvalues of the forms
-assert &and[HeckeEigenvalue(vs[2],p) eq Coefficient(f2,p)^2 : p in PrimesUpTo(20)];
-assert &and[HeckeEigenvalue(vs[4],p) eq Coefficient(f3,p)^2 : p in PrimesUpTo(20)];
+assert &and[HeckeEigenvalue(v[2],p) eq Coefficient(f2,p)^2 : p in PrimesUpTo(20)];
+assert &and[HeckeEigenvalue(v[4],p) eq Coefficient(f3,p)^2 : p in PrimesUpTo(20)];
 
 // verifying that the L-Polynomials of the vectors are the Rankin-Selberg L-functions associated to f2 and f3
-assert &and[LPolynomial(vs[2],p) eq (1-p*x)^2*(1-(Coefficient(f2,p)^2-2*p)*x+p^2*x^2) : p in PrimesUpTo(20)];
-assert &and[LPolynomial(vs[4],p) eq (1-p*x)^2*(1-(Coefficient(f3,p)^2-2*p)*x+p^2*x^2) : p in PrimesUpTo(20)];
+assert &and[LPolynomial(v[2],p) eq (1-p*x)^2*(1-(Coefficient(f2,p)^2-2*p)*x+p^2*x^2) : p in PrimesUpTo(20)];
+assert &and[LPolynomial(v[4],p) eq (1-p*x)^2*(1-(Coefficient(f3,p)^2-2*p)*x+p^2*x^2) : p in PrimesUpTo(20)];
 
 // verifying that lambda_p = a_p*(1+p) between eigenvalues of vs[3] and eigenvalues of f3
-assert &and[HeckeEigenvalue(vs[3],p) eq Coefficient(f3,p)*(p+1) : p in PrimesUpTo(20)];
+assert &and[HeckeEigenvalue(v[3],p) eq Coefficient(f3,p)*(p+1) : p in PrimesUpTo(20)];
 
 // verifying that the L-Polynomials of vs[3] is the Rankin-Selberg L-functions associated to E2 and f3
-assert &and[(1-Coefficient(f3,p)*x+p*x^2)*(1-p*Coefficient(f3,p)*x+p^3*x^2) eq LPolynomial(vs[3],p) : p in PrimesUpTo(20)];
+assert &and[(1-Coefficient(f3,p)*x+p*x^2)*(1-p*Coefficient(f3,p)*x+p^3*x^2) eq LPolynomial(v[3],p) : p in PrimesUpTo(20)];
 
 exit;

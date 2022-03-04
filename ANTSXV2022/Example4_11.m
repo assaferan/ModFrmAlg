@@ -39,6 +39,7 @@ chi := KroneckerCharacter(193);
 assert &and[HeckeEigenvalue(vs[1],p) eq 1 + p + p^2 + chi(p)*p : p in PrimesUpTo(20)];
 
 // and L-polynomial (1-chi(p)*p^(1-s))*(1-p^(-s))*(1-p^(1-s))*(1-p^(2-s))
+_<x> := Parent(LPolynomial(vs[1],2));
 assert &and[LPolynomial(vs[1],p) eq (1-x)*(1-p*x)*(1-p^2*x)*(chi(p)-p*x) : p in PrimesUpTo(20)];
 
 // This is the form with LMFDB label 193.2.b.a
@@ -58,6 +59,7 @@ for p in PrimesUpTo(20) do
 end for;
 
 // verify also that the L-polynmoial is coming from the Doi-Naganuma lift
+_<x> := Parent(LPolynomial(vs[3],2));
 assert &and[LPolynomial(vs[3],p) eq
 	    (1-p*x)*(chi(p)-p*x)*(1 - (HeckeEigenvalue(vs[3],p)-(1+chi(p))*p)*x + p^2*x^2) : p in PrimesUpTo(20)];
 
@@ -68,10 +70,10 @@ evs;
 [ -4, -4, 1, -2, -4, 1, -17, -14 ]
 */
 
-// we create the corresponding Hilbert cusp form
+// we create the corresponding Hilbert cusp form, with LMFDB label 2.2.193-1.1.a
 K := QuadraticField(193);
 ZK := Integers(K);
-f := Eigenforms(HilbertCuspForms(K, 1*ZK, [2,2]));
+f := Eigenforms(HilbertCuspForms(K, 1*ZK, [2,2]))[1];
 f_evs := [[HeckeEigenvalue(f, P) : P in PrimeIdealsOverPrime(K,p)] : p in PrimesUpTo(10)];
 _<alpha> := Universe(f_evs[1]);
 assert (2*alpha-1)^2 eq 17;

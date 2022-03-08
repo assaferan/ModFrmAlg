@@ -101,7 +101,7 @@ freeze;
 // CuspidalHeckeOperator(M::ModFrmAlg, p::RngIntElt) -> AlgMatElt
 // 'eq'(M1::ModFrmAlg, M2::ModFrmAlg) -> BoolElt
 // Representation(M::ModFrmAlg) -> ModTupFld
-// VectorSpace(M::ModFrmAlg) -> ModtupFld
+// VectorSpace(M::ModFrmAlg) -> ModTupFld
 // Weight(M::ModFrmAlg) -> GrpRep
 
 // imports
@@ -771,7 +771,7 @@ intrinsic Representation(M::ModFrmAlg) -> ModTupFld
   return VectorSpace(BaseRing(M`H[1]), dim);
 end intrinsic;
 
-intrinsic VectorSpace(M::ModFrmAlg) -> ModtupFld
+intrinsic VectorSpace(M::ModFrmAlg) -> ModTupFld
 {.}
   return Representation(M);
 end intrinsic;

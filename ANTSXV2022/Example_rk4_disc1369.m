@@ -1,9 +1,12 @@
-// This is Example 3.1 from the paper.
 AttachSpec("../ModFrmAlg.spec");
 Q := SymmetricMatrix([2,0,4,1,1,10,1,2,1,20]);
 time M := OrthogonalModularForms(LatticeWithGram(Q));
 /*
 Time: 0.070
+*/
+time Lambdas := [InnerProductMatrix(Lambda) : Lambda in GenusReps(M)];
+/*
+Time: 0.080
 */
 time Dimension(M);
 /*

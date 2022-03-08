@@ -48,7 +48,7 @@ procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
 
     // Compute the neighbor according to the current state
     //  of the neighbor procedure.
-    nLat := buildNeighbor(nProc : BeCareful := BeCareful);
+    nLat := buildNeighbor(nProc : BeCareful := BeCareful, UseLLL := not Special);
 
     // A specified invariant of the neighbor lattice.
     inv := Invariant(nLat);

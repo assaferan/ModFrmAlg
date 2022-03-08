@@ -976,7 +976,9 @@ end intrinsic;
 // This is a temporary fix that only works for spherical polynomial representations,
 // namely for weights of the form [k,0]
 function embed_v_in_rep(v)
-    return &cat[[v[i]] cat [0 : j in [1..Degree(v)-1]] : i in [1..Degree(v)]];
+    // Should do something smarter in general, but this should work for Sym^n
+    // return &cat[[v[i]] cat [0 : j in [1..Degree(v)-1]] : i in [1..Degree(v)]];
+    return [v[i] : i in [1..Degree(v)]];
 end function;
 
 function MatrixSquareRoot(Q)
@@ -1004,7 +1006,7 @@ intrinsic Theta1(f::ModFrmAlgElt : Precision := 25) -> RngSerPowElt
 	     : j in [1..#H] *];
     if IsTrivial(f`M`W) then
 	n := Rank(InnerForm(f`M));
-	all_polys := [* [PolynomialRing(BaseRing(v),n^2)!1] : vec in vecs *];
+	all_polys := [* [PolynomialRing(BaseRing(v),n)!1] : vec in vecs *];
     else
 	all_polys := [* Names(Parent(vec)`M) : vec in vecs *];
     end if;

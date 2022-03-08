@@ -4,7 +4,7 @@ time M := OrthogonalModularForms(LatticeWithGram(Q));
 /*
 Time: 0.070
 */
-time Lambdas := [InnerProductMatrix(Lambda) : Lambda in GenusReps(M)];
+time Lambdas := [GramMatrix(ZLattice(Lambda)) : Lambda in GenusReps(M)];
 /*
 Time: 0.080
 */

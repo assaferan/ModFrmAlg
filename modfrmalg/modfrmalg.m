@@ -140,7 +140,15 @@ declare attributes ModFrmAlg:
 	genus,
 
 	// The filename from which this space was loaded.
-	filename;
+	filename,
+
+	// Generic L-polynomials for the split and non-split primes
+	// These are cached on the first occurence, and then substituted into on subsequent calls
+	// Currently only tested for the orthogonal case.
+	
+        LPolynomialSplit,
+
+	LPolynomialNonSplit;
 
 /* constructors */
 

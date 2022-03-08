@@ -1737,24 +1737,33 @@ function my_prod(seq, univ)
   return &*seq;
 end function;
 
-function get_lap_kernel(lap)
+function get_lap_kernel(lap : basis := false)
   F := BaseRing(Universe(lap));
   im_B := lap;
   im_mons := SetToSequence(&join([Set(Monomials(b)) : b in im_B]));
   W := VectorSpace(F, #im_mons);
   im_vecs := [my_sum([Coefficients(b)[i]*W.(Index(im_mons, Monomials(b)[i]))
-              : i in [1..#Monomials(b)]], W) : b in im_B];
+		      : i in [1..#Monomials(b)]], W) : b in im_B];
+  if basis then
+      return Basis(sub<Universe(im_vecs) | im_vecs>);
+  end if;
   K := Kernel(Matrix(im_vecs));
   return K;
 end function;
 
 function get_hw_basis_gl(lambda, F, n)
-  R := PolynomialRing(F, n^2);
-  var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..n]] : i in [1..n]];
-  AssignNames(~R, &cat var_names);
   mu := ConjugatePartition(lambda);
-  x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
-		   : j in [1..n]]: i in [1..n]]);
+  k := Maximum(mu cat [0]);
+  R := PolynomialRing(F, n*k);
+  var_names := [[Sprintf("x_%o_%o", i,j) : j in [1..k]] : i in [1..n]];
+  AssignNames(~R, &cat var_names);
+
+  if k eq 0 then
+      x := RMatrixSpace(R, n, 0)!0;
+  else
+      x := Matrix([[R.(Index(&cat var_names, var_names[i][j]))
+		    : j in [1..k]]: i in [1..n]]);
+  end if;
   // TableauxOfShape needs the exact partition, so we trim
   lam := [l : l in lambda | l gt 0];
   if IsEmpty(lam) then
@@ -1767,16 +1776,59 @@ function get_hw_basis_gl(lambda, F, n)
   return B, x;
 end function;
 
-function get_hw_basis_so(lambda, Q : Dual := true)
+function tau_polys(x,Q,sign)
+    assert IsEven(Rank(Q));
+    is_sqr, scale := IsSquare(Determinant(Q));
+    n := Rank(Q) div 2;
+    assert Nrows(x) eq 2*n;
+    
+    idxs := [SetToSequence(s) : s in Subsets({1..2*n}, n)];
+    basis := [Minor(x,I,[1..n]) : I in idxs];
+    tau_basis := basis[1..#basis];
+    
+    // complements to idxs
+    comp := [[x : x in [1..2*n] | x notin idx] :  idx in idxs];
+    assert &and[c in idxs : c in comp];
+    for i->I in idxs do
+	for j->J_prime in idxs do
+	    J := comp[j];
+	    s := Sign(Sym(2*n)!(J_prime cat J));
+	    tau_basis[i] +:= sign*s * Minor(Q,I,J)*basis[j] / scale;
+	end for;
+    end for;
+ 
+    return tau_basis;
+end function;
+
+function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
   F := BaseRing(Q);
   n := Degree(Parent(Q));
-  B, x := get_hw_basis_gl(lambda, F, n);
+  lambda_gl := lambda;
+  // in the even rank case, this could be negative
+  lambda_gl[#lambda] := Abs(lambda[#lambda]);
+  B, x := get_hw_basis_gl(lambda_gl, F, n);
   Q_lap := Dual select Q^(-1) else Q;
+  k := Maximum(ConjugatePartition(lambda_gl) cat [0]);
   laplacians := [[&+[Q_lap[i,j]*Derivative(Derivative(f, x[i][p]), x[j][q])
-		     : i,j in [1..n]] : f in B] : p,q in [1..n]];
+		     : i,j in [1..n]] : f in B] : p,q in [1..k]];
   kers := [get_lap_kernel(lap) : lap in laplacians];
-  ker := &meet kers;
-  return [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
+  
+  ker := &meet (kers cat [VectorSpace(F, #B)]);
+  basis := [&+[b[i]*B[i] : i in [1..#B]] : b in Basis(ker)];
+  // In even rank, when lambda_n ne 0, the above gives a sum of two irreducibles.
+  // We separate them out using the map tau, as described in [FultonHarris, p. 298]
+  if (n eq 2 * #lambda) and (lambda[#lambda] ne 0) and Special then
+      sign := Sign(lambda[#lambda]);
+      tau_basis := tau_polys(x, Q_lap, sign);
+      deg_gap := Degree(B[1]) - (n div 2);
+      R_poly := BaseRing(x);
+      I := [mon*p : mon in MonomialsOfDegree(R_poly,deg_gap), p in tau_basis];
+      I_basis := get_lap_kernel(I : basis);
+      I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      ker := get_lap_kernel(basis cat I_red);
+      basis := [&+[b[i]*basis[i] : i in [1..#basis]] : b in Basis(ker)];
+  end if;
+  return basis;
 end function;
 
 function get_hw_rep_poly(lambda, B, n : Dual := false)
@@ -1785,7 +1837,7 @@ function get_hw_rep_poly(lambda, B, n : Dual := false)
   M := CombinatorialFreeModule(F, {@ b : b in B@});
   mons := &join([Set(Monomials(b)) : b in B]);
   mons := SetToSequence(mons);
-  degs := [[Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
+  degs := [[Integers() | Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
   mon_vs := VectorSpace(F, #mons);
   // This is somewhat long, optimize if needed
   vecs := [&+[Coefficients(b)[i]*
@@ -1795,14 +1847,20 @@ function get_hw_rep_poly(lambda, B, n : Dual := false)
   // !!! TODO - this is still inefficient
   // can change construction of vec_g to not need multiplication
   g_R_str := Dual select Sprintf("g^(-1)") else Sprintf("Transpose(g)");
+  k := Maximum(ConjugatePartition(lambda[1..#lambda-1] cat [Abs(lambda[#lambda])]) cat [0]);
   action_desc := Sprintf("           
   	      function action(g, m, V)
 	      	      B := Names(V`M);
                       R := Universe(B);
                       n := %o;
+		      k := %o;
                       gens := GeneratorsSequence(R);
-                      x := Matrix([[gens[n*i+j+1] 
-                            : j in [0..n-1]] : i in [0..n-1]]);
+		      if k eq 0 then
+		      	 x := RMatrixSpace(R, n, 0)!0;
+		      else			 
+                         x := Matrix([[gens[k*i+j+1] 
+                                       : j in [0..k-1]] : i in [0..n-1]]);
+		      end if;
                       g_R := ChangeRing(%o, R);
                       f := B[m];
                       f_g := Evaluate(f, Eltseq(g_R*x));
@@ -1826,7 +1884,7 @@ function get_hw_rep_poly(lambda, B, n : Dual := false)
                                  Solution(basis_mat, vec_g));
   	      end function;
   	      return action;
-	      ", n, g_R_str);
+	      ", n, k, g_R_str);
   
   V := GroupRepresentation(GL(n, F), M, action_desc :
 			   params := [* <"HW_VDW", <hw_vdw_data, lambda> > *]);
@@ -1859,9 +1917,9 @@ function getGLHighestWeightRepresentationPolys(lambda, F, n)
   return V;
 end function;
 
-function getSOHighestWeightRepresentationPolys(lambda, Q)
+function getSOHighestWeightRepresentationPolys(lambda, Q : Special := false)
   n := Degree(Parent(Q));
-  B := get_hw_basis_so(lambda, Q);
+  B := get_hw_basis_so(lambda, Q : Special := Special);
 
   return get_hw_rep_poly(lambda, B, n : Dual);
 end function;
@@ -1891,7 +1949,7 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   end if;
   Q := ChangeRing(Q, F);
   if IsOrthogonal(G) then
-    V := getSOHighestWeightRepresentationPolys(lambda, Q);
+    V := getSOHighestWeightRepresentationPolys(lambda, Q : Special := IsSpecialOrthogonal(G));
     if NumberOfRows(Q) eq 5 then
        V`weight := <1, lambda[1] - lambda[2], lambda[2]>;
     end if;
@@ -1971,3 +2029,33 @@ intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt) -> GrpRep
   V`weight := <d, 0, 0>;
   return V;
 end intrinsic;
+
+function tau_alternating(V, Q)
+    assert IsEven(Rank(Q));
+    n := Rank(Q) div 2;
+    tau := ZeroMatrix(BaseRing(V), Dimension(V));
+    bases_names := [Split(name , "^") : name in V`M`names];
+    idxs := [[Index(V`alternating`M`names, name) : name in base_names] : base_names in bases_names];
+    // complements to idxs
+    comp := [[x : x in [1..2*n] | x notin idx] :  idx in idxs];
+    assert &and[c in idxs : c in comp];
+    for i->I in idxs do
+	for j->J_prime in idxs do
+	    J := comp[j];
+	    s := Sign(Sym(2*n)!(J_prime cat J));
+	    tau[i][j] := s * Minor(Q,I,J);
+	end for;
+    end for;
+    assert IsScalar(tau^2);
+    return tau;
+end function;
+
+function get_plus_representation(V,Q)
+    tau := tau_alternating(V, Q);
+    tau2 := (tau^2)[1,1]; // This should be det(Q), but to be on the safe side
+    is_sqr, sqrt_tau := IsSquare(tau2);
+    // !! TODO - handle the non-square case
+    return Subrepresentation(V,Basis(Eigenspace(tau, sqrt_tau)));
+end function;
+
+

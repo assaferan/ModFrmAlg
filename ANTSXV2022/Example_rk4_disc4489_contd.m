@@ -1,4 +1,3 @@
-// This is Example 4.9 from the paper, a continuation of Example 3.2.
 AttachSpec("../ModFrmAlg.spec");
 // A gram matrix representing the genus 
 Q := SymmetricMatrix([2,0,2,0,1,34,1,0,0,34]);

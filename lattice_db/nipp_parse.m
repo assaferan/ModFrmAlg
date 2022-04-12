@@ -250,8 +250,18 @@ end intrinsic;
 intrinsic QuaternaryQuadraticLattices(d::RngIntElt) -> SeqEnum[SeqEnum[AlgMatElt]]
 {Return representatives for all genera of positive definite quinary quadratic forms of discrimi
 nant d. Currently uses Nipp database and only works for d up to 457.}
-  nipp_fname := "lattice_db/nipp_4_4-457.txt";
-  nipps := ParseNippDiscQuaternary(nipp_fname, d);
+  //nipp_fname := "lattice_db/nipp_4_4-457.txt";
+  //nipps := ParseNippDiscQuaternary(nipp_fname, d);
+  nipp_web := "http://www.math.rwth-aachen.de/~Gabriele.Nebe/LATTICES/";
+  nipp_maxs := [0, 457, 641, 777, 893, 992, 1080, 1161, 1236, 1308, 1373, 1433, 1492, 1549, 1604, 1656, 1705, 1732];
+  table_idx := get_nipp_table_idx(d, nipp_maxs);
+  //  nipp_mins := [4, 458, 642, 778, 894, 993, 1081, 1162, 1237, 1309, 1374, 1434, 1493, 1550, 1605, 1657, 1706];
+  fname := Sprintf("d%o.html", nipp_maxs[table_idx+1]);
+  if table_idx eq 1 then
+      fname := "d4to457.html";
+  end if;
+  I := POpen("lynx -dump " cat nipp_web cat fname, "r");
+  nipps := ParseNippDiscQuaternary2(Read(I), d);
   return [NippToForms(nipp : Rank := 4) : nipp in nipps];
 end intrinsic;
 
@@ -264,4 +274,64 @@ intrinsic QuinaryQuadraticLattices(table_idx::RngIntElt,
 			  nipp_maxs[table_idx]+1, nipp_maxs[table_idx+1]);
   nipps := ParseNippFile(nipp_fname);
   return NippToForms(nipps[idx]), nipps[idx]`D, nipps[idx]`genus;
+end intrinsic;
+
+intrinsic ParseNippDiscQuaternary2(r::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
+{Extract the records of a certain discrminant from a file in the Nipp database of quaternary lattices.}
+  r_lines := Split(r, "\n");
+  split_lines := [Split(line, "\t ") : line in r_lines];
+  if Split("404 Not Found", " ") eq split_lines[1] then
+      error "Webpage not found!";
+  end if;
+  digits := [Sprintf("%o", i) : i in [0..9]];
+  is_lattice := false;
+  idx := 0;
+  while not is_lattice do
+      idx +:= 1;
+      line := split_lines[idx];
+      is_lattice := line[1][1] in digits;
+  end while;
+  // TODO : can binary search the file to make this part faster
+  is_disc_d := (#line ne 0) and (eval line[1]) eq d;
+  while not is_disc_d do
+      idx +:= 1;
+      line := split_lines[idx];
+      is_disc_d := (#line ne 0) and (eval line[1]) eq d;
+  end while;
+  // split_lines_disc := [line : line in split_lines |
+  //		       (#line ne 0) and (eval line[1]) eq d];
+  split_lines_disc := [];
+  while is_disc_d do
+      Append(~split_lines_disc, line);
+      idx +:= 1;
+      line := split_lines[idx];
+      is_disc_d := (#line ne 0) and (eval line[1]) eq d;
+  end while;
+  genera := [];
+  latGen := rec<latticeGenus_RF | >;
+  latGen`D := d;
+  latGen`genus := 1;
+  latGen`lattices := [];
+  num_hasse := #PrimeDivisors(2*d);
+  for line in split_lines_disc do
+      genus := eval line[2];
+      if (genus gt latGen`genus) then
+	  Append(~genera, latGen);
+	  latGen`genus := genus;
+	  latGen`lattices := [];
+      end if;
+      lattice := rec<lattice_RF | >;
+      lattice`form := [eval line[j] : j in [3..12]];
+      hasse_chars := [[line[i][j] : j in [1..#line[i]]] : i in [13..#line-4]];
+      hasse_strs := [&cat[(x eq "-") select " -" else x : x in hasse_char]
+		     : hasse_char in hasse_chars];
+      hasse_sym := &cat [[eval(y) : y in Split(hasse_str, " ")] : hasse_str in hasse_strs];
+      assert num_hasse eq #hasse_sym;
+      latGen`HasseSym := hasse_sym;
+      lattice`numAut := eval line[#line-2];
+      latGen`mass := (eval line[#line-1])/(eval line[#line]);
+      Append(~latGen`lattices, lattice);
+  end for;
+  Append(~genera, latGen);
+  return genera;
 end intrinsic;

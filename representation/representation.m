@@ -468,6 +468,9 @@ intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
 end intrinsic;
 
 function make_wedge_str(names, seq)
+  if IsEmpty(seq) then
+      return "1";
+  end if;
   ret := Sprintf("%o", names[seq[1]]);
   for i in [2..#seq] do
     ret cat:= Sprintf("^%o", names[seq[i]]);

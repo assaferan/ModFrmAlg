@@ -567,9 +567,9 @@ function OrthogonalMass(L : Special := false)
       if not IsMaximalIntegral(L, d[1]) then
         if Type(R) eq RngInt then
 	  // over the rationals we can cheat
-	  genus_cmd := Special select SpinorGenus else Genus;   
-	  return &+[1/#AutomorphismGroup(r : Special := Special)
-		       : r in Representatives(Genus(ZLattice(L)))];
+	  genus_cmd := Special select SpinorGenus else Genus;
+	  reps := [LatticeFromLat(r) : r in Representatives(Genus(ZLattice(L)))];
+	  return &+[1/#AutomorphismGroup(r : Special := Special) : r in reps];
         else
 	  error "The lattice must be maximal at primes over 2";
         end if;

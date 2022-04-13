@@ -1778,13 +1778,22 @@ end function;
 
 function tau_polys(x,Q,sign)
     assert IsEven(Rank(Q));
+    F := BaseRing(Q);
+    _<y> := PolynomialRing(F);
     is_sqr, scale := IsSquare(Determinant(Q));
+    if is_sqr then
+	K := F;
+    else
+	K<scale> := ext<F | y^2 - Determinant(Q)>;
+    end if;
+    
     n := Rank(Q) div 2;
     assert Nrows(x) eq 2*n;
     
     idxs := [SetToSequence(s) : s in Subsets({1..2*n}, n)];
     basis := [Minor(x,I,[1..n]) : I in idxs];
-    tau_basis := basis[1..#basis];
+    K_polys := ChangeRing(Universe(basis), K);
+    tau_basis := [K_polys!b : b in basis[1..#basis]];
     
     // complements to idxs
     comp := [[x : x in [1..2*n] | x notin idx] :  idx in idxs];
@@ -1793,7 +1802,7 @@ function tau_polys(x,Q,sign)
 	for j->J_prime in idxs do
 	    J := comp[j];
 	    s := Sign(Sym(2*n)!(J_prime cat J));
-	    tau_basis[i] +:= sign*s * Minor(Q,I,J)*basis[j] / scale;
+	    tau_basis[i] +:= K_polys!(sign * s * Minor(Q,I,J) * basis[j]) / scale;
 	end for;
     end for;
  
@@ -1821,10 +1830,12 @@ function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
       sign := Sign(lambda[#lambda]);
       tau_basis := tau_polys(x, Q_lap, sign);
       deg_gap := Degree(B[1]) - (n div 2);
-      R_poly := BaseRing(x);
+      // R_poly := BaseRing(x);
+      R_poly := Universe(tau_basis);
       I := [mon*p : mon in MonomialsOfDegree(R_poly,deg_gap), p in tau_basis];
       I_basis := get_lap_kernel(I : basis);
       I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      basis := [R_poly!b : b in basis];
       ker := get_lap_kernel(basis cat I_red);
       basis := [&+[b[i]*basis[i] : i in [1..#basis]] : b in Basis(ker)];
   end if;

@@ -1,4 +1,3 @@
-// This is Example 4.9 from the paper, a continuation of Example 3.1.
 AttachSpec("../ModFrmAlg.spec");
 // A gram matrix representing the genus 
 Q := SymmetricMatrix([2,0,4,1,1,10,1,2,1,20]);
@@ -14,6 +13,11 @@ Lambdas;
     [ 1  1 10  1]
     [ 1  2  1 20],
 
+    [10  3  2 12]
+    [ 3  4  1  2]
+    [ 2  1 10  1]
+    [12  2  1 20],
+
     [ 2  1  1  2]
     [ 1 28 12 44]
     [ 1 12  8 21]
@@ -22,12 +26,7 @@ Lambdas;
     [14 13  7  4]
     [13 16  2  4]
     [ 7  2 10  1]
-    [ 4  4  1 20],
-
-    [10  3  2 12]
-    [ 3  4  1  2]
-    [ 2  1 10  1]
-    [12  2  1 20]
+    [ 4  4  1 20]
 ]
 */
 // The first few HeckeOperators

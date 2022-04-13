@@ -142,7 +142,7 @@ intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt, pR::RngInt)
 end intrinsic;
 
 intrinsic SetHeckeOperator(M::ModFrmAlg, T::AlgMatElt,
-					    p::RngIntElt, k::RngIntEl)
+					    p::RngIntElt, k::RngIntElt)
 { Sets the k-th order Hecke operator at the specified prime for this form. }
   SetHeckeOperator(M, T, ideal< Integers() | p >, k);
 end intrinsic;

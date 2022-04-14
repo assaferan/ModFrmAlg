@@ -928,36 +928,45 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
   iso, f := IsIsometric(L1, AuxForms(lat1), L2, AuxForms(lat2));
 
   if not iso then return false, _; end if;
-	
+
+  /*
   if BeCareful then
     // a trap set to catch SO bugs
     f_lift := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
     assert Determinant(f) eq Determinant(f_lift);
   end if;
-
+ */
+  f := PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
+  MnF := Parent(f);
+  F := BaseRing(MnF);
+  n := Dimension(lat1);
+  G := GL(n,F);
+  
   // Currently, this only works for O and SO, where det in -1,1
   if Special and Determinant(f) eq -1 then
       // Look at the generators of the automorphism group of the
       //  first lattice.
-      gens := Generators(AutomorphismGroup(lat1));
+      gens := [Transpose(g) : g in Generators(AutomorphismGroupOverField(lat1, G))];
       
       // If any of the generators have determinant -1, then we can
       //  compose f and g in such a way to produce a proper isometry.
       for g in gens do
 	  if Determinant(g) eq -1 then
 	      return true,
-		     PullUp(Matrix(f*g), lat1, lat2 :
-			    BeCareful := BeCareful);
+		     f*Matrix(g);
+//		     PullUp(Matrix(f*g), lat1, lat2 :
+//			    BeCareful := BeCareful);
 	  end if;
       end for;
 
       // Same as above.
-      gens := Generators(AutomorphismGroup(lat2));
+      gens := [Transpose(g) : g in Generators(AutomorphismGroupOverField(lat2, G))];
       for g in gens do
 	  if Determinant(g) eq -1 then
 	      return true,
-		     PullUp(Matrix(g*f), lat1, lat2 :
-			    BeCareful := BeCareful);
+		     Matrix(g)*f;
+//		     PullUp(Matrix(g*f), lat1, lat2 :
+//			    BeCareful := BeCareful);
 	  end if;
       end for;
       
@@ -966,7 +975,8 @@ intrinsic IsIsometric(lat1::ModDedLat, lat2::ModDedLat :
       return false, _;
   end if;
 
-  return iso, PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
+  return iso,f;
+	 //PullUp(Matrix(f), lat1, lat2 : BeCareful := BeCareful);
 end intrinsic;
 
 intrinsic AutomorphismGroup(lat::ModDedLat : Special := false) -> SeqEnum

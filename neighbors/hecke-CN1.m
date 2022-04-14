@@ -185,7 +185,7 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
 			BeCareful := BeCareful)) :
 		  g in Generators(gamma_rep)]>;
    */
-    gamma := AutomorphismGroupOverField(nLat : Special := Special);
+    gamma := AutomorphismGroupOverField(nLat, W`G : Special := Special);
     h := FixedSubspace(gamma, W);
     for h_idx in [1..#H] do
       for v_idx in [1..Dimension(H[h_idx])] do
@@ -298,8 +298,8 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 			BeCareful := BeCareful) :
 		 g in Generators(G)];
        */
-	G := AutomorphismGroupOverField(L : Special := IsSpecialOrthogonal(M));
-	gens := [Transpose(g) : g in Generators(G)];
+	G := AutomorphismGroupOverField(L, M`W`G : Special := IsSpecialOrthogonal(M));
+	gens := [Transpose(Matrix(g)) : g in Generators(G)];
 	
 	pMaximalBasis :=
 	    ChangeRing(L`pMaximal[nProc`pR][2], BaseRing(Q));
@@ -517,7 +517,7 @@ function HeckeOperatorCN1(M, pR, k
 				  BeCareful := BeCareful)) :
 			  g in Generators(gamma_rep)]>;
      */
-      gamma := AutomorphismGroupOverField(L : Special := IsSpecialOrthogonal(M));
+      gamma := AutomorphismGroupOverField(L, M`W`G : Special := IsSpecialOrthogonal(M));
       M`H := [FixedSubspace(gamma, M`W)];
     else
       // The genus representatives.
@@ -734,7 +734,7 @@ function fillHeckeFromRelations(M, column, indices, ind)
     aut := [ #AutomorphismGroup(L : Special := IsSpecialOrthogonal(M))
 	     : L in M`genus`Representatives ];
    */
-    aut := [ #AutomorphismGroupOverField(L : Special := IsSpecialOrthogonal(M))
+    aut := [ #AutomorphismGroupOverField(L, M`W`G : Special := IsSpecialOrthogonal(M))
 	     : L in M`genus`Representatives ];
 
     // spreading them according to the spaces

@@ -1019,14 +1019,11 @@ function special_subgroup(gamma)
     return Kernel(h); 
 end function;
 
-intrinsic AutomorphismGroupOverField(lat::ModDedLat : Special := false) -> SeqEnum
+intrinsic AutomorphismGroupOverField(lat::ModDedLat, G::GrpMat : Special := false) -> SeqEnum
 { Computes the automorphism group of the specified lattice. }
   Z_aut_grp := AutomorphismGroup(lat);
   gens := [Transpose(PullUp(Matrix(g), lat, lat)) : g in Generators(Z_aut_grp)];
-  MnF := Universe(gens);
-  F := BaseRing(MnF);
-  n := Nrows(MnF.1);
-  G := sub<GL(n,F) | gens>;
+  G := sub<G | gens>;
   if Special then
       return special_subgroup(G);
   end if;

@@ -562,7 +562,7 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
       gammas := [special_subgroup(gamma) : gamma in gammas];
   end if;
  */
-  gammas := [AutomorphismGroupOverField(r : Special := IsSpecialOrthogonal(M)) : r in reps];
+  gammas := [AutomorphismGroupOverField(r, M`W`G : Special := IsSpecialOrthogonal(M)) : r in reps];
   if GetVerbose("AlgebraicModularForms") ge 2 then
      printf "The sizes of the automorphism groups are %o.\n",
 		   [#x : x in gammas];
@@ -647,7 +647,7 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	// Replace this by an actual bilinear form compatible with the group
 	// Add handling the case when the narrow class group of the field
 	// is nontrivial.
-	wts := &cat[[#AutomorphismGroupOverField(reps[i] : Special := IsSpecialOrthogonal(M))
+	wts := &cat[[#AutomorphismGroupOverField(reps[i], M`W`G : Special := IsSpecialOrthogonal(M))
 		     : j in [1..Dimension(M`H[i])]]: i in [1..#reps]];
 	// instead of dividing by wts[i], we multiply for the case of positive
 	// characteristic

@@ -570,6 +570,7 @@ function OrthogonalMass(L : Special := false)
 	  genus_cmd := Special select SpinorGenus else Genus;
 	  reps := [LatticeFromLat(r) : r in Representatives(Genus(ZLattice(L)))];
 	  return &+[1/#AutomorphismGroupOverField(r, GL(Dimension(L),K) : Special := Special) : r in reps];
+
         else
 	  error "The lattice must be maximal at primes over 2";
         end if;

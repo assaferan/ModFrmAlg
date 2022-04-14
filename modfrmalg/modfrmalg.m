@@ -526,6 +526,15 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := false, Orbits := true) -> GenusSym
 	return M`genus;
 end intrinsic;
 
+/*
+function special_subgroup(gamma)
+    F := BaseRing(gamma);
+    C2 := sub<GL(1, F) | [-1]>;
+    h := hom<gamma -> C2 | [C2![Determinant(gamma.i)] : i in [1..Ngens(gamma)]]>;
+    return Kernel(h); 
+end function;
+*/
+
 intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
 				: BeCareful := false)
 {Set the automorphism groups of the lattices in the genus of M.}
@@ -539,14 +548,21 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
 			    BaseRing(M`W`G));
 
-  gamma_reps := [AutomorphismGroup(r : Special := IsSpecialOrthogonal(M))
-		: r in reps];
+  //gamma_reps := [AutomorphismGroup(r : Special := IsSpecialOrthogonal(M))
+  //		: r in reps];
+  /*
   gammas := [sub<M`W`G|
 		[Transpose(PullUp(Matrix(g), reps[i], reps[i] :
 				  BeCareful := BeCareful)) :
-			  g in Generators(gamma_reps[i])]> :
+		 //			  g in Generators(gamma_reps[i])]> :
+		 g in Generators(autgps[i])]> :
 	    i in [1..#reps]];
-        
+
+  if IsSpecialOrthogonal(M) then
+      gammas := [special_subgroup(gamma) : gamma in gammas];
+  end if;
+ */
+  gammas := [AutomorphismGroupOverField(r : Special := IsSpecialOrthogonal(M)) : r in reps];
   if GetVerbose("AlgebraicModularForms") ge 2 then
      printf "The sizes of the automorphism groups are %o.\n",
 		   [#x : x in gammas];
@@ -631,7 +647,7 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	// Replace this by an actual bilinear form compatible with the group
 	// Add handling the case when the narrow class group of the field
 	// is nontrivial.
-	wts := &cat[[#AutomorphismGroup(reps[i] : Special := IsSpecialOrthogonal(M))
+	wts := &cat[[#AutomorphismGroupOverField(reps[i] : Special := IsSpecialOrthogonal(M))
 		     : j in [1..Dimension(M`H[i])]]: i in [1..#reps]];
 	// instead of dividing by wts[i], we multiply for the case of positive
 	// characteristic

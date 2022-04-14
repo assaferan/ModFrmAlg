@@ -173,8 +173,8 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	    // Move to the next prime.
 	    idx +:= 1;
             if UseMass then
-		acc_mass := &+[#AutomorphismGroup(rep :
-						  Special := IsSpecialOrthogonal(M))^(-1) : rep in genList];
+		acc_mass := &+[#AutomorphismGroupOverField(rep, M`W`G :
+							   Special := IsSpecialOrthogonal(M))^(-1) : rep in genList];
             end if;
             inner_stop_cond := UseMass select
 	      ((idx gt #ps)  or (acc_mass eq total_mass)) else true;
@@ -569,7 +569,7 @@ function OrthogonalMass(L : Special := false)
 	  // over the rationals we can cheat
 	  genus_cmd := Special select SpinorGenus else Genus;
 	  reps := [LatticeFromLat(r) : r in Representatives(Genus(ZLattice(L)))];
-	  return &+[1/#AutomorphismGroup(r : Special := Special) : r in reps];
+	  return &+[1/#AutomorphismGroupOverField(r, GL(Dimension(L),K) : Special := Special) : r in reps];
         else
 	  error "The lattice must be maximal at primes over 2";
         end if;

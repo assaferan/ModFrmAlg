@@ -139,6 +139,9 @@ freeze;
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../utils/linalg.m" : Restrict;
 
+import "combfreemod.m" : make_wedge_str,
+                         get_spin_matrix_action;
+
 forward projLocalization;
 forward spinor_norm_rho;
 
@@ -179,6 +182,8 @@ declare attributes GrpRep :
 	symmetric,
         // alternating representation
         alternating,
+	// spin representation
+	spin,
 	// tensor product of the matrices.
 	tensor_product,
 	// This is assigned only if our representation is a pullback
@@ -253,6 +258,10 @@ function _grp_rep(G, M, action_desc, params)
 
   if IsDefined(param_array, "ALTERNATING") then
       V`alternating := param_array["ALTERNATING"];
+  end if;
+
+  if IsDefined(param_array, "SPIN") then
+      V`spin := param_array["SPIN"];
   end if;
 
   if IsDefined(param_array, "HW_VDW") then
@@ -467,14 +476,6 @@ intrinsic SymmetricRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
   return Sym;
 end intrinsic;
 
-function make_wedge_str(names, seq)
-  ret := Sprintf("%o", names[seq[1]]);
-  for i in [2..#seq] do
-    ret cat:= Sprintf("^%o", names[seq[i]]);
-  end for;
-  return ret;
-end function;
-
 // Should display those better...
 intrinsic AlternatingRepresentation(V::GrpRep, n::RngIntElt) -> GrpRep
 {Constructs the representation Alt^n(V).}
@@ -596,14 +597,18 @@ end intrinsic;
 // since magma doesn't support localization in arbitrary number fields
 // we make a small patch for that
 function projLocalization(g, proj)
-// denom := Parent(g)!ScalarMatrix(Degree(g),Denominator(g));
-    denom := GL(Degree(g), BaseRing(g))!ScalarMatrix(Degree(g),Denominator(g));
-    numerator := GL(Degree(g), Domain(proj)) !(denom*g);
-    f := hom< MatrixAlgebra(Domain(proj),Degree(g)) ->
-			  MatrixAlgebra(Codomain(proj),Degree(g)) | proj >;
-    f_gl := hom< GL(Degree(g), Domain(proj)) ->
-		   GL(Degree(g), Codomain(proj)) | x :-> f(Matrix(x)) >;
-    return f_gl(numerator) * f_gl(denom)^(-1);
+    // denom := Parent(g)!ScalarMatrix(Degree(g),Denominator(g));
+    n := Nrows(g);
+    denom := LCM([Denominator(x) : x in Eltseq(g)]);
+    denom := GL(n, BaseRing(g))!ScalarMatrix(n,denom);
+    // numerator := GL(n, Domain(proj)) !(denom*g);
+    numerator := MatrixAlgebra(Domain(proj),n)!(denom*g);
+    f := hom< MatrixAlgebra(Domain(proj),n) ->
+			  MatrixAlgebra(Codomain(proj),n) | proj >;
+    // f_gl := hom< GL(n, Domain(proj)) ->
+//		   GL(n, Codomain(proj)) | x :-> f(Matrix(x)) >;
+    //    return f_gl(numerator) * f_gl(denom)^(-1);
+    return GL(n,Codomain(proj))!(f(numerator)*f(denom)^(-1));
 end function;
 // Then one can pullback via something like
 // f := map< GL(3,K) -> GL(3,F7) | x :-> projLocalization(x, mod_root_7)>;
@@ -2069,4 +2074,51 @@ function get_plus_representation(V,Q)
     return Subrepresentation(V,Basis(Eigenspace(tau, sqrt_tau)));
 end function;
 
-
+intrinsic GetSplitPrimeWithSquare(G::GrpRed : LowerBound := 2) -> RngIntElt
+{Returns a prime where G_p is split, and 2 is a square.}
+  V := InnerForm(G,1);
+  L := StandardLattice(V);
+  n := Dimension(L);
+  is_split_prime := false;
+  p := LowerBound-1;
+  while (not is_split_prime) do
+      p := NextPrime(p);
+      pR := Factorization(ideal<BaseRing(L) | p>)[1][1];
+      nProc := BuildNeighborProc(L, pR, 1);
+      Vpp := L`Vpp[pR]`V;
+      witt := Vpp`WittIndex;
+      is_split_prime := Vpp`WittIndex eq n div 2;
+      std_basis := Transpose(Vpp`Basis);
+      u := std_basis[n];
+      norm_u := (u*Vpp`GramMatrix, u);
+      is_split_prime and:= IsSquare(GF(p)!2 / norm_u);
+  end while;
+  return p;
+end intrinsic;			   
+		       
+intrinsic SpinRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
+{Constructs the Spin representation of G=SO(Q) mod p. }
+  V := InnerForm(G,1);
+  Q := InnerForm(V);
+  L := StandardLattice(V);
+  n := Dimension(L);
+  pR := Factorization(ideal<BaseRing(L) | p>)[1][1];
+  nProc := BuildNeighborProc(L, pR, 1);
+  Vpp := L`Vpp[pR]`V;
+  F := BaseRing(Vpp);
+  M := CombinatorialFreeModule(F, [Sprintf("x%o", i) : i in [1..n div 2]]);
+  M := ExteriorAlgebra(M);
+  a := Sprintf("
+  function action(g,m,V)
+      pR := V`spin[1];
+      L := V`spin[2];
+      mat := get_spin_matrix_action(g, pR, L);
+      return V`M!(mat[m]);
+  end function;
+  return action;
+  ");
+  Spin := GroupRepresentation(GL(n,BaseRing(V)), M, a  : params := [* <"SPIN", [* pR, L *]> *]);
+  Spin`trivial := false;
+  
+  return Spin;
+end intrinsic;

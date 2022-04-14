@@ -1012,6 +1012,24 @@ intrinsic AutomorphismGroup(lat::ModDedLat : Special := false) -> SeqEnum
   return lat`AutomorphismGroup;
 end intrinsic;
 
+function special_subgroup(gamma)
+    F := BaseRing(gamma);
+    C2 := sub<GL(1, F) | [-1]>;
+    h := hom<gamma -> C2 | [C2![Determinant(gamma.i)] : i in [1..Ngens(gamma)]]>;
+    return Kernel(h); 
+end function;
+
+intrinsic AutomorphismGroupOverField(lat::ModDedLat, G::GrpMat : Special := false) -> SeqEnum
+{ Computes the automorphism group of the specified lattice. }
+  Z_aut_grp := AutomorphismGroup(lat);
+  gens := [Transpose(PullUp(Matrix(g), lat, lat)) : g in Generators(Z_aut_grp)];
+  G := sub<G | gens>;
+  if Special then
+      return special_subgroup(G);
+  end if;
+  return G;
+end intrinsic;
+
 intrinsic IsFree(L::ModDedLat) -> BoolElt
 { Determines whether the lattice is a free lattice or not. }
   // The pseudobasis for the lattice.

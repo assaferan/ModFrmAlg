@@ -266,7 +266,7 @@ function _grp_rep(G, M, action_desc, params)
 
   if IsDefined(param_array, "HW_VDW") then
       V`hw_vdw := param_array["HW_VDW"][1];
-      V`M := CombinatorialFreeModule(BaseRing(G), M`names);
+      V`M := CombinatorialFreeModule(BaseRing(Universe(M`names)), M`names);
       V`hw_vdw_rev := AssociativeArray();
       for i in [1..#V`hw_vdw[1]] do
 	V`hw_vdw_rev[V`hw_vdw[1][i]] := i;
@@ -1847,18 +1847,18 @@ function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
   return basis;
 end function;
 
-function get_hw_rep_poly(lambda, B, n : Dual := false)
+function get_hw_rep_poly(lambda, B, n, F : Dual := false)
   R := Universe(B);
-  F := BaseRing(R);
-  M := CombinatorialFreeModule(F, {@ b : b in B@});
+  K := BaseRing(R);
+  M := CombinatorialFreeModule(K, {@ b : b in B@});
   mons := &join([Set(Monomials(b)) : b in B]);
   mons := SetToSequence(mons);
   degs := [[Integers() | Degree(m, R.i) : i in [1..Rank(R)]] : m in mons];
-  mon_vs := VectorSpace(F, #mons);
+  mon_vs := VectorSpace(K, #mons);
   // This is somewhat long, optimize if needed
-  vecs := [&+[Coefficients(b)[i]*
+  vecs := [&+([mon_vs!0] cat [Coefficients(b)[i]*
               mon_vs.(Index(mons, Monomials(b)[i]))
-	      : i in [1..#Monomials(b)]] : b in B];
+	      : i in [1..#Monomials(b)]]) : b in B];
   hw_vdw_data := [* degs, [Eltseq(v) : v in vecs] *];
   // !!! TODO - this is still inefficient
   // can change construction of vec_g to not need multiplication
@@ -1925,7 +1925,7 @@ function getGLHighestWeightRepresentationPolys(lambda, F, n)
     w := lambda;
   end if;
   B := get_hw_basis_gl(w, F, n);
-  V := get_hw_rep_poly(w, B, n);
+  V := get_hw_rep_poly(w, B, n, F);
   if adjust then
     V := TensorProduct(V, det_rep);
     V`lambda := lambda;
@@ -1936,8 +1936,8 @@ end function;
 function getSOHighestWeightRepresentationPolys(lambda, Q : Special := false)
   n := Degree(Parent(Q));
   B := get_hw_basis_so(lambda, Q : Special := Special);
-
-  return get_hw_rep_poly(lambda, B, n : Dual);
+  F := BaseRing(Q);
+  return get_hw_rep_poly(lambda, B, n, F : Dual);
 end function;
 
 // This is for debugging purposes
@@ -2121,4 +2121,29 @@ intrinsic SpinRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   Spin`trivial := false;
   
   return Spin;
+  end intrinsic;
+
+intrinsic HighestWeightRepresentation(G::GrpRed, lambda::SeqEnum[RngIntElt], char::RngIntElt) -> GrpRep
+{.}
+   V := HighestWeightRepresentation(G, lambda);
+   F := BaseRing(G);
+   pR := Factorization(ideal<Integers(F)|char>)[1][1];
+   Fq, mod_q := ResidueClassField(pR);
+   V := ChangeRing(V, Fq);   
+   n := Dimension(InnerForm(G,1));
+
+   f_desc := Sprintf("
+      function foo(H)
+        F := BaseRing(H);
+        n := %m; 
+        pR := Factorization(ideal<Integers(F)|%m>)[1][1];
+        Fq, mod_q := ResidueClassField(pR);
+        f := map< H -> GL(n,Fq) |
+		  x :-> projLocalization(x, mod_q)>;
+        return f;
+      end function;
+      return foo;
+       ", n, char);
+   W := Pullback(V,f_desc, GL(n, F));
+   return W;
 end intrinsic;

@@ -292,20 +292,27 @@ intrinsic ParseNippDiscQuaternary2(r::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
       is_lattice := line[1][1] in digits;
   end while;
   // TODO : can binary search the file to make this part faster
-  is_disc_d := (#line ne 0) and (eval line[1]) eq d;
-  while not is_disc_d do
+  is_disc_lt_d := (#line ne 0) and (eval line[1]) lt d;
+  while is_lattice and is_disc_lt_d do
       idx +:= 1;
       line := split_lines[idx];
-      is_disc_d := (#line ne 0) and (eval line[1]) eq d;
+      is_lattice := line[1][1] in digits;
+      if is_lattice then
+	  is_disc_lt_d := (#line ne 0) and (eval line[1]) lt d;
+      end if;
   end while;
   // split_lines_disc := [line : line in split_lines |
   //		       (#line ne 0) and (eval line[1]) eq d];
   split_lines_disc := [];
+  is_disc_d := is_lattice and (#line ne 0) and (eval line[1]) eq d;
   while is_disc_d do
       Append(~split_lines_disc, line);
       idx +:= 1;
       line := split_lines[idx];
-      is_disc_d := (#line ne 0) and (eval line[1]) eq d;
+      is_lattice := line[1][1] in digits;
+      if is_lattice then
+	  is_disc_d := (#line ne 0) and (eval line[1]) eq d;
+      end if;
   end while;
   genera := [];
   latGen := rec<latticeGenus_RF | >;
@@ -332,6 +339,8 @@ intrinsic ParseNippDiscQuaternary2(r::MonStgElt, d::RngIntElt) -> SeqEnum[Rec]
       latGen`mass := (eval line[#line-1])/(eval line[#line]);
       Append(~latGen`lattices, lattice);
   end for;
-  Append(~genera, latGen);
+  if not IsEmpty(split_lines_disc) then
+      Append(~genera, latGen);
+  end if;
   return genera;
 end intrinsic;

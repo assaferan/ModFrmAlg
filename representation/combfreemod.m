@@ -785,25 +785,8 @@ function get_spin_matrix_action(g, pR, L)
    vecs := find_reflection_pts(g_p, Vpp`GramMatrix);
    x_g := &*[emb_p(v) : v in Reverse(vecs)];
    is_sqr, sqrt := IsSquare(Norm(x_g));
-   assert is_sqr; // SO should come from elements qith norm 1 or -1
+   assert is_sqr; // SO should come from elements with norm 1
    x_g /:= sqrt;
    assert &and[x_g*emb_p(v)*x_g^(-1) eq emb_p(v*g_p) : v in Basis(Vpp)];
    return get_clifford_mat(x_g, Vpp, emb_p);
 end function;
-
-/*
-Vpp := L`Vpp[p*Integers()]`V;
-w := Rows(Transpose(Vpp`Basis))[1..2];
-W := sub< Universe(w) | w>;
-w_prime := Rows(Transpose(Vpp`Basis))[3..4];
-W_prime := sub< Universe(w_prime) | w_prime>;
-// picking examples
-w := W.1 + W.2;
-w_prime := W_prime.1 + W_prime.2;
-coords := Solution(BasisMatrix(W),w);
-// This is the matrix representing l_w
-Matrix([(phi(M!coords)^b)`vec : b in Basis(EM)]);
-// this is theta in W^* (careful with 2)
-theta := hom<W -> GF(3) | w :-> (w_prime * Vpp`GramMatrix, w)>;
-
-*/

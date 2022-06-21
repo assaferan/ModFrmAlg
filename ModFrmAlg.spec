@@ -4,6 +4,7 @@
 
   io/saveload.m
 
+  lattice/BrtCl.m
   lattice/clifford.m
   lattice/fracIdl.m
   lattice/lattice.m

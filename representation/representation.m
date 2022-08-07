@@ -1994,6 +1994,8 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   basis := L`pMaximal[pR][2];
   ZF := Order(pR);
   ZF_p := Completion(ZF, pR);
+  // Needed to introduce this line due to a bug in Magma 2.26-12
+  ZF_p := Integers(ZF_p);
   Fp := ResidueClassField(ZF_p);
   rad := rad * ChangeRing(basis, Fp);
   pRdata := [Eltseq(x) : x in Generators(pR)];
@@ -2006,6 +2008,8 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
           pRdata := %m;
           pR := ideal<ZF | [ZF!x : x in pRdata]>;
 	  ZF_p := Completion(ZF, pR);
+	  // Needed to introduce this line due to a bug in Magma 2.26-12
+  	  ZF_p := Integers(ZF_p);
           dummy, redp := ResidueClassField(ZF_p);
           assert Fp eq dummy;
           redp_mat := hom<MatrixAlgebra(ZF_p, n) -> MatrixAlgebra(Fp,n) | redp>;

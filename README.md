@@ -9,10 +9,9 @@ Can input any representation as a weight, and there is some support for construc
 Supports also different levels. Levels can be input as a matrix describing the lattice. 
 
 Here is a simple usage example.
-
+```
 // loading the package
 AttachSpec("ModFrmAlg.spec");
-
 QQ := Rationals();
 // setting up several weights (representations) and quadratic forms
 std_reps := AssociativeArray();
@@ -44,3 +43,4 @@ evs := [* HeckeEigensystem(f,1 : Precision := prec) :  f in eigenforms *];
 lpolys := [* LPolynomials(f : Precision := prec) : f in eigenforms *];
 // Factorization of the L-polynomials
 lps :=  [* [Factorization(lp[p]) : p in PrimesUpTo(prec)] : lp in lpolys *];
+```

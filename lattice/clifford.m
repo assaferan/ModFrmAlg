@@ -1,4 +1,4 @@
-freeze;
+// freeze;
 // In this file we implement various methods related to the even clifford functor
 
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
@@ -7,7 +7,7 @@ import "../neighbors/neighbor-CN1.m" : GetNextNeighbor;
 
 // This was constructed only for quaternary lattices, change later
 
-function RationalEvenClifford(M)
+function RationalEvenClifford(M : Isometries := [])
   C_Q, V_Q, emb_Q := CliffordAlgebra(1/2*M);
   dim := Dimension(V_Q);
   e := [emb_Q(V_Q.i) : i in [1..dim]];
@@ -16,7 +16,15 @@ function RationalEvenClifford(M)
   // we construct the even and odd (rational) clifford algebras.
   basis_C_0 := &cat [C_Q_gr[1 + 2*k] : k in [0..dim div 2]];
   C_0_Q := sub<C_Q | basis_C_0>;
-  return C_0_Q, emb_Q;
+  basismat := Matrix([C_0_Q!x : x in basis_C_0]);
+  C_0_iso := [];
+  for s in Isometries do
+      s_e := [emb_Q(r) : r in Rows(s)];
+      s_C_Q_gr := [[&*([1] cat [s_e[i] : i in I]) : I in Subsets({1..dim}, k)] : k in [0..dim]];
+      s_C_0 := &cat [s_C_Q_gr[1 + 2*k] : k in [0..dim div 2]];
+      Append(~C_0_iso, Matrix([C_0_Q!l : l in s_C_0])*basismat^(-1));
+  end for;
+  return C_0_Q, emb_Q, C_0_iso;
 end function;
 
 // Currently this only works for primitive lattices
@@ -229,11 +237,15 @@ function get_quaternion_orders(M : Isometry := 1)
     C_0_Q, emb_Q := RationalEvenClifford(M);
     _, T := Diagonalization(M);
     v_orth := [emb_Q(r) : r in Rows(T)];
-    assert v_orth[1]*v_orth[1] eq 1;
+    // assert v_orth[1]*v_orth[1] eq 1;
     i := v_orth[2]*v_orth[3];
     j := v_orth[3]*v_orth[4];
     B, quat_emb := sub<C_0_Q | i, j>;
     _, BB, isom := IsQuaternionAlgebra(B);
+    BBB := QuaternionAlgebra(Discriminant(BB));
+    _, isom2 := IsIsomorphic(BB,BBB : Isomorphism);
+    isom := isom*isom2;
+    BB := BBB;
     delta_Q := C_0_Q!(Center(C_0_Q).2);
     delta_Q := delta_Q * Denominator(delta_Q);
     delta_bar := Trace(delta_Q)/4 - delta_Q;
@@ -294,8 +306,8 @@ function get_quaternion_orders(M : Isometry := 1)
     return orders;
 end function;
 
-function get_genus_orders(M)
-    genus := [GramMatrix(lat) : lat in Representatives(Genus(LatticeWithGram(M)))];
+function get_genus_orders(genus)
+//    genus := [GramMatrix(lat) : lat in Representatives(Genus(LatticeWithGram(M)))];
     all_orders := [get_quaternion_orders(L) : L in genus];
     // quat_alg := [QuaternionAlgebra(o[1]) : o in all_orders];
     quat_alg := [Algebra(o[1]) : o in all_orders];

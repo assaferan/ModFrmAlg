@@ -1358,3 +1358,101 @@ function GenerateOrbit(QF)
   end for;
   return orbit;
 end function;
+
+function getTammelaTable1(n)
+    l_table := [CartesianProduct([{1}] cat [{-1,1} : k in [1..j]] cat
+				 [{0} : i in [1..n-j-1]]) : j in [1..n-1]];
+    if n ge 5 then
+	l_table cat:= [CartesianProduct([{1}] cat [{-1,1} : k in [1..j]] cat
+					[{-2,2} : i in [1..n-j-1]]) : j in [3..n-2]];
+    end if;
+    if n eq 6 then
+	Append(~l_table, CartesianProduct([{1}] cat [{-1,1} : k in [1..3]] cat
+					  [{-2,2}, {-3,3}]));
+	Append(~l_table, CartesianProduct([{1}] cat [{-1,1} : k in [1..3]] cat
+					  [{-2,2}, {0}]));
+    end if;
+    l := &cat [[x : x in ll] : ll in l_table];
+    return l;
+end function;
+
+function getTammelaTable2(n)
+    l_table := [CartesianProduct([{-1,1}] cat
+				 [{0} : i in [1..n-1]])];
+    if n ge 2 then
+	l_table cat:=  [CartesianProduct([{-1,1} : k in [1..3]] cat
+					 [{-2,2} : i in [1..j]] cat
+					 [{0} : i in [1..n-j-3]]) : j in [1..n-3]];
+    end if;
+    if n eq 6 then
+	Append(~l_table, CartesianProduct([{-1,1} : k in [1..5]] cat
+					  [{-3,3}]));
+	l_table cat:= [CartesianProduct([{-1,1} : k in [1..3]] cat
+					[{-2,2} : k in [1..2]] cat
+					[{-j,j}]) : j in [3,4]];
+	Append(~l_table, CartesianProduct([{-1,1} : k in [1..2]] cat
+					  [{-2,2} : k in [1..3]] cat
+					  [{-3,3}]));
+    end if;
+    l := &cat [[x : x in ll] : ll in l_table];
+    return l;
+end function;
+
+// !! TODO: we can take quotients in the end by G (the automorphism group of QF)
+// However this is a right action here, so there are chances of confusion...
+function generateOrbitTammela(QF)
+    n := Nrows(QF);
+    l1 := getTammelaTable1(n);
+    l2 := getTammelaTable2(n);
+    ls := l1 cat l2;
+    S_n := Sym(n);
+    X := GSet(S_n);
+    act := Action(X);
+    all_ls := [[] : k in [1..n]];
+    for sigma in S_n do
+	for ll in ls do
+	    l_sigma := [ll[act(i,sigma^(-1))] : i in [1..n]];
+	    k := act(1,sigma);
+	    Append(~all_ls[k],l_sigma);
+	end for;
+    end for;
+    Z := [* [] : k in [1..n] *];
+    for k in [1..n] do
+	for l in all_ls[k] do
+	    v := Vector(l);
+	    if (v*QF, v) eq QF[k,k] then
+		v_t := Transpose(Matrix(v));
+		if k eq 1 then
+		    Append(~Z[k], v_t);
+		else
+		    for z in Z[k-1] do
+			z_new := HorizontalJoin(z, v_t);
+			if Rank(z_new) eq k then
+			    Append(~Z[k], z_new);
+			end if;
+		    end for;
+		end if;
+	    end if;
+	end for;
+    end for;
+    return Z[n];
+end function;
+
+// Here is the code that should be used after parsing the Bravais groups from the catalogue (the main TODO)
+/*
+function find_form(G)
+sym_basis := SymmetricForms(G);
+good := false;
+while not good do
+lin_comb := &+[Random([-5..5])*b : b in sym_basis]; // We should be able to do better than random
+good := IsPositiveDefinite(lin_comb) and AutomorphismGroup(LatticeWithGram(lin_comb)) eq G;
+end while;
+return lin_comb;
+end function;
+
+rep_forms := [find_form(G) : G in all_Bravais]; // here all_Bravais presumably has a least of the Bravais groups
+red_forms := [GramMatrix(MinkowskiReduction(LatticeWithGram(f))) : f in rep_forms];
+orbits := [generateOrbitTammela(f) : f in red_forms];
+*/
+
+// Then orbits can tell us which matrices should act after we have classified our Bravais type.

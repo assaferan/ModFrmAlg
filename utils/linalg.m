@@ -48,7 +48,8 @@ function Decompose(T, t)
 
     for data in fs do
 	// Number field associated to one of the irreducible factors.
-
+	vprintf AlgebraicModularForms, 2:
+	    "Working on polynomial of degree %o\n", Degree(data[1]);
 	// This started throwing errors when base ring is a FldOrd
 	// K := ext< BaseRing(data[1]) | data[1] >;
 	K0 := BaseRing(data[1]);

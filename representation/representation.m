@@ -1412,8 +1412,8 @@ end intrinsic;
 
 forward my_prod;
 
-intrinsic SpinorNormRepresentationOld(G::GrpRed, d::RngIntElt :
-				      name := "x") -> GrpRep
+intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt :
+				   name := "x") -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);
@@ -2026,7 +2026,7 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
 end intrinsic;
 
 // Something here is off
-intrinsic SpinorNormRepresentation(G::GrpRed, d::RngIntElt) -> GrpRep
+intrinsic SpinorNormRepresentationFast(G::GrpRed, d::RngIntElt) -> GrpRep
 {Constructs the spinor norm representation of the matrix group G.}
   A := InnerForm(InnerForm(G,1)); 
   K := BaseRing(A);

@@ -43,7 +43,7 @@ import "inv-CN1.m" : Invariant;
 
 // functions
 
-procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
+procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList, ~acc_mass, G
 			    : BeCareful := false, Special := false)
 
     // Compute the neighbor according to the current state
@@ -76,17 +76,21 @@ procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList
        if not found then
          Append(~invs[inv], < nLat, #isoList+1 >);
 	 Append(~isoList, nLat);
+	 acc_mass +:= #AutomorphismGroupOverField(nLat, G : Special := Special)^(-1);
+//	 assert acc_mass eq &+[#AutomorphismGroupOverField(r, G : Special := Special)^(-1) : r in isoList];
        end if;
     else
        invs[inv] := [ < nLat, #isoList+1 > ];
        Append(~isoList, nLat);
+       acc_mass +:= #AutomorphismGroupOverField(nLat, G : Special := Special)^(-1);
+//       assert acc_mass eq &+[#AutomorphismGroupOverField(r, G : Special := Special)^(-1) : r in isoList];
     end if;
 
 end procedure;
 
-function computeGenusRepsAt(p, isoList, invs
+function computeGenusRepsAt(p, isoList, invs, total_mass, acc_mass, G
 			    : BeCareful := true, Force := false,
-			    Special := false)
+			    Special := false, UseMass := false)
     // The index of the current isometry class being considered.
     isoIdx := 1;
 
@@ -97,19 +101,32 @@ function computeGenusRepsAt(p, isoList, invs
 
 	while nProc`isoSubspace ne [] do
 	    checkNextNeighbor(nProc, BuildNeighbor,
-			      ~invs, ~isoList :
+			      ~invs, ~isoList, ~acc_mass, G:
 			      BeCareful := BeCareful,
 			      Special := Special);
 	    // Move on to the next neighbor lattice.
 	    GetNextNeighbor(~nProc
 			    : BeCareful := BeCareful);
+	    if UseMass then
+		if (acc_mass eq total_mass) then
+		    return isoList, invs, acc_mass;
+		end if;
+	    end if;
+	    
 	end while;
+
+	vprintf AlgebraicModularForms, 1: "isoIdx / #isoList = %o / %o\n", isoIdx, #isoList; 
+	if GetVerbose("AlgebraicModularForms") ge 1 then
+	    if UseMass then
+		print "accumulated mass / total_mass = ", acc_mass * 1., "/", total_mass * 1.;
+	    end if;
+	end if;
 	
 	// Move on to the next genus representative.
 	isoIdx +:= 1;
     until isoIdx gt #isoList;
     
-    return isoList, invs;
+    return isoList, invs, acc_mass;
 end function;
 
 forward UnitaryMass, OrthogonalMass;
@@ -141,15 +158,19 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
     // until we figure it out we leave it be
     if UseMass then
       // If we're doing more than one prime, it could be a bad one
-      bad_modulus := Parent(bad_modulus)!1;
-      if SpaceType(V) eq "Hermitian" then
-	K := BaseRing(V);
-	// !!! TODO :
-	// replace with the calculation of mass relative to this lattice
-	total_mass := UnitaryMass(K, Dimension(Module(M)));
-      else
-	total_mass := OrthogonalMass(Module(M) : Special := IsSpecialOrthogonal(M));
-      end if;
+	bad_modulus := Parent(bad_modulus)!1;
+	acc_mass := #AutomorphismGroupOverField(Module(M), M`W`G : Special := IsSpecialOrthogonal(M))^(-1);
+	if SpaceType(V) eq "Hermitian" then
+	    K := BaseRing(V);
+	    // !!! TODO :
+	    // replace with the calculation of mass relative to this lattice
+	    total_mass := UnitaryMass(K, Dimension(Module(M)));
+	else
+	    total_mass := OrthogonalMass(Module(M) : Special := IsSpecialOrthogonal(M));
+	end if;
+    else
+	total_mass := 0;
+	acc_mass := 0;
     end if;
     repeat
 	repeat
@@ -164,18 +185,14 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	idx := 1;
 	repeat
 	    // Compute genus representatives at a specific prime.
-	    genList, invs := computeGenusRepsAt(
-				     ps[idx], genList, invs
-				     : BeCareful := BeCareful,
-				     Force := Force,
-				     Special := IsSpecialOrthogonal(M));
+	    genList, invs, acc_mass := computeGenusRepsAt(
+					       ps[idx], genList, invs, total_mass, acc_mass, M`W`G
+					       : BeCareful := BeCareful,
+						 Force := Force,
+						 Special := IsSpecialOrthogonal(M), UseMass := UseMass);
 
 	    // Move to the next prime.
 	    idx +:= 1;
-            if UseMass then
-		acc_mass := &+[#AutomorphismGroupOverField(rep, M`W`G :
-							   Special := IsSpecialOrthogonal(M))^(-1) : rep in genList];
-            end if;
             inner_stop_cond := UseMass select
 	      ((idx gt #ps)  or (acc_mass eq total_mass)) else true;
        until inner_stop_cond;
@@ -605,8 +622,8 @@ function OrthogonalMass(L : Special := false)
   else
       Witt:= WittToHasse2(L, Hasse);
       Witt:= { p: p in BadPrimes(L) } join Witt;
-      // B:= { p: p in Witt | Minimum(p) ne 2 };
-      B := {p : p in B | Minimum(p) ne 2};
+      B:= { p: p in Witt | Minimum(p) ne 2 };
+      // B := {p : p in B | Minimum(p) ne 2};
       Witt diff:= B;
       Disc:= (-1)^((m*(m-1)) div 2) * Det;
       assert Disc eq (-1)^r * Det;

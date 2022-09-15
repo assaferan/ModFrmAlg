@@ -620,7 +620,8 @@ function OrthogonalMass(L : Special := false)
       Witt diff:= NonUnits;
       mass *:= &* [ Rationals() | (q^(m-1)-1)/(2*(q+1)) where q:= Norm(p) : p in Witt ];
   else
-      Witt:= WittToHasse2(L, Hasse);
+      // Witt:= WittToHasse2(L, Hasse);
+      Witt:= WittToHasse(m, Det, Hasse);
       Witt:= { p: p in BadPrimes(L) } join Witt;
       B:= { p: p in Witt | Minimum(p) ne 2 };
       // B := {p : p in B | Minimum(p) ne 2};

@@ -492,7 +492,7 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
    invs := HeckeInitializeInvs(M, ThetaPrec);
 
    for p in new_ps do
-	 sp_hec := HeckeOperatorCN1Sparse(M, p, k, s, invs :
+       sp_hec := HeckeOperatorCN1Sparse(M, p, k, s, invs :
 					  BeCareful := BeCareful,
 					  Estimate := Estimate,
 					  Orbits := Orbits,

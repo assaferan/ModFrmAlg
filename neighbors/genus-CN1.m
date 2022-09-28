@@ -424,13 +424,6 @@ function DedekindZetaExact(K, z : Relative := false)
     return myEval(K, z, Relative);
 end function;
 
-function DedekindZetaExact(K, z : Relative:= false)
-    if not ( (Relative and z eq 0) or z lt 0) then
-	error "The argument must be a negative integer";
-    end if;
-    return myEval(K, z, Relative);
-end function;
-
 // mass formulas for verifying the genus
 
 function UnitaryMass(L, m)

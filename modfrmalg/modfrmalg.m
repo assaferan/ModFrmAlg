@@ -292,8 +292,8 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
   else
     G := OrthogonalGroup(ChangeRing(innerForm, K));
   end if;
-  W := HighestWeightRepresentation(G, weight, IdentityMatrix(K,n));
-  return AlgebraicModularForms(G, W);
+  W := HighestWeightRepresentation(G, weight);
+  return AlgebraicModularForms(G, W, IdentityMatrix(K,n));
 end intrinsic;
 
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],

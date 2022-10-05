@@ -367,16 +367,11 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    is_complete := true;
    for fac in FAC do
        f,a := Explode(fac);
-       // This is because in char 0 the Hecke operators are semisimple
-       if Characteristic(BaseRing(M)) eq 0 then
-           fa := f;
-       else
-           fa := f^a;
-       end if;
+       fa := f^a;
      
-      vprintf AlgebraicModularForms, 2: "Cutting out subspace using f(T_%o), where f=%o.\n",Norm(pR), f;
-      fT  := Evaluate(fa,T);
-      W   := KernelOn(fT,V);
+       vprintf AlgebraicModularForms, 2: "Cutting out subspace using f(T_%o), where f=%o.\n",Norm(pR), f;
+       fT  := Evaluate(fa,T);
+       W   := KernelOn(fT,V);
 
       if Dimension(W) eq 0 then
           error "WARNING: dim W = 0 factor; shouldn't happen.";
@@ -608,15 +603,20 @@ function EigenvectorOfMatrixWithCharpoly(T, f : e := 1)
     return w;
 end function;
 
-// get eigenvectors from results of decompositoin
+// get eigenvectors from results of decomposition
+// !! TODO - figure out what to do when there are still reducible subspaces (failure of multiplicity one)
 function GetEigenvectors(M, D)
     T := M`Hecke`Ts[1];
     keys := [k : k in Keys(T)];
-    Tp := T[keys[1]];
     vecs := [* *];
     for d in D do
-	Td := Restrict(Tp,d);
-	f := CharacteristicPolynomial(Td);
+	p_idx := 0;
+	repeat
+	    p_idx +:= 1;
+	    Tp := T[keys[p_idx]];
+	    Td := Restrict(Tp,d);
+	    f := CharacteristicPolynomial(Td);
+	until IsIrreducible(f);
 	wd := EigenvectorOfMatrixWithCharpoly(Td, f);
 	w := wd*ChangeRing(BasisMatrix(d), BaseRing(wd));
 	Append(~vecs, w);

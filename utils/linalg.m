@@ -502,6 +502,11 @@ p coprime to the level of M and p<= bound. }
 				     Proof := Proof,
 				     Force := Force);
      bound *:= 2;
+     // in non-zero characteristic we don't have semisimplicity, and the Hecke bound is too large.
+     // Right now, we stop at 10
+     if (Characteristic(BaseRing(Weight(M))) ne 0) then
+	 break;
+     end if;
    end while;
    return D;
 end intrinsic;
@@ -609,6 +614,7 @@ function GetEigenvectors(M, D)
     T := M`Hecke`Ts[1];
     keys := [k : k in Keys(T)];
     vecs := [* *];
+    is_eigenform := [];
     for d in D do
 	p_idx := 0;
 	repeat
@@ -616,10 +622,18 @@ function GetEigenvectors(M, D)
 	    Tp := T[keys[p_idx]];
 	    Td := Restrict(Tp,d);
 	    f := CharacteristicPolynomial(Td);
-	until IsIrreducible(f);
-	wd := EigenvectorOfMatrixWithCharpoly(Td, f);
-	w := wd*ChangeRing(BasisMatrix(d), BaseRing(wd));
-	Append(~vecs, w);
+	until (IsIrreducible(f)) or (p_idx ge #keys);
+	if IsIrreducible(f) then
+	    wd := EigenvectorOfMatrixWithCharpoly(Td, f);
+	    w := wd*ChangeRing(BasisMatrix(d), BaseRing(wd));
+	    Append(~vecs, w);
+	    Append(~is_eigenform, true);
+	else
+	    for w in Basis(d) do
+		Append(~vecs, w);
+		Append(~is_eigenform, false);
+	    end for;
+	end if;
     end for;
-    return vecs;
+    return vecs, is_eigenform;
 end function;

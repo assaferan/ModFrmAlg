@@ -395,13 +395,14 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
         if IsDefined(M`Hecke`Ts, 1) then
 	  // spaces, reducible := 
 	    //	EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
-	    vecs := GetEigenvectors(M, D);
+	    vecs, is_eigenform := GetEigenvectors(M, D);
 	    // spaces := [sub<Parent(v) | v> : v in vecs];
 	    // reducible := [];
         else // space is zero-dimensional
 	    // spaces := [];
             // reducible := [];
 	    vecs := [];
+	    is_eigenform := [];
         end if;
 
 	// This is not enough yet, since the spaces aren't the eigenvectors.
@@ -447,6 +448,13 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 		// Assign vector.
 		mform`vec := vec;
 
+		// This shouldn't happen if we fully decomposed the space.
+		// This is an eigenform if and only if the size
+		//  of the subspace has dimension 1.
+		// mform`IsEigenform := true; // not i in reducible;
+
+		mform`IsEigenform := is_eigenform[i];
+		
 		// If the weight is non-trivial all forms are cuspidal
 		// !!! TODO - do the general case, we might have some
 		// multiplicity of the trivial representation
@@ -459,11 +467,6 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 		
 		// Cusp forms are not Eistenstein.
 		mform`IsEisenstein := not mform`IsCuspidal;
-		
-		// This shouldn't happen if we fully decomposed the space.
-		// This is an eigenform if and only if the size
-		//  of the subspace has dimension 1.
-		mform`IsEigenform := true; // not i in reducible;
 
 		// Add to list.
 		Append(~eigenforms, mform);

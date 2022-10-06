@@ -323,9 +323,9 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    
    fac := Factorization(ideal<Integers(BaseRing(M))|
 			     Generators(primes[prime_idx])>);
-   // if the prime is ramified, at the moment the Hecke Operator
+   // if the prime is ramified or inert above 2, at the moment the Hecke Operator
    // is not computed correctly
-   if (#fac eq 1) and (fac[1][2] eq 2) then
+   if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[prime_idx]))) then
 		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
 				    random_op : UseLLL := UseLLL,
 						Estimate := Estimate,
@@ -351,7 +351,7 @@ function Decomposition_recurse(M, V, primes, prime_idx,
        t := Cputime();
        printf "Computing characteristic polynomial of T_%o.\n", Norm(pR);
    end if;
-   f := MyCharpoly(T,proof);
+   f<x> := MyCharpoly(T,proof);
    if GetVerbose("AlgebraicModularForms") ge 2 then
        f;
        printf "\t\ttime = %o\n", Cputime(t);
@@ -367,26 +367,21 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    is_complete := true;
    for fac in FAC do
        f,a := Explode(fac);
-       // This is because in char 0 the Hecke operators are semisimple
-       if Characteristic(BaseRing(M)) eq 0 then
-           fa := f;
-       else
-           fa := f^a;
-       end if;
+       fa := f^a;
      
-      vprintf AlgebraicModularForms, 2: "Cutting out subspace using f(T_%o), where f=%o.\n",Norm(pR), f;
-      fT  := Evaluate(fa,T);
-      W   := KernelOn(fT,V);
+       vprintf AlgebraicModularForms, 2: "Cutting out subspace using f(T_%o), where f=%o.\n",Norm(pR), f;
+       fT  := Evaluate(fa,T);
+       W   := KernelOn(fT,V);
 
       if Dimension(W) eq 0 then
           error "WARNING: dim W = 0 factor; shouldn't happen.";
       end if;
 
-      if Characteristic(BaseRing(M)) eq 0 and
+      if (Characteristic(BaseRing(Weight(M))) eq 0 and
 	 W_is_irreducible(M,W,a,random_op select Norm(pR) else 0 :
 			  Estimate := Estimate, Orbits := Orbits,
 			  UseLLL := UseLLL, LowMemory := LowMemory,
-			  ThetaPrec := ThetaPrec) then
+			  ThetaPrec := ThetaPrec)) or (Dimension(W) eq 1) then
          Append(~D,W);
          is_complete_W := true;
       else
@@ -507,6 +502,138 @@ p coprime to the level of M and p<= bound. }
 				     Proof := Proof,
 				     Force := Force);
      bound *:= 2;
+     // in non-zero characteristic we don't have semisimplicity, and the Hecke bound is too large.
+     // Right now, we stop at 10
+     if (Characteristic(BaseRing(Weight(M))) ne 0) then
+	 break;
+     end if;
    end while;
    return D;
 end intrinsic;
+
+function EigenvectorOfMatrixWithCharpoly(T, f : e := 1)
+/* Let T be an nxn matrix over K with irreducible characteristic
+ polynomial f.  This function returns an eigenvector for T
+ over the extension field K[x]/(f(x)). 
+ assaferan : added e to denot exponent, so that T could have as
+ a characteristic polynomial a power of an irreducible - f^e
+*/
+
+    // This is implemented using a quotient of a polynomial ring
+    // because this works generically for any field.
+    n  := Degree(f) * e;
+    K  := Parent(T[1,1]);
+    if n eq 1 then
+	return VectorSpace(K,n)![1];
+    end if;
+   
+    vprintf AlgebraicModularForms,1: "Calling EigenvectorOfMatrixWithCharpoly ... ";
+    time0_eig := Cputime();
+
+    if Type(K) eq FldRat or ISA(Type(K),FldAlg) then
+	L<a> := ext< K | f : DoLinearExtension, Check:=false>;
+    else
+	// still occurs in the finite characteristic case
+	R := PolynomialRing(K);
+	L<a> := quo<R | f>;
+    end if;
+    b    := 1/a;
+    c    := [-b*Coefficient(f,0)];
+    for i in [1..Degree(f)-1] do
+	Append(~c, (c[i] - Coefficient(f,i))*b);
+    end for;
+
+    Ln := RSpace(L,n);     // magma is weird in that it can take *way* too long to do this!
+                          // (possible thing to optimize)  see remarks in same function 
+                          // level1.m in ModFrm package
+                          //
+                          // This will have changed because we're using number fields now,
+                          // not quo's. I think this problem has been fixed for quo's, anyway.  
+                          //   --- Steve
+    time0 := Cputime();
+    
+    if Type(K) eq FldRat then
+	S := IntegerRing();
+	denom := LCM([Denominator(x): x in Eltseq(T)]);
+	// "denom:", denom;
+	denom_scale := 1/denom;
+	T := Matrix(S, denom*T);
+    else
+	S := L;
+	T  := RMatrixSpace(L,n,n)!T;
+	denom := 1;
+	denom_scale := 1;
+    end if;
+    if Cputime(time0) gt 1 then "RMatrixSpace coercion", Cputime(time0); end if;
+
+    Ln := RSpace(L, n);
+    Sn := RSpace(S, n);
+    v  := Sn!0;
+    
+    repeat
+	v[Random(1,n)] +:= 1;
+	w  := c[1]*Ln!v;
+	vv := v;
+	scale := denom_scale;
+	// "eigen loop", #c; time
+	for i in [2..#c] do 
+	    time0 := Cputime();
+            vv := vv*T;
+	    time1 := Cputime(time0);
+            //w +:= c[i]*vv;
+            u := Ln!vv;
+	    time2 := Cputime(time1);
+	    if denom_scale ne 1 then
+		e := Eltseq(vv);
+		g := GCD(e);
+		if g ne 1 then
+		    // printf " {GCD %o}", g;
+		    vv := Parent(vv)![x div g: x in e];
+		    scale *:= g;
+		end if;
+		u := Ln!vv;
+		u := scale*u;
+		scale *:= denom_scale;
+	    else
+		u := Ln!vv;
+	    end if;
+            w +:= c[i]*u;
+	    time3 := Cputime(time0);
+	    //printf "  %o", [time1, time3-time1];
+	end for;
+    until w ne Parent(w)! 0;
+   
+    vprintf AlgebraicModularForms,1: "%os\n", Cputime(time0_eig);
+
+    return w;
+end function;
+
+// get eigenvectors from results of decomposition
+// !! TODO - figure out what to do when there are still reducible subspaces (failure of multiplicity one)
+function GetEigenvectors(M, D)
+    T := M`Hecke`Ts[1];
+    keys := [k : k in Keys(T)];
+    vecs := [* *];
+    is_eigenform := [];
+    for d in D do
+	p_idx := 0;
+	repeat
+	    p_idx +:= 1;
+	    Tp := T[keys[p_idx]];
+	    Td := Restrict(Tp,d);
+	    f := CharacteristicPolynomial(Td);
+	until (IsIrreducible(f)) or (p_idx ge #keys);
+	if IsIrreducible(f) then
+	    wd := EigenvectorOfMatrixWithCharpoly(Td, f);
+	    w := wd*ChangeRing(BasisMatrix(d), BaseRing(wd));
+	    Append(~vecs, w);
+	    Append(~is_eigenform, true);
+	else
+	    for w in Basis(d) do
+		Append(~vecs, w);
+		Append(~is_eigenform, false);
+	    end for;
+	end if;
+    end for;
+    return vecs, is_eigenform;
+end function;

@@ -257,6 +257,8 @@ function LiftSubspace(nProc : BeCareful := false, Override := false)
         gram := B * nProc`L`pMaximal[nProc`pR][1] *
 		Transpose(alpha_B);
 
+	if not IsIdentity(alpha) then gram := gram div BaseRing(gram)!2; end if;
+	
 	// The dimension.
 	dim := Nrows(B);
 	    
@@ -919,7 +921,8 @@ procedure UpdateSkewSpace(~nProc : BeCareful := false)
     q := #F;
     // In the inert case we have to multiply by an element of trace zero.
     if Vpp`splitting_type eq "inert" and IsOdd(q) then
-	factor := proj(((BaseRing(Vpp`V).1)^((q+1) div 2)) @@ map);
+	zeta := PrimitiveElement(BaseRing(Vpp`V));
+	factor := proj((zeta^((q+1) div 2)) @@ map);
     else
 	factor := 1;
     end if;

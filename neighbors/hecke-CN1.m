@@ -224,7 +224,8 @@ function createInvsWithPrecision(M, ThetaPrec)
 end function;
 
 function createReducedInvs(reps)
-  invs := AssociativeArray();
+  ZZq<q> := PuiseuxSeriesRing(Integers());
+  invs := AssociativeArray(ZZq);
   for i in [1..#reps] do
     r := reps[i];
     red := GreedyReduce(r);
@@ -237,7 +238,8 @@ function createReducedInvs(reps)
 end function;
 
 function createReducedInvs2(reps)
-  invs := AssociativeArray();
+  ZZq<q> := PuiseuxSeriesRing(Integers());
+  invs := AssociativeArray(ZZq);
   for i in [1..#reps] do
     r := reps[i];
     reds := generate_orbit(GreedyReduce2(r));
@@ -508,7 +510,8 @@ function HeckeOperatorCN1(M, pR, k
     if ComputeGenus then
       L := Module(M);
       reps := [L];
-      invs := AssociativeArray();
+      ZZq<q> := PuiseuxSeriesRing(Integers());
+      invs := AssociativeArray(ZZq);
       invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
       /*
       gamma_rep := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));

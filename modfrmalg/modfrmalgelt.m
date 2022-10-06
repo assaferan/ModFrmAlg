@@ -64,6 +64,7 @@ import "modfrmalg.m" : ModFrmAlgInit;
 import "../neighbors/inv-CN1.m" : Invariant;
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../representation/representation.m" : nu;
+import "../utils/linalg.m" : GetEigenvectors;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -112,6 +113,11 @@ end intrinsic;
 // access
 
 intrinsic BaseField(f::ModFrmAlgElt) -> Fld
+{returns the field of definition of the vector representing the eigenform.}
+  return BaseRing(f`vec);
+end intrinsic;
+
+intrinsic BaseRing(f::ModFrmAlgElt) -> Rng
 {returns the field of definition of the vector representing the eigenform.}
   return BaseRing(f`vec);
 end intrinsic;
@@ -317,7 +323,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 			embs := [hom<K -> L | root[1] > : root in roots];
 			vec := Eltseq(hecke_images[p]);
 			assert exists(emb){emb : emb in embs |
-				       f`Eigenvalues[k][p] eq
+				       f`Eigenvalues[k][p] * f`vec[pivot] eq
 				       DotProduct(f`vec,
 						  Vector([emb(x) : x in vec]))};
 			K2 := sub<L|emb(K.1)>;
@@ -326,7 +332,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 		end if;
 	    else
 		hecke_image := ChangeRing(hecke_images[p], BaseRing(f`vec));
-		f`Eigenvalues[k][p] := DotProduct(f`vec, hecke_image);
+		f`Eigenvalues[k][p] := DotProduct(f`vec, hecke_image) / f`vec[pivot];
 	    end if;
 	end for;
 	
@@ -387,11 +393,16 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 
 	// Decompose eigenspace.
         if IsDefined(M`Hecke`Ts, 1) then
-	  spaces, reducible := 
-		EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
+	  // spaces, reducible := 
+	    //	EigenspaceDecomposition(M`Hecke`Ts[1] : Warning := false);
+	    vecs, is_eigenform := GetEigenvectors(M, D);
+	    // spaces := [sub<Parent(v) | v> : v in vecs];
+	    // reducible := [];
         else // space is zero-dimensional
-	  spaces := [];
-          reducible := [];
+	    // spaces := [];
+            // reducible := [];
+	    vecs := [];
+	    is_eigenform := [];
         end if;
 
 	// This is not enough yet, since the spaces aren't the eigenvectors.
@@ -414,9 +425,11 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
         wt_prod := IsEmpty(wts) select 1 else &*wts;
 	mult_wts := [wt_prod div wt : wt in wts];
 	
-	for i in [1..#spaces] do
+	// for i in [1..#spaces] do
+	for i in [1..#vecs] do
 	    // We build a form for every basis vector
-	    for vec in Basis(spaces[i]) do
+	    // for vec in Basis(spaces[i]) do
+	    vec := vecs[i];
 
 		//	    vec := Basis(spaces[i])[1];
 	    
@@ -435,6 +448,13 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 		// Assign vector.
 		mform`vec := vec;
 
+		// This shouldn't happen if we fully decomposed the space.
+		// This is an eigenform if and only if the size
+		//  of the subspace has dimension 1.
+		// mform`IsEigenform := true; // not i in reducible;
+
+		mform`IsEigenform := is_eigenform[i];
+		
 		// If the weight is non-trivial all forms are cuspidal
 		// !!! TODO - do the general case, we might have some
 		// multiplicity of the trivial representation
@@ -447,11 +467,6 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 		
 		// Cusp forms are not Eistenstein.
 		mform`IsEisenstein := not mform`IsCuspidal;
-		
-		// This shouldn't happen if we fully decomposed the space.
-		// This is an eigenform if and only if the size
-		//  of the subspace has dimension 1.
-		mform`IsEigenform := not i in reducible;
 
 		// Add to list.
 		Append(~eigenforms, mform);
@@ -460,7 +475,7 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 		if mform`IsEisenstein then
 		    M`Hecke`EisensteinSeries := mform;
 		end if;
-	    end for;
+	    // end for;
 	end for;
 
 	// Assign Hecke eigenforms.

@@ -157,6 +157,10 @@ end intrinsic;
 // internal function for several of the interfaces below
 function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
 		       ComputeGenus, LowMemory, ThetaPrec)
+    // at the moment we are still having trouble computing the Hecke operators at inert primes above 2
+  if ((not IsOrthogonal(M)) and IsInert(pR)) then
+      assert IsOdd(Norm(Norm(pR)));
+  end if;
   // Initialize the space of algebraic modular forms, if needed.
   if not ComputeGenus then
     ModFrmAlgInit(M : BeCareful := BeCareful,
@@ -199,7 +203,7 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
   if UseLLL and not IsSpecialOrthogonal(M) then
     use_LLL := true;
   else
-   use_LLL := false;
+    use_LLL := false;
   end if;
 
   hecke := HeckeOperatorCN1(M, pR, k : BeCareful := BeCareful,
@@ -492,7 +496,7 @@ function internalHeckeImages(M, i, prec, k, BeCareful,
    invs := HeckeInitializeInvs(M, ThetaPrec);
 
    for p in new_ps do
-	 sp_hec := HeckeOperatorCN1Sparse(M, p, k, s, invs :
+       sp_hec := HeckeOperatorCN1Sparse(M, p, k, s, invs :
 					  BeCareful := BeCareful,
 					  Estimate := Estimate,
 					  Orbits := Orbits,

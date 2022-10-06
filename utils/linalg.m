@@ -323,9 +323,9 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    
    fac := Factorization(ideal<Integers(BaseRing(M))|
 			     Generators(primes[prime_idx])>);
-   // if the prime is ramified, at the moment the Hecke Operator
+   // if the prime is ramified or inert above 2, at the moment the Hecke Operator
    // is not computed correctly
-   if (#fac eq 1) and (fac[1][2] eq 2) then
+   if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[prime_idx]))) then
 		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
 				    random_op : UseLLL := UseLLL,
 						Estimate := Estimate,
@@ -351,7 +351,7 @@ function Decomposition_recurse(M, V, primes, prime_idx,
        t := Cputime();
        printf "Computing characteristic polynomial of T_%o.\n", Norm(pR);
    end if;
-   f := MyCharpoly(T,proof);
+   f<x> := MyCharpoly(T,proof);
    if GetVerbose("AlgebraicModularForms") ge 2 then
        f;
        printf "\t\ttime = %o\n", Cputime(t);
@@ -377,11 +377,11 @@ function Decomposition_recurse(M, V, primes, prime_idx,
           error "WARNING: dim W = 0 factor; shouldn't happen.";
       end if;
 
-      if Characteristic(BaseRing(M)) eq 0 and
+      if (Characteristic(BaseRing(Weight(M))) eq 0 and
 	 W_is_irreducible(M,W,a,random_op select Norm(pR) else 0 :
 			  Estimate := Estimate, Orbits := Orbits,
 			  UseLLL := UseLLL, LowMemory := LowMemory,
-			  ThetaPrec := ThetaPrec) then
+			  ThetaPrec := ThetaPrec)) or (Dimension(W) eq 1) then
          Append(~D,W);
          is_complete_W := true;
       else

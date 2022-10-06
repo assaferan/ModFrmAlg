@@ -323,7 +323,7 @@ intrinsic HeckeEigensystem(f::ModFrmAlgElt, k::RngIntElt :
 			embs := [hom<K -> L | root[1] > : root in roots];
 			vec := Eltseq(hecke_images[p]);
 			assert exists(emb){emb : emb in embs |
-				       f`Eigenvalues[k][p] eq
+				       f`Eigenvalues[k][p] * f`vec[pivot] eq
 				       DotProduct(f`vec,
 						  Vector([emb(x) : x in vec]))};
 			K2 := sub<L|emb(K.1)>;

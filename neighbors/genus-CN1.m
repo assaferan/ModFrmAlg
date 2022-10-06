@@ -148,7 +148,8 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
     // Initialize the associative array hashed by an invariant. This will
     //  allow us to reduce the number of isometry tests required to
     //  determine equivalence.
-    invs := AssociativeArray();
+    ZZq<q> := PuiseuxSeriesRing(Integers());
+    invs := AssociativeArray(ZZq);
     invs[Invariant(Module(M))] := [ < Module(M), 1 > ];
 
     // Do we need this? Check the ramified primes
@@ -208,28 +209,29 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 end procedure;
 
 function sortGenusCN1(genus)
-	// An empty associative array.
-	invs := AssociativeArray();
+    // An empty associative array.
+    ZZq<q> := PuiseuxSeriesRing(Integers());
+    invs := AssociativeArray(ZZq);
 
-	// An ordered list of genus representatives;
-	lats := Representatives(genus);
+    // An ordered list of genus representatives;
+    lats := Representatives(genus);
 
-	for i in [1..#lats] do
-		// Compute the invariant associated to this genus rep.
-		inv := Invariant(lats[i]);
+    for i in [1..#lats] do
+	// Compute the invariant associated to this genus rep.
+	inv := Invariant(lats[i]);
 
-		// Assign an empty list to the invariant hash if it hasn't been
-		//  assigned yet.
-		if not IsDefined(invs, inv) then invs[inv] := []; end if;
-
-		// Add to list.
-		Append(~invs[inv], < lats[i], i >);
-	end for;
-
-	// Assign the representatives associated array.
-	genus`RepresentativesAssoc := invs;
-
-	return genus;
+	// Assign an empty list to the invariant hash if it hasn't been
+	//  assigned yet.
+	if not IsDefined(invs, inv) then invs[inv] := []; end if;
+	
+	// Add to list.
+	Append(~invs[inv], < lats[i], i >);
+    end for;
+    
+    // Assign the representatives associated array.
+    genus`RepresentativesAssoc := invs;
+    
+    return genus;
 end function;
 
 // All the code down below is for computing mass formulas

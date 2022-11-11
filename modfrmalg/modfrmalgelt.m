@@ -681,11 +681,20 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
-    pR := ideal<R | p>;
-    require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
-    return LPolynomial(f, pR, d
+    // pR := ideal<R | p>;
+    // require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
+    // Ps := Factorization(pR);
+    require IsPrime(p) : "Can only compute LPolynomial at prime ideals!";
+    F := NumberField(R);
+    if Degree(F) gt 1 then
+	Ps := PrimeIdealsOverPrime(NumberField(R),p);
+    else
+	Ps := [p*R];
+    end if;
+    return &*[LPolynomial(f, P, d
 		       : Estimate := Estimate, Orbits := Orbits,
-		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
+		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, 
+		       Satake := Satake) : P in Ps];
 end intrinsic;
 
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
@@ -695,11 +704,19 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
 {Compute the L-polynomial of f at the prime p.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
-    pR := ideal<R | p>;
-    require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
-    return LPolynomial(f, pR 
+    // pR := ideal<R | p>;
+    // require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
+    require IsPrime(p) : "Can only compute LPolynomial at prime ideals!";
+    F := NumberField(R);
+    if Degree(F) gt 1 then
+	Ps := PrimeIdealsOverPrime(NumberField(R),p);
+    else
+	Ps := [p*R];
+    end if;
+    return &*[LPolynomial(f, pR 
 		       : Estimate := Estimate, Orbits := Orbits,
-		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
+		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, 
+		       Satake := Satake) : pR in Ps];
 end intrinsic;
 
 // used in the following intrinsics

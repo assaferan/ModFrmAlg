@@ -4,7 +4,7 @@ freeze;
                                                                             
                      Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch         
              
                                                                             
@@ -682,6 +682,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
     pR := ideal<R | p>;
+    require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
     return LPolynomial(f, pR, d
 		       : Estimate := Estimate, Orbits := Orbits,
 		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
@@ -695,6 +696,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
     pR := ideal<R | p>;
+    require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
     return LPolynomial(f, pR 
 		       : Estimate := Estimate, Orbits := Orbits,
 		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);

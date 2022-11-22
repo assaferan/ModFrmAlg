@@ -63,7 +63,8 @@ end intrinsic;
 // access
 
 intrinsic GenusReps(M::ModFrmAlg
-	: BeCareful := false, Force := false, Orbits := true) -> SeqEnum
+	: BeCareful := false, Force := false, 
+	  Orbits := true, ThetaPrec := 25) -> SeqEnum
 { Computes the genus representatives of the inner form associated to the
 	   space of algebraic modular forms provided. }
 
@@ -81,7 +82,8 @@ intrinsic GenusReps(M::ModFrmAlg
         // is_sqrfree := &and[fa[2] eq 1 : fa in fac];
         computeGenusRepsCN1(M : BeCareful := BeCareful, Force := Force,
 			    UseMass := /* (not is_sqrfree) and */
-			    (not IsSpecialOrthogonal(M)));
+			    (not IsSpecialOrthogonal(M)),
+			    ThetaPrec := ThetaPrec);
 
 	return M`genus`Representatives;
 end intrinsic;

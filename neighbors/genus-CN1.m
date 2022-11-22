@@ -44,14 +44,15 @@ import "inv-CN1.m" : Invariant;
 // functions
 
 procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList, ~acc_mass, G
-			    : BeCareful := false, Special := false)
+			    : BeCareful := false, Special := false, 
+			      ThetaPrec := 25)
 
     // Compute the neighbor according to the current state
     //  of the neighbor procedure.
     nLat := buildNeighbor(nProc : BeCareful := BeCareful, UseLLL := not Special);
 
     // A specified invariant of the neighbor lattice.
-    inv := Invariant(nLat);
+    inv := Invariant(nLat : Precision := ThetaPrec);
 
     // If this invariant is defined for the array, we need
     //  to potentially check for isometry.
@@ -90,7 +91,8 @@ end procedure;
 
 function computeGenusRepsAt(p, isoList, invs, total_mass, acc_mass, G
 			    : BeCareful := true, Force := false,
-			    Special := false, UseMass := false)
+			    Special := false, UseMass := false,
+			    ThetaPrec := 25)
     // The index of the current isometry class being considered.
     isoIdx := 1;
 
@@ -103,7 +105,8 @@ function computeGenusRepsAt(p, isoList, invs, total_mass, acc_mass, G
 	    checkNextNeighbor(nProc, BuildNeighbor,
 			      ~invs, ~isoList, ~acc_mass, G:
 			      BeCareful := BeCareful,
-			      Special := Special);
+			      Special := Special,
+			      ThetaPrec := ThetaPrec);
 	    // Move on to the next neighbor lattice.
 	    GetNextNeighbor(~nProc
 			    : BeCareful := BeCareful);
@@ -132,7 +135,7 @@ end function;
 forward UnitaryMass, OrthogonalMass;
 
 procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
-			      UseMass := false)
+			      UseMass := false, ThetaPrec := 25)
     // Do not compute the genus representatives if they've already been
     //  computed and we aren't forcing a recomputation.
     if not Force and assigned M`genus then return; end if;
@@ -150,7 +153,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
     //  determine equivalence.
     ZZq<q> := PuiseuxSeriesRing(Integers());
     invs := AssociativeArray(ZZq);
-    invs[Invariant(Module(M))] := [ < Module(M), 1 > ];
+    invs[Invariant(Module(M) : Precision := ThetaPrec)] := [ < Module(M), 1 > ];
 
     // Do we need this? Check the ramified primes
     bad_modulus := Numerator(Norm(Discriminant(Module(M))));
@@ -187,10 +190,13 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 	repeat
 	    // Compute genus representatives at a specific prime.
 	    genList, invs, acc_mass := computeGenusRepsAt(
-					       ps[idx], genList, invs, total_mass, acc_mass, M`W`G
+					       ps[idx], genList, invs, 
+					       total_mass, acc_mass, M`W`G
 					       : BeCareful := BeCareful,
 						 Force := Force,
-						 Special := IsSpecialOrthogonal(M), UseMass := UseMass);
+						 Special := IsSpecialOrthogonal(M), 
+						 UseMass := UseMass, 
+						 ThetaPrec := ThetaPrec);
 
 	    // Move to the next prime.
 	    idx +:= 1;
@@ -208,7 +214,7 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
     M`genus`RepresentativesAssoc := invs;
 end procedure;
 
-function sortGenusCN1(genus)
+function sortGenusCN1(genus : ThetaPrec := 25)
     // An empty associative array.
     ZZq<q> := PuiseuxSeriesRing(Integers());
     invs := AssociativeArray(ZZq);
@@ -218,7 +224,7 @@ function sortGenusCN1(genus)
 
     for i in [1..#lats] do
 	// Compute the invariant associated to this genus rep.
-	inv := Invariant(lats[i]);
+	inv := Invariant(lats[i] : Precision := ThetaPrec);
 
 	// Assign an empty list to the invariant hash if it hasn't been
 	//  assigned yet.

@@ -4,7 +4,7 @@ freeze;
                                                                             
                      Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch         
              
                                                                             
@@ -681,10 +681,20 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt, d::RngIntElt :
 {Compute the L-polynomial of f at the prime p up to precision x^d.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
-    pR := ideal<R | p>;
-    return LPolynomial(f, pR, d
+    // pR := ideal<R | p>;
+    // require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
+    // Ps := Factorization(pR);
+    require IsPrime(p) : "Can only compute LPolynomial at prime ideals!";
+    F := NumberField(R);
+    if Degree(F) gt 1 then
+	Ps := PrimeIdealsOverPrime(NumberField(R),p);
+    else
+	Ps := [p*R];
+    end if;
+    return &*[LPolynomial(f, P, d
 		       : Estimate := Estimate, Orbits := Orbits,
-		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
+		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, 
+		       Satake := Satake) : P in Ps];
 end intrinsic;
 
 intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
@@ -694,10 +704,19 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngIntElt :
 {Compute the L-polynomial of f at the prime p.
     Currently only implemented for good primes. }
     R := BaseRing(Module(f`M));
-    pR := ideal<R | p>;
-    return LPolynomial(f, pR 
+    // pR := ideal<R | p>;
+    // require IsPrime(pR) : "Can only compute LPolynomial at prime ideals!";
+    require IsPrime(p) : "Can only compute LPolynomial at prime ideals!";
+    F := NumberField(R);
+    if Degree(F) gt 1 then
+	Ps := PrimeIdealsOverPrime(NumberField(R),p);
+    else
+	Ps := [p*R];
+    end if;
+    return &*[LPolynomial(f, pR 
 		       : Estimate := Estimate, Orbits := Orbits,
-		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, Satake := Satake);
+		       LowMemory := LowMemory, ThetaPrec := ThetaPrec, 
+		       Satake := Satake) : pR in Ps];
 end intrinsic;
 
 // used in the following intrinsics
@@ -840,6 +859,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngInt :
     Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
+  require Degree(BaseRing(f`M)) eq 1 : "Base Field is not the Rational Field, need to speicfy a prime ideal";
   require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
   return lpoly(f, p, n, Estimate, Orbits, LowMemory, ThetaPrec : Satake := Satake);
 end intrinsic;
@@ -852,6 +872,7 @@ intrinsic LPolynomial(f::ModFrmAlgElt, p::RngInt, d::RngIntElt:
     Currently only implemented for good primes. }
   L := Module(f`M);
   n := Dimension(ReflexiveSpace(L));
+  require Degree(BaseRing(f`M)) eq 1 : "Base Field is not the Rational Field, need to speicfy a prime ideal";
   require ((3 le n) and (n le 8)) or Satake : "Currently only implemented for 3<=n<=8";
   return lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := Satake);
 end intrinsic;
@@ -893,7 +914,7 @@ intrinsic LPolynomials(f::ModFrmAlgElt : Precision := 0,
   L_polys := AssociativeArray();
   for P in Ps do
       p := Norm(P);
-      L_polys[p] := LPolynomial(f, p, n :
+      L_polys[p] := LPolynomial(f, P, n :
 				Estimate := Estimate,
 				Orbits := Orbits,
 				LowMemory := LowMemory,

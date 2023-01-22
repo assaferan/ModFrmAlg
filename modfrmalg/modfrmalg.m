@@ -514,14 +514,18 @@ intrinsic InnerForm(M::ModFrmAlg) -> AlgMatElt
      return InnerForm(ReflexiveSpace(Module(M)));
 end intrinsic;
 
-intrinsic Genus(M::ModFrmAlg : BeCareful := false, Orbits := true) -> GenusSym
+intrinsic Genus(M::ModFrmAlg : BeCareful := false, 
+			       Orbits := true,
+			       ThetaPrec := 25) -> GenusSym
 { Returns the genus associated to the underlying module used to construct
   this space. }
 	// If already computed, return it.
 	if assigned M`genus then return M`genus; end if;
 
 	// Otherwise, compute the genus and return it.
-	   _ := GenusReps(M : BeCareful := BeCareful, Orbits := Orbits);
+	   _ := GenusReps(M : BeCareful := BeCareful, 
+			      Orbits := Orbits,
+			      ThetaPrec := ThetaPrec);
 	     
 	return M`genus;
 end intrinsic;
@@ -590,7 +594,7 @@ end intrinsic;
 // !!! TODO - make Orbits and LowMemory meaningful here
 
 procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
-			LowMemory := false)
+			LowMemory := false, ThetaPrec := 25)
     
     // If the representation space has already been computed, then this
     //  object has already been initialized, and we can simply return
@@ -603,7 +607,7 @@ procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
 	end if;
 
         reps := Representatives(Genus(M : BeCareful := BeCareful,
-				      Orbits := Orbits));
+				      Orbits := Orbits, ThetaPrec := ThetaPrec));
 
 	if GetVerbose("AlgebraicModularForms") ge 1 then
 	    printf "Found %o genus representatives.\n", #reps;
@@ -617,10 +621,10 @@ procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
     end if;
 end procedure;
 
-intrinsic Dimension(M::ModFrmAlg) -> RngIntElt
+intrinsic Dimension(M::ModFrmAlg : ThetaPrec := 25) -> RngIntElt
 { Returns the dimension of this vector space. }
 	// Initialize this space of modular forms.
-	ModFrmAlgInit(M);
+	ModFrmAlgInit(M : ThetaPrec := ThetaPrec);
 
 	return &+[Dimension(h) : h in M`H];
 end intrinsic;

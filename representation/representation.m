@@ -1320,6 +1320,7 @@ function get_aniso_vec(subspace, A)
 	x := B[i];
     else
 	// This should be true because A_res is nonzero
+	// Why is it up to 2 here? Shouldn't that be up to dimension?
 	assert exists(ij){[i,j] : i,j in [1..2] |
 			  A_res[i,j] ne 0 and i lt j};
 	i := ij[1]; j := ij[2];
@@ -1981,9 +1982,11 @@ intrinsic HighestWeightRepresentation(G::GrpRed,
   return V;
 end intrinsic;
 
+// !! TODO - this is false when p = 2 (-1 = 1 in F2)
 intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep 
 {new method of constructing the spinor norm representations. }
-  L := StandardLattice(InnerForm(G,1));
+  Q := InnerForm(G,1);
+  L := StandardLattice(Q);
   n := Dimension(L);
   pR := Factorization(ideal<BaseRing(L) | p>)[1][1];
   nProc := BuildNeighborProc(L, pR, 1);
@@ -1999,6 +2002,15 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   Fp := ResidueClassField(ZF_p);
   rad := rad * ChangeRing(basis, Fp);
   pRdata := [Eltseq(x) : x in Generators(pR)];
+  if (p eq 2) then
+      Q := ChangeRing(InnerForm(Q), Integers());
+      lift := Vector([Integers()!x : x in Eltseq(rad)]);
+      liftQ := lift * Q;
+      lift2 := ChangeRing(liftQ div 2, GF(2));
+      sol := Solution(ChangeRing(Q, GF(2)), lift2);
+      sol_lift := Vector([Integers()!x : x in Eltseq(sol)]);
+      rad := ChangeRing(lift + 2*sol_lift, Integers(4));
+  end if;
   a := Sprintf("
     function action(g,m,V)
           rad := %m;
@@ -2007,14 +2019,17 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
           ZF := Integers(BaseRing(g));
           pRdata := %m;
           pR := ideal<ZF | [ZF!x : x in pRdata]>;
-	  ZF_p := Completion(ZF, pR);
-	  // Needed to introduce this line due to a bug in Magma 2.26-12
-  	  ZF_p := Integers(ZF_p);
-          dummy, redp := ResidueClassField(ZF_p);
-          assert Fp eq dummy;
-          redp_mat := hom<MatrixAlgebra(ZF_p, n) -> MatrixAlgebra(Fp,n) | redp>;
-          // g_p := Transpose(MatrixAlgebra(Fp,n)!g);
-          g_p := Transpose(redp_mat(g));
+	  if (#Fp eq 4) then
+	     g_p := Transpose(ChangeRing(g,Fp));
+	  else
+	     ZF_p := Completion(ZF, pR);
+	     // Needed to introduce this line due to a bug in Magma 2.26-12
+  	     ZF_p := Integers(ZF_p);
+             dummy, redp := ResidueClassField(ZF_p);
+             assert Fp eq dummy;
+             redp_mat := hom<MatrixAlgebra(ZF_p, n) -> MatrixAlgebra(Fp,n) | redp>;
+	     g_p := Transpose(redp_mat(g));
+	  end if;	  
           scalar := Determinant(Solution(rad,rad*g_p));
           scalar := (scalar eq 1) select Integers()!1 else -Integers()!1;
           return scalar*(V`M).m; 

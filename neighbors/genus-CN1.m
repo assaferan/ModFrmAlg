@@ -161,8 +161,11 @@ procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
     // something crashes in orthogonal mass
     // until we figure it out we leave it be
     if UseMass then
-      // If we're doing more than one prime, it could be a bad one
-	bad_modulus := Parent(bad_modulus)!1;
+	// If we're doing more than one prime, it could be a bad one
+	// Changing it to avoid issues with fake spinor norm representations
+	if (not assigned M`W`weight) or (M`W`weight[1] eq 1) then
+	    bad_modulus := Parent(bad_modulus)!1;
+	end if;
 	acc_mass := #AutomorphismGroupOverField(Module(M), M`W`G : Special := IsSpecialOrthogonal(M))^(-1);
 	if SpaceType(V) eq "Hermitian" then
 	    K := BaseRing(V);

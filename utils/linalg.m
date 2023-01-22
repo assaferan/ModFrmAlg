@@ -455,8 +455,12 @@ p coprime to the level of M and p<= bound. }
    // refine decomp
    alpha := Involution(AmbientSpace(Module(M)));
    F := FixedField(alpha);
-  
-   primes := PrimesUpTo(bound, F);
+
+   if (not assigned M`W`weight) or (M`W`weight[1] ne 1) then
+       primes := PrimesUpTo(bound, F : coprime_to := Numerator(Norm(Discriminant(Module(M)))));
+   else
+       primes := PrimesUpTo(bound, F);
+   end if;
    prime_idx := [i : i in [1..#primes] | Norm(primes[i]) gt known][1];
    use_LLL := UseLLL and (not IsSpecialOrthogonal(M));
    refined_decomp := [* *];

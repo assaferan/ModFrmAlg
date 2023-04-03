@@ -122,14 +122,14 @@ intrinsic BaseRing(f::ModFrmAlgElt) -> Rng
   return BaseRing(f`vec);
 end intrinsic;
 
-intrinsic HeckeEigenvalue(f::ModFrmAlgElt, p::RngIntElt : k := 1) -> SeqEnum
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, p::RngIntElt : k := 1) -> FldElt
 {Returns the Hecke eigenvalue of T(p^k) at the specified prime.}
    R := BaseRing(Module(f`M));
    pR := Type(R) eq RngInt select ideal<R|p> else Factorization(R!!p)[1][1];
    return HeckeEigenvalue(f, pR : k := k);
 end intrinsic;
 
-intrinsic HeckeEigenvalue(f::ModFrmAlgElt, pR::RngInt : k := 1) -> SeqEnum
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, pR::RngInt : k := 1) -> FldElt
 {Returns the Hecke eigenvalue of T(p^k) at the specified prime.}
   vals, _ := HeckeEigensystem(f, k : Precision := [pR]);
   return vals[1];
@@ -137,14 +137,20 @@ end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, p::RngIntElt) -> SeqEnum
 {Returns a list of all Hecke eigenvalues at the specified prime.}
-     R := BaseRing(Module(f`M));
-     pR := Type(R) eq RngInt select ideal<R|p> else Factorization(R!!p)[1][1];
-     return HeckeEigenvalues(f, pR);
+   R := BaseRing(Module(f`M));
+   pR := Type(R) eq RngInt select ideal<R|p> else Factorization(R!!p)[1][1];
+   return HeckeEigenvalues(f, pR);
 end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngInt) -> SeqEnum
 { Returns a list of all Hecke eigenvalues at the specified prime. }
-	return HeckeEigenvalues(f, ideal< BaseRing(Module(f`M)) | Norm(pR) >);
+   return HeckeEigenvalues(f, ideal< BaseRing(Module(f`M)) | Norm(pR) >);
+end intrinsic;
+
+intrinsic HeckeEigenvalue(f::ModFrmAlgElt, pR::RngOrdIdl : k := 1) -> FldElt
+{Returns the Hecke eigenvalue of T(pR^k) at the specified prime.}
+   vals, _ := HeckeEigensystem(f, k : Precision := [pR]);
+   return vals[1];
 end intrinsic;
 
 intrinsic HeckeEigenvalues(f::ModFrmAlgElt, pR::RngOrdIdl) -> SeqEnum

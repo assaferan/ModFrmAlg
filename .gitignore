@@ -16,3 +16,4 @@ neighbors/.#inv-CN1.m
 *.el
 modfrmalg/.magma-scan/modfrmalgelt.m.el
 *.spec~
+io/path.m

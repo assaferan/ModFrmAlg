@@ -29,7 +29,7 @@
   representation/combfreemod.m
   representation/representation.m
   
-  tests/tests.m
+  Tests/tests.m
   
   unitary/fieldaut.m
   unitary/stdbasis.m

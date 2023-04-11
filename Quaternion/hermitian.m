@@ -129,7 +129,7 @@ end intrinsic;
 
 // access
 
-intrinsic BaseAlgebra(hSpace::HermSpace) -> AlgGen
+intrinsic BaseAlgebra(hSpace::HermSpace) -> AlgQuat
 {Returns the algebra over which the space is defined. }
   return hSpace`B;
 end intrinsic;
@@ -145,7 +145,12 @@ intrinsic Dimension(hSpace::HermSpace) -> RngIntElt
 end intrinsic;
 
 // !! TODO - needs to define an order in general algebras
-intrinsic BaseOrder(hSpace::HermSpace) -> AlgGenOrd
+intrinsic BaseOrder(hSpace::HermSpace) -> AlgQuatOrd
+{ Returns the base field of the hermitian space. }
+  return hSpace`O;
+end intrinsic;
+
+intrinsic BaseRing(hSpace::HermSpace) -> AlgQuatOrd
 { Returns the base field of the hermitian space. }
   return hSpace`O;
 end intrinsic;
@@ -238,8 +243,11 @@ intrinsic AmbientHermitianSpace(innerForm::AlgMatElt, alpha::AlgAut) -> HermSpac
   // Assign base field and base ring.
   hSpace`B := B;
   if Type(B) in [FldNum, FldOrd, FldCyc, FldQuad, FldRat] then
-      hSpace`R := Integers(B);
+      hSpace`O := Integers(B);
       hSpace`classNo := ClassNumber(AbsoluteField(B));
+  else
+      hSpace`O := R;
+      hSpace`classNo := #RightIdealClasses(hSpace`O);
   end if;
   
   hSpace`deg := Degree(B);

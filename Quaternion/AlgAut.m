@@ -307,8 +307,8 @@ end intrinsic;
 intrinsic '@'(v::ModTupRngElt, alpha::AlgAut) -> ModTupRngElt
 {.}
   V := Parent(v);
-  require BaseAlgebra(V) eq BaseAlgebra(alpha) : "map must be defined on elements!";
-  return V![alpha(v[i]) : i in [1..Dimension(V)]];
+  require BaseRing(V) eq BaseAlgebra(alpha) : "map must be defined on elements!";
+  return V!Vector([alpha(v[i]) : i in [1..Dimension(V)]]);
 end intrinsic;
 
 intrinsic '@'(a::AlgMatElt, alpha::AlgAut) -> AlgMatElt
@@ -340,6 +340,15 @@ end intrinsic;
 */
 
 intrinsic '@'(I::AlgAssVOrdIdl[RngOrd], alpha::AlgAut) -> AlgAssVOrdIdl[RngOrd]
+{.}
+  B := BaseAlgebra(alpha);
+  O := MaximalOrder(B);
+  require O eq Order(I) :
+    "Fractional ideal must be in the maximal order of the algebra the automorphism is acting on.";
+  return ideal<O | [alpha`map(g) : g in Generators(I)]>;
+end intrinsic;
+
+intrinsic '@'(I::AlgQuatOrdIdl, alpha::AlgAut) -> AlgQuatOrdIdl
 {.}
   B := BaseAlgebra(alpha);
   O := MaximalOrder(B);

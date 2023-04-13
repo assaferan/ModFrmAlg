@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@v2
       - id: set-matrix_ANTS
         run: |
-	  cd ANTSXV2022/
+          cd ANTSXV2022/
           matrix=$((
             echo '{ "target" : ['
             ls -1 tests | sed -r 's/^([^,]*)(,?)$/"\1"\2/'  | paste -sd "," -
@@ -186,5 +186,5 @@ jobs:
       - name: Run ANTS tests
         shell: bash
         run: |
-	  cd ANTSXV2022/
+          cd ANTSXV2022/
           ./magma/magma -b target:=${{matrix_ANTS.target}} exitsignal:="" run_tests.m

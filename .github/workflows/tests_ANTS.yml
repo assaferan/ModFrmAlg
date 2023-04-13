@@ -149,4 +149,4 @@ jobs:
         shell: bash
         run: |
           cd ANTSXV2022/
-          ./magma/magma -b target:=${{matrix.target}} exitsignal:="" run_tests.m
+          ../magma/magma -b target:=${{matrix.target}} exitsignal:="" run_tests.m

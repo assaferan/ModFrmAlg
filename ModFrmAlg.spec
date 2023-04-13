@@ -1,7 +1,7 @@
 {
 
   grp/GrpRed.m
-  grp/GrpSch.m
+  grp/grpSch.m
 
   io/saveload.m
   io/path.m

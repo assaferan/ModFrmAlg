@@ -1,4 +1,4 @@
 import "examples/examples.m" : AlgebraicModularFormsExamples;
 import "examples/TestExamples.m" : testExampleTimingsSaveAndLoad;
 
-testExampleTimingsSaveAndLoad(AlgebraicModularFormsExamples[4] : LowMemory);
+testExampleTimingsSaveAndLoad(AlgebraicModularFormsExamples[4] : LowMemory, NumPrimes := 10);

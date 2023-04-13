@@ -1,4 +1,4 @@
-import "Tests/examples.m" : AlgebraicModularFormsExamples;
-import "Tests/TestExamples.m" : testExampleTimingsSaveAndLoad;
+import "examples/examples.m" : AlgebraicModularFormsExamples;
+import "examples/TestExamples.m" : testExampleTimingsSaveAndLoad;
 
 testExampleTimingsSaveAndLoad(AlgebraicModularFormsExamples[8]);

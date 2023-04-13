@@ -31,7 +31,6 @@ freeze;
 // imports
 
 import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
-import "../neighbors/inv-CN1.m" : Invariant;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //

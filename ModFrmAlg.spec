@@ -1,8 +1,10 @@
 {
 
   grp/GrpRed.m
+  grp/grpSch.m
 
   io/saveload.m
+  io/path.m
 
   lattice/BrtCl.m
   lattice/clifford.m
@@ -20,6 +22,7 @@
 
   neighbors/genus-CN1.m
   neighbors/hecke-CN1.m
+  neighbors/inv-CN1.m
   neighbors/isotropic.m
   neighbors/neighbor-CN1.m
   neighbors/orbits.m
@@ -28,8 +31,6 @@
 
   representation/combfreemod.m
   representation/representation.m
-  
-  tests/tests.m
   
   unitary/fieldaut.m
   unitary/stdbasis.m

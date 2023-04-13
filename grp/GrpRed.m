@@ -91,7 +91,7 @@ freeze;
 
 // !! TODO - fix this terrible patch
 
-import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
+import "../LieThry/Root/RootDtm.m" : rootDatum;
 
 
 ///////////////////////////////////////////////////////////////////

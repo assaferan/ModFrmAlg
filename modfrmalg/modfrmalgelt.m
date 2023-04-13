@@ -61,9 +61,7 @@ freeze;
 
 import "modfrmalg.m" : ModFrmAlgInit;
 
-import "../neighbors/inv-CN1.m" : Invariant;
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
-import "../representation/representation.m" : nu;
 import "../utils/linalg.m" : GetEigenvectors;
 
 ///////////////////////////////////////////////////////////////////
@@ -781,8 +779,8 @@ function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := false
 		    evs[1]*p^w*x + 1;
           else
 	     eps_p := (-1)^w*WittInvariant(L,pR);
-             nu_p := (dw mod p eq 0) select nu(D,p) else 1;
-             L_poly := p^(3+2*w)*x^2-(eps_p*p - nu(D,p)*(evs[1] + 1))*p^w*x+1;
+             nu_p := (dw mod p eq 0) select CharacterQQModSquares(D,Rationals()!p) else 1;
+             L_poly := p^(3+2*w)*x^2-(eps_p*p - CharacterQQModSquares(D,Rationals()!p)*(evs[1] + 1))*p^w*x+1;
              L_poly *:= eps_p*p^(1+w)*x+1;
 	  end if;
       when 6:
@@ -965,7 +963,7 @@ intrinsic LSeries(f::ModFrmAlgElt : Precision := 0,
   // should be (??)
   // LSeries(2*n+4, [-n-1,-n,0,1], D) ?? doesn't make sense. look more closely
   return LSeries(2*w+n-1, [-w-1+j,-w+j,j,j+1], D, local_factor :
-		 Sign := (-1)^w*nu(D,d), Precision := Precision);
+		 Sign := (-1)^w*CharacterQQModSquares(D,Rationals()!d), Precision := Precision);
 end intrinsic;
 
 intrinsic ThetaSeries(f::ModFrmAlgElt : Precision := 25) -> RngSerPuisElt

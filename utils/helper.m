@@ -20,6 +20,7 @@ freeze;
 ***********************************************/
 
 // Here we list the intrinsics that this file defines
+// FactorPolynomialOverNumberField(f::RngUPolElt) -> SeqEnum
 // RandomSymmetric(FF::Fld, dim::RngElt) -> Mtrx
 // RandomSymmetric(R::RngOrd, dim::RngIntElt, maxNorm::RngIntElt) -> AlgMatElt
 // RandomSymmetricInt(Dim::RngElt, Max::RngElt) -> Mtrx
@@ -234,7 +235,9 @@ end function;
 
 // This is the final factorization function
 
-function my_facAlgExt(f)
+//function my_facAlgExt(f)
+intrinsic FactorPolynomialOverNumberField(f::RngUPolElt) -> SeqEnum
+{Factor a polynomial over a number field. Works in some cases when magma's built-in function crashes.}
   res := [];
   sqfree_fac := SquareFreeFactorization(f);
   for fa in sqfree_fac do
@@ -243,7 +246,7 @@ function my_facAlgExt(f)
     res cat:= [<g, a> : g in f_fac];
   end for;
   return res;
-end function;
+end intrinsic;
 
 // Constructs a random symmetric matrix over a specified finite field of a specified dimension.
 intrinsic RandomSymmetric(FF::Fld, dim::RngElt) -> Mtrx

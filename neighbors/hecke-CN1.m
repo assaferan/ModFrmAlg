@@ -54,7 +54,6 @@ freeze;
 import "../lattice/minkowski.m" : generate_orbit; 
 import "../utils/helper.m" : printEstimate;
 
-import "inv-CN1.m" : Invariant;
 import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor,
 	GetNextNeighbor, SkipToNeighbor;
 import "orbits.m" : build_polycyclic_data, orb_stab_pc, orb_stab_general;

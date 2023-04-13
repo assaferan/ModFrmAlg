@@ -2,7 +2,7 @@
 if assigned filename then
   tests := [filename];
 else
-  tests := Split(Pipe("ls Tests", ""), "\n");
+  tests := Split(Pipe("ls tests", ""), "\n");
 end if;
 ROOT_DIR := "./";
 v1, v2, v3 := GetVersion();
@@ -19,7 +19,7 @@ end if;
 
 for filename in tests do
   if target in filename then
-    fullPath := "Tests/" cat filename;
+    fullPath := "tests/" cat filename;
     timestamp := Time();
     try
       printf "%o: ", filename;

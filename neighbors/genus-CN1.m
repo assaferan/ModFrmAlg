@@ -4,7 +4,7 @@ freeze;
                                                                             
                     Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch
                                                                             
    FILE: genus-CN1.m (implementation file for genus computations)
@@ -34,12 +34,14 @@ freeze;
  
  ***************************************************************************/
 
+// exported intrinsics
+// intrinsic UnitaryMass(L::Fld, m::RngIntElt) -> FldRatElt
+
 // imports
 
 import "../lattice/lattice.m" : GramMatrixOfBasis;
 import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
 import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor, GetNextNeighbor;
-import "inv-CN1.m" : Invariant;
 
 // functions
 
@@ -132,7 +134,7 @@ function computeGenusRepsAt(p, isoList, invs, total_mass, acc_mass, G
     return isoList, invs, acc_mass;
 end function;
 
-forward UnitaryMass, OrthogonalMass;
+forward OrthogonalMass;
 
 procedure computeGenusRepsCN1(M : BeCareful := true, Force := false,
 			      UseMass := false, ThetaPrec := 25)
@@ -454,7 +456,8 @@ end function;
 
 // mass formulas for verifying the genus
 
-function UnitaryMass(L, m)
+intrinsic UnitaryMass(L::Fld, m::RngIntElt) -> FldRatElt
+{Return the mass of a maximal unitary lattice of rank m over L.}
     L := NumberField(AbsoluteField(L));
     ZZ_L := MaximalOrder(L);
     _,cc := HasComplexConjugate(L);
@@ -504,7 +507,7 @@ function UnitaryMass(L, m)
 
     return mass;
     
-end function;
+end intrinsic;
 
 function WittToHasse(Dim, Det, Finite)
   K:= Parent(Det);

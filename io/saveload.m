@@ -45,7 +45,6 @@ freeze;
 //  by removing direct access via the ` substructure symbol.
 
 import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
-import "path.m" : path;
 import "../neighbors/genus-CN1.m" : sortGenusCN1;
 import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
 
@@ -80,7 +79,7 @@ end intrinsic;
 intrinsic Save(M::ModFrmAlg, filename::MonStgElt : Overwrite := false)
 { Save data to disk. }
 	// The file where the data will be stored.
-	file := path() cat filename;
+	file := GetAMFPath() cat filename;
 
 	// If overwrite flag not set and file exists, display warning and
 	//  immediately return.
@@ -232,7 +231,7 @@ end intrinsic;
 intrinsic AlgebraicModularForms(filename::MonStgElt : ShowErrors := true) -> ModFrmAlg
 { Load an algebraic modular form from disk. }
 	// The file where the data will be loaded.
-	file := path() cat filename;
+	file := GetAMFPath() cat filename;
 
 	// Build the polynomial ring over the integers so we are ready to read
 	//  data from input file.

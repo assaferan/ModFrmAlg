@@ -1,9 +1,13 @@
 freeze;
-// This script computes an invariant used to sort genus representatives.
 
-function Invariant(L : Precision := 25)
+// exports
+// intrinsic Invariant(L::ModDedLat : Precision := 25) -> RngSerPowElt
+
+// This script computes an invariant used to sort genus representatives.
+intrinsic Invariant(L::ModDedLat : Precision := 25) -> RngSerPowElt
+{Computes an invariant of the lattice L. At the moment, a theta series up to a certain precision.}
     return ThetaSeries(ZLattice(L), Precision);
-end function;
+end intrinsic;
 
 // This is a temporary fix that only works for spherical polynomial representations,
 // namely for weights of the form [k,0]

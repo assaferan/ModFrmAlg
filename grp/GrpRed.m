@@ -4,7 +4,7 @@ freeze;
                                                                             
                     Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch         
 
                                                                             
@@ -91,7 +91,7 @@ freeze;
 
 // !! TODO - fix this terrible patch
 
-import "/Applications/Magma/package/LieThry/Root/RootDtm.m" : rootDatum;
+import "../LieThry/Root/RootDtm.m" : rootDatum;
 
 
 ///////////////////////////////////////////////////////////////////

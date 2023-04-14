@@ -4,7 +4,7 @@ freeze;
                                                                             
                     Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch         
 
    FILE: hecke-CN1.m (Implementation for computing Hecke matrices)
@@ -54,7 +54,6 @@ freeze;
 import "../lattice/minkowski.m" : generate_orbit; 
 import "../utils/helper.m" : printEstimate;
 
-import "inv-CN1.m" : Invariant;
 import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor,
 	GetNextNeighbor, SkipToNeighbor;
 import "orbits.m" : build_polycyclic_data, orb_stab_pc, orb_stab_general;

@@ -4,7 +4,7 @@ freeze;
                                                                             
                     Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch         
 
                                                                             
@@ -31,7 +31,6 @@ freeze;
 // imports
 
 import "../neighbors/genus-CN1.m" : computeGenusRepsCN1;
-import "../neighbors/inv-CN1.m" : Invariant;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //

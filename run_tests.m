@@ -1,8 +1,8 @@
-// usage: magma exitsignal:=EXITSIG target:=SUBSTRING run_tests.m
+// usage: magma exitsignal:=EXITSIGNAL target:=SUBSTRING run_tests.m
 if assigned filename then
   tests := [filename];
 else
-  tests := Split(Pipe("ls Tests", ""), "\n");
+  tests := Split(Pipe("ls tests", ""), "\n");
 end if;
 ROOT_DIR := "./";
 v1, v2, v3 := GetVersion();
@@ -11,8 +11,7 @@ if version lt Vector([2,19,6]) then
     error Sprintf("This package only supports Magma version >= 2.19-6!
     	  	    This is version %o.%o-%o!", v1, v2, v3);
 end if;
-AttachSpec(ROOT_DIR cat "ModFrmGL2.spec");
-// AttachSpec("ModFrmGL2.spec");
+AttachSpec(ROOT_DIR cat "ModFrmAlg.spec");
 failed := [];
 if not assigned target then
   target := "";
@@ -20,7 +19,7 @@ end if;
 
 for filename in tests do
   if target in filename then
-    fullPath := "Tests/" cat filename;
+    fullPath := "tests/" cat filename;
     timestamp := Time();
     try
       printf "%o: ", filename;

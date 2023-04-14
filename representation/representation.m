@@ -3,7 +3,7 @@ freeze;
                                                                             
                     Algebraic Modular Forms in Magma
                         
-                  E. Assaf, M. Greenberg, J. Hein, J.Voight
+                  E. Assaf, M. Greenberg, J. Hein, J. Voight
          using lattices over number fields by M. Kirschmer and D. Lorch         
                            
                                                                             
@@ -134,7 +134,7 @@ freeze;
 // SymSpinor(G::GrpRed, d::RngIntElt, k::RngIntElt) -> GrpRep
 // AltSpinor(G::GrpRed, d::RngIntElt, j::RngIntElt) -> GrpRep
 // HighestWeightRepresentation(G::GrpRed, lambda::SeqEnum) -> GrpRep
-// 
+// CharacterQQModSquares(d::RngIntElt,r::FldRatElt) -> RngIntElt
 
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../utils/linalg.m" : Restrict;
@@ -1380,7 +1380,9 @@ function spinor_norm(sigma, A)
     return &*[(x*A, x) : x in refl_pts];
 end function;
 
-function nu(d,r)
+intrinsic CharacterQQModSquares(d::RngIntElt,r::FldRatElt) -> RngIntElt
+{Compute the value of the character of QQ / QQ^2 defined by d on the element r.
+ d defines the character which sends the primes dividing d to -1.}
     fac_num := Factorization(ideal<Integers(Parent(r)) | Numerator(r)>);
     fac_den := Factorization(ideal<Integers(Parent(r)) | Denominator(r)>);
     fac := fac_num cat fac_den;
@@ -1392,7 +1394,7 @@ function nu(d,r)
 	end if;
     end for;
     return ret;
-end function;
+end intrinsic;
 
 function rho(d, sigma, A)
     // assert Transpose(sigma)*A*sigma eq A;
@@ -1401,7 +1403,8 @@ function rho(d, sigma, A)
 	assert IsOdd(NumberOfRows(sigma));
 	return rho(d, -sigma, A);
     end if;
-    return nu(d, spinor_norm(sigma, A));
+    QQ := Rationals();
+    return CharacterQQModSquares(d, QQ!spinor_norm(sigma, A));
 end function;
 
 // Is this the spinor norm of sigma or of its transpose???
@@ -2004,11 +2007,11 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   pRdata := [Eltseq(x) : x in Generators(pR)];
   if (p eq 2) then
       Q := ChangeRing(InnerForm(Q), Integers());
-      lift := Vector([Integers()!x : x in Eltseq(rad)]);
+      lift := Matrix([[Integers()!x : x in Eltseq(rad_row)] : rad_row in Rows(rad)]);
       liftQ := lift * Q;
       lift2 := ChangeRing(liftQ div 2, GF(2));
       sol := Solution(ChangeRing(Q, GF(2)), lift2);
-      sol_lift := Vector([Integers()!x : x in Eltseq(sol)]);
+      sol_lift := Matrix([[Integers()!x : x in Eltseq(sol_row)] : sol_row in Rows(sol)]);
       rad := ChangeRing(lift + 2*sol_lift, Integers(4));
   end if;
   a := Sprintf("

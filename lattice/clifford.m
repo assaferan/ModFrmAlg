@@ -441,7 +441,7 @@ function getHilbertDims(d,n : k := [2,2], UseFinite := false)
     else
 	W0s := [HighestWeightRepresentation(G, wt) : G in Gs];
     end if;
-    Ws := [[TensorProduct(W0s[i],SpinorNormRepresentationOld(Gs[i], d)) :
+    Ws := [[TensorProduct(W0s[i],SpinorNormRepresentation(Gs[i], d)) :
 		d in Divisors(n)] : i in [1..#Gs]];
     L := IdentityMatrix(Rationals(),4);
     omfs := [[AlgebraicModularForms(Gs[i], W, L) : W in Ws[i]] : i in [1..#Gs]];

@@ -1,5 +1,7 @@
 {
 
+  G2/Octonion.m
+    
   grp/GrpRed.m
   grp/grpSch.m
 

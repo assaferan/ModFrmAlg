@@ -482,8 +482,6 @@ intrinsic ZLattice(lat::ModDedLat : Standard := false) -> Lat
   return lat`ZLattice;
 end intrinsic;
 
-forward GramMatrixOfBasis;
-
 intrinsic AuxForms(lat::ModDedLat : Standard := false) -> SeqEnum
 { Compute the auxiliary forms associated to this lattice. }
   // Assign the ZLattice attribute if not yet assigned.
@@ -1196,13 +1194,14 @@ end intrinsic;
 
 // This returns the Gram Matrix in Kirschmer's convention
 // so we halve the matrix unless explicitly stated otherwise in the quadratic case
-function GramMatrixOfBasis(L : Half := true)
+intrinsic GramMatrixOfBasis(L::ModDedLat : Half := true) -> AlgMatElt, SeqEnum, SeqEnum
+{.}
   P:= PseudoBasis(Module(L));
   U:= Universe(P);
   C:= [ U[1] | p[1]: p in P ];
   B:= [ U[2] | p[2]: p in P ] ;
   return GramMatrix( L, B : Half := Half and IsQuadratic(L)), C, B;
-end function;
+end intrinsic;
 
 intrinsic DualLattice(L::ModDedLat) -> ModDedLat
 {return the dual of the lattice L - lattice L^# such that <L,L^#> = ZZ_F}

@@ -279,7 +279,7 @@ intrinsic OrthogonalModularForms(lat::Lat :
   end if;
   W := HighestWeightRepresentation(G, weight);
   if (d ne 1) then
-    W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
+    W := TensorProduct(W, SpinorNormRepresentation(G, d));
   end if;
   return AlgebraicModularForms(G, W, Matrix(level));
 end intrinsic;
@@ -297,7 +297,7 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
   end if;
   W := HighestWeightRepresentation(G, weight);
   if (d ne 1) then
-    W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
+    W := TensorProduct(W, SpinorNormRepresentation(G, d));
   end if;
   return AlgebraicModularForms(G, W, IdentityMatrix(K,n));
 end intrinsic;
@@ -314,7 +314,7 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
     G := OrthogonalGroup(ChangeRing(innerForm, K));
   end if;
   if (d ne 1) then
-    weight := TensorProduct(weight, SpinorNormRepresentationFast(G, d));
+    weight := TensorProduct(weight, SpinorNormRepresentation(G, d));
   end if;
   return AlgebraicModularForms(G, weight, IdentityMatrix(K,n));
 end intrinsic;
@@ -539,15 +539,6 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := false,
 	return M`genus;
 end intrinsic;
 
-/*
-function special_subgroup(gamma)
-    F := BaseRing(gamma);
-    C2 := sub<GL(1, F) | [-1]>;
-    h := hom<gamma -> C2 | [C2![Determinant(gamma.i)] : i in [1..Ngens(gamma)]]>;
-    return Kernel(h); 
-end function;
-*/
-
 intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
 				: BeCareful := false)
 {Set the automorphism groups of the lattices in the genus of M.}
@@ -557,24 +548,10 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   for i in [1..#reps] do
      reps[i]`AutomorphismGroup := autgps[i];
   end for;
-//  gamma_reps := autgps;
+
   assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
-			    BaseRing(M`W`G));
-
-  //gamma_reps := [AutomorphismGroup(r : Special := IsSpecialOrthogonal(M))
-  //		: r in reps];
-  /*
-  gammas := [sub<M`W`G|
-		[Transpose(PullUp(Matrix(g), reps[i], reps[i] :
-				  BeCareful := BeCareful)) :
-		 //			  g in Generators(gamma_reps[i])]> :
-		 g in Generators(autgps[i])]> :
-	    i in [1..#reps]];
-
-  if IsSpecialOrthogonal(M) then
-      gammas := [special_subgroup(gamma) : gamma in gammas];
-  end if;
- */
+		      BaseRing(M`W`G));
+  
   gammas := [AutomorphismGroupOverField(r, M`W`G : Special := IsSpecialOrthogonal(M)) : r in reps];
   if GetVerbose("AlgebraicModularForms") ge 2 then
      printf "The sizes of the automorphism groups are %o.\n",
@@ -602,9 +579,9 @@ end intrinsic;
 
 // !!! TODO - make Orbits and LowMemory meaningful here
 
-procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
-			LowMemory := false, ThetaPrec := 25)
-    
+intrinsic ModFrmAlgInit(M::ModFrmAlg : BeCareful := false, Orbits := true,
+				       LowMemory := false, ThetaPrec := 25)
+{}
     // If the representation space has already been computed, then this
     //  object has already been initialized, and we can simply return
     //  without any further computations.
@@ -628,7 +605,7 @@ procedure ModFrmAlgInit(M : BeCareful := false, Orbits := true,
 	gamma_reps := [AutomorphismGroup(r) : r in reps];
         SetAutomorphismGroups(~M, gamma_reps : BeCareful := BeCareful);
     end if;
-end procedure;
+end intrinsic;
 
 intrinsic Dimension(M::ModFrmAlg : ThetaPrec := 25) -> RngIntElt
 { Returns the dimension of this vector space. }
@@ -675,47 +652,7 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 
 	// vectors orthogonal to the Eisenstein series
 	cuspBasis := Basis(Kernel(Transpose(Matrix(eis`vec*gram))));
-	/*
-	// The change-of-basis matrix.
-	basis := Id(MatrixRing(F, dim));
-
-	// Make the Eisenstein series the first basis vector.
-	for i in [2..dim] do
-		AddColumn(~gram, eis`vec[i], i, 1);
-		AddRow(~gram, eis`vec[i], i, 1);
-		AddRow(~basis, eis`vec[i], i, 1);
-	end for;
-
-	// Orthogonalize with respect to the Eisenstein series.
-	for i in [2..dim] do
-		scalar := -gram[1,i] / gram[1,1];
-		AddColumn(~gram, scalar, 1, i);
-		AddRow(~gram, scalar, 1, i);
-		AddRow(~basis, scalar, 1, i);
-	end for;
-
-	// The normalized cuspidal basis.
-	cuspBasis := [];
-
-	// Normalize the basis vectors of the cuspidal subspace.
-	for i in [2..dim] do
-		// Retrieve the cuspical vector.
-		vec := basis[i];
-
-		// Find its pivot.
-		pivot := 0; repeat pivot +:= 1; until vec[pivot] ne 0;
-
-		// Normalize the vector add it to the list.
-		Append(~cuspBasis, vec[pivot]^-1 * vec);
-	end for;
-
-	if IsEmpty(cuspBasis) then
-	    return VectorSpace(F, 0);
-	end if;
 	
-	// Reduce the cuspidal basis to be as sparse as possible.
-	cuspBasis := EchelonForm(Matrix(cuspBasis));
-	*/
 	return VectorSpaceWithBasis(cuspBasis);
 end intrinsic;
 

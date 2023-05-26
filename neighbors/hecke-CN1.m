@@ -54,8 +54,7 @@ freeze;
 import "../lattice/minkowski.m" : generate_orbit; 
 import "../utils/helper.m" : printEstimate;
 
-import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor,
-	GetNextNeighbor, SkipToNeighbor;
+import "neighbor-CN1.m" : SkipToNeighbor;
 import "orbits.m" : build_polycyclic_data, orb_stab_pc, orb_stab_general;
 
 // This function is the atomic operation on a single neighbor
@@ -285,9 +284,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
     kk := k ne 0 select k else n div 2;
     Perestroika := k eq 0;
     // Build neighboring procedure for this lattice.
-    nProc := BuildNeighborProc(L, pR, kk
-			       : BeCareful := BeCareful,
-				 Perestroika := Perestroika);
+    nProc := NeighborProcess(L, pR, kk : Perestroika := Perestroika);
 
     if GetVerbose("AlgebraicModularForms") ge 1 then
 	printf "Computing %o%o-neighbors for isometry class "
@@ -364,7 +361,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				      Perestroika := Perestroika);
                 // Update nProc in preparation for the next neighbor
                 //  lattice.
-	        GetNextNeighbor(~nProc : BeCareful := BeCareful);
+	        NextNeighbor(~nProc);
                 if Estimate then
 	          printEstimate(start, ~count, ~elapsed,
 			  fullCount, Sprintf("T_%o^%o", Norm(pR), kk)
@@ -372,7 +369,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	        end if;
               until (nProc`skewDim eq 0) or (nProc`skew eq skew0);
             else
-              GetNextNeighbor(~nProc : BeCareful := BeCareful);
+              NextNeighbor(~nProc);
             end if;
             y := nProc`isoSubspace;
           end while;
@@ -425,8 +422,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				      Perestroika := Perestroika);
 		// Update nProc in preparation for the next neighbor
 		//  lattice.
-		GetNextNeighbor(~nProc
-				: BeCareful := BeCareful);
+		NextNeighbor(~nProc);
                 nbr_tm +:= Realtime() - tm;
 		if Estimate then
 		  if IsTrivial(M`W) then
@@ -452,8 +448,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				  Perestroika := Perestroika);
 	    // Update nProc in preparation for the next neighbor
 	    //  lattice.
-	    GetNextNeighbor(~nProc
-			    : BeCareful := BeCareful);
+	    NextNeighbor(~nProc : BeCareful := BeCareful);
 	    if Estimate then
 		printEstimate(start, ~count, ~elapsed,
 			      fullCount, Sprintf("T_%o^%o", Norm(pR), kk));
@@ -481,7 +476,7 @@ function finalizeHecke(M_source, M_target, hecke, idxs)
 
   vert_blocks := [&cat mat : mat in mats];
 
-  empty_operator := MatrixAlgebra(BaseRing(M),0)![];
+  empty_operator := MatrixAlgebra(BaseRing(M_source),0)![];
     
   if IsEmpty(vert_blocks) then return empty_operator; end if;
   if IsEmpty(vert_blocks[1]) then return empty_operator; end if;
@@ -592,7 +587,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				       Estimate := true,
 				       Orbits := true,
 				       LowMemory := false,
-				     ThetaPrec := 25)
+				       ThetaPrec := 25)
 
     assert 1 le idx and idx le #M`H;
     // The genus representatives.
@@ -903,7 +898,7 @@ intrinsic InitPivots(M::ModFrmAlg, pR::RngInt, k::RngIntElt, hecke_idx::RngIntEl
 {.}
     reps := Representatives(Genus(M));
     L := reps[hecke_idx];
-    nProc := BuildNeighborProc(L, pR, k);
+    nProc := NeighborProcess(L, pR, k);
     V := nProc`L`Vpp[nProc`pR]`V;
     if not IsDefined(V`ParamArray, k) then
 	data := New(IsoParam);
@@ -1007,8 +1002,7 @@ intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
 			      ThetaPrec := ThetaPrec);
 	// Update nProc in preparation for the next neighbor
 	//  lattice.
-	GetNextNeighbor(~nProc
-			: BeCareful := BeCareful);
+	NextNeighbor(~nProc);
 	if Estimate then
 	    printEstimate(start, ~count, ~elapsed,
 			  fullCount, Sprintf("T_%o^%o", Norm(nProc`pR), k));

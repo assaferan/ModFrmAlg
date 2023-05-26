@@ -632,10 +632,16 @@ intrinsic NeighborProcess(L::ModDedLat, pR::RngOrdIdl, k::RngIntElt : Perestroik
   return BuildNeighborProc(L, pR, k : Perestroika := Perestroika);
 end intrinsic;
 
+intrinsic NeighborProcess(L::ModDedLat, pR::RngInt, k::RngIntElt : Perestroika := false) -> NeighborProc
+{Returns a process for enumerating pR^k-neighbors of L}
+  return BuildNeighborProc(L, pR, k : Perestroika := Perestroika);
+end intrinsic;
+
 // Constructing the next p-neighbor
 
-function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
-		       Perestroika := false, Similarity := 1)
+intrinsic BuildNeighbor(nProc::NeighborProc : BeCareful := true, UseLLL := false,
+					      Perestroika := false, Similarity := 1) -> ModDedLat
+{Returns the next p-neighbor from nProc.}
     assert nProc`isoSubspace ne [];
     
     // The affine data.
@@ -840,7 +846,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
     end if;
 
     return nLat;
-end function;
+end intrinsic;
 
 // Advancement - getting the next neighbor
 

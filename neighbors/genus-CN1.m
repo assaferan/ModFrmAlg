@@ -37,12 +37,6 @@ freeze;
 // exported intrinsics
 // intrinsic UnitaryMass(L::Fld, m::RngIntElt) -> FldRatElt
 
-// imports
-
-import "../lattice/lattice.m" : GramMatrixOfBasis;
-import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
-import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor, GetNextNeighbor;
-
 // functions
 
 procedure checkNextNeighbor(nProc, buildNeighbor, ~invs, ~isoList, ~acc_mass, G
@@ -100,8 +94,7 @@ function computeGenusRepsAt(p, isoList, invs, total_mass, acc_mass, G
 
     repeat
 	// Build the neighbor procedure for the current lattice.
-	nProc := BuildNeighborProc(isoList[isoIdx], p, 1
-				   : BeCareful := BeCareful);
+	nProc := NeighborProcess(isoList[isoIdx], p, 1);
 
 	while nProc`isoSubspace ne [] do
 	    checkNextNeighbor(nProc, BuildNeighbor,
@@ -110,8 +103,7 @@ function computeGenusRepsAt(p, isoList, invs, total_mass, acc_mass, G
 			      Special := Special,
 			      ThetaPrec := ThetaPrec);
 	    // Move on to the next neighbor lattice.
-	    GetNextNeighbor(~nProc
-			    : BeCareful := BeCareful);
+	    NextNeighbor(~nProc);
 	    if UseMass then
 		if (acc_mass eq total_mass) then
 		    return isoList, invs, acc_mass;
@@ -563,7 +555,7 @@ function WittToHasse2(L, Hasse)
     Witt := {};
     for p in Hasse do
 	pR := p[1];
-	nProc := BuildNeighborProc(L, pR, 1);
+	nProc := NeighborProcess(L, pR, 1);
 	Vp := L`Vpp[pR]`V;
 	if Vp`AnisoDim ne 0 then
 	    // the space is not split hyperbolic

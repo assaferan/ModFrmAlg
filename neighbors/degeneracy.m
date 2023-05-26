@@ -217,6 +217,8 @@ end function;
 // We start with primes and with naive implementation, testing all for isometries
 // We also start with trivial weight and only with the AL+ map
 function DegeneracyMatrix(M_old, M_new, p, k : ThetaPrec := 25)
+    ModFrmAlgInit(M_old);
+    ModFrmAlgInit(M_new);
     mat := [ [ [* M_new`W!0 : hh in M_new`H *] : vec_idx in [1..Dimension(h)]]
 		 : h in M_old`H];
     reps_old := Representatives(Genus(M_old));
@@ -237,6 +239,8 @@ function DegeneracyMatrix(M_old, M_new, p, k : ThetaPrec := 25)
 end function;
 
 function DegeneracyMatrixReverse(M_new, M_old, p, k : ThetaPrec := 25)
+    ModFrmAlgInit(M_old);
+    ModFrmAlgInit(M_new);
     mat := [ [ [* M_old`W!0 : hh in M_old`H *] : vec_idx in [1..Dimension(h)]]
 		 : h in M_new`H];
     reps_old := Representatives(Genus(M_old));

@@ -62,25 +62,33 @@ import "orbits.m" : build_polycyclic_data, orb_stab_pc, orb_stab_general;
 // It test the neighbor for isometry with the members of the genus
 // and if so, adds the appropriate weight multiple to the
 // matrix of the Hecke operator in the correct place.
-procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
+procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_target :
 				 BeCareful := false,
 				 UseLLL := false,
 				 Weight := 1,
 				 Special := false,
 				 ComputeGenus := false,
-				ThetaPrec := 25,
-				Perestroika := false)
+				 ThetaPrec := 25,
+				 Perestroika := false,
+				 BuildNeighbor := BuildNeighbor,
+				 Similarity := 1)
   // Build the neighbor lattice corresponding to the
   //  current state of nProc.
   nLat := BuildNeighbor(nProc : BeCareful := BeCareful,
 			UseLLL := UseLLL,
-			Perestroika := Perestroika);
+			Perestroika := Perestroika, Similarity := Similarity);
 
   if Perestroika then
     isom_scale := BasisMatrix(Module(nLat));
     Vpp := nProc`L`Vpp[nProc`pR];
     pi := Vpp`pElt;
     nLat := ScaledLattice(nLat, 1/pi);
+  end if;
+
+  if (Type(Similarity) ne RngIntElt) then
+      isom_scale := BasisMatrix(Module(nLat));
+      Q := ReflexiveSpace(reps[1]);
+      nLat := LatticeWithBasis(Q,ChangeRing(isom_scale,BaseRing(Q))*Similarity);
   end if;
 
   if GetVerbose("AlgebraicModularForms") ge 2 then
@@ -113,14 +121,16 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
   //  was actually found. This is a failsafe.
   found := false;
 
-  iota := H[idx]`embedding;
+  iota_target := H_target[idx]`embedding;
     
-  W := Codomain(iota);
+  W_target := Codomain(iota_target);
 
+  W_source := Codomain(H_source[1]`embedding);
+  
   // If the weight is trivial, we don't need the isometry
   // If moreover, there is only one lattice with the invariant,
   // we can assume this is the neighbor it is isometric to.
-  if (not ComputeGenus) and IsTrivial(W) and #array eq 1 then
+  if (not ComputeGenus) and IsTrivial(W_target) and #array eq 1 then
     space_idx := array[1][2];
 	    
     if GetVerbose("AlgebraicModularForms") ge 2 then
@@ -129,10 +139,12 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
     end if;
 	    
     found := true;
-    iota := H[space_idx]`embedding;
-    for vec_idx in [1..Dimension(H[space_idx])] do
-      vec := iota(H[space_idx].vec_idx);
-      hecke[space_idx][vec_idx][idx] +:= Weight * vec;
+    iota_source := H_source[space_idx]`embedding;
+    W_source := Codomain(iota_source);
+    for vec_idx in [1..Dimension(H_source[space_idx])] do
+	vec := iota_source(H_source[space_idx].vec_idx);
+	vec := W_target!Eltseq(vec);
+	hecke[space_idx][vec_idx][idx] +:= Weight * vec;
     end for;
   else
     for j in [1..#array] do
@@ -152,21 +164,27 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
         if Perestroika then
           g := g * ChangeRing(isom_scale, BaseRing(g));
         end if;
-
-        gg := W`G!ChangeRing(Transpose(g), BaseRing(W`G));
+	
+	if (Type(Similarity) ne RngIntElt) then
+	    g := Similarity * g * Similarity^(-1);
+	end if;
+	
+        gg := W_target`G!ChangeRing(Transpose(g), BaseRing(W_target`G));
 
         if GetVerbose("AlgebraicModularForms") ge 2 then
 	  print "Updating the Hecke operator...";
         end if;
 	    
         found := true;
-	iota := H[space_idx]`embedding;
-	for vec_idx in [1..Dimension(H[space_idx])] do
-	  vec := iota(H[space_idx].vec_idx);
-          if not IsTrivial(W) then
-            vec := gg * vec;
-          end if;
-	  hecke[space_idx][vec_idx][idx] +:= Weight * vec;
+	iota_source := H_source[space_idx]`embedding;
+	W_source := Codomain(iota_source);
+	for vec_idx in [1..Dimension(H_source[space_idx])] do
+	    vec := iota_source(H_source[space_idx].vec_idx);
+	    vec := W_target!Eltseq(vec);
+            if not IsTrivial(W_target) then
+		vec := gg * vec;
+            end if;
+	    hecke[space_idx][vec_idx][idx] +:= Weight * vec;
 	end for;
 	break;
       end if;
@@ -177,23 +195,19 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H :
     assert ComputeGenus; // should not happen if we computed the genus already
     Append(~reps, nLat);
     Append(~invs[inv], <nLat, #reps>);
-    /*
-    gamma_rep := AutomorphismGroup(nLat : Special := Special);
-    gamma := sub<W`G|
-      [Transpose(PullUp(Matrix(g), nLat, nLat :
-			BeCareful := BeCareful)) :
-		  g in Generators(gamma_rep)]>;
-   */
-    gamma := AutomorphismGroupOverField(nLat, W`G : Special := Special);
-    h := FixedSubspace(gamma, W);
-    for h_idx in [1..#H] do
-      for v_idx in [1..Dimension(H[h_idx])] do
-	Append(~hecke[h_idx][v_idx], W!0);
+    
+    gamma := AutomorphismGroupOverField(nLat, W_source`G : Special := Special);
+    h := FixedSubspace(gamma, W_source);
+    for h_idx in [1..#H_target] do
+      for v_idx in [1..Dimension(H_target[h_idx])] do
+	Append(~hecke[h_idx][v_idx], W_target!0);
       end for;
     end for;
 
-    Append(~H, h);
-    Append(~hecke, [ [* W!0 : hh in H *] : i in [1..Dimension(h)]]);
+    Append(~H_source, h);
+    if (H_source eq H_target) then
+	Append(~hecke, [ [* W_target!0 : hh in H_source *] : i in [1..Dimension(h)]]);
+    end if;
 
     if GetVerbose("AlgebraicModularForms") ge 2 then
       print "Updating the Hecke operator...";
@@ -264,7 +278,6 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 				 LowMemory := false,
 				 ThetaPrec := 25)
     L := reps[idx];
-    // !! TODO - get this out of here
 
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
@@ -292,13 +305,6 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	F := BaseRing(V);
 	
 	// The automorphism group restricted to the affine space.
-	/*
-	G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
-	
-	gens := [PullUp(Matrix(g), L, L :
-			BeCareful := BeCareful) :
-		 g in Generators(G)];
-       */
 	G := AutomorphismGroupOverField(L, M`W`G : Special := IsSpecialOrthogonal(M));
 	gens := [Transpose(Matrix(g)) : g in Generators(G)];
 	
@@ -312,7 +318,6 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	if LowMemory then
 	  proj := L`Vpp[pR]`proj_pR;
           R := Domain(proj);
-// G_conj := sub<GL(n,BaseRing(Q)) | conj_gens>;
           is_solvable, G_pc, f_pc, red := build_polycyclic_data(G_conj, V, proj);
           orb_stab := is_solvable select orb_stab_pc else orb_stab_general;
           orb_reps := [];
@@ -349,7 +354,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
               // Changing the skew matrix, but not the isotropic
               // subspace mod p
               repeat
-                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H:
+                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H, M`H:
 					  BeCareful := BeCareful,
 					  UseLLL := UseLLL,
 					  Weight := w,
@@ -410,7 +415,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	    // subspace mod p
 	    repeat
 	        tm := Realtime();
-                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H:
+                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H, M`H:
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
 				      Weight := w,
@@ -438,7 +443,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
       end if;
     else
 	while nProc`isoSubspace ne [] do
-	    processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H :
+	    processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, M`H, ~M`H :
 				  BeCareful := BeCareful,
 				  UseLLL := UseLLL,
 				  Special := IsSpecialOrthogonal(M),
@@ -467,12 +472,12 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
     end if;
 end procedure;
 
-function finalizeHecke(M, hecke, idxs)
-  iota := [h`embedding : h in M`H];
+function finalizeHecke(M_source, M_target, hecke, idxs)
+  iota := [h`embedding : h in M_target`H];
 
   mats := [[[Eltseq(hecke[space_idx][vec_idx][idx]@@iota[idx]) :
-		    vec_idx in [1..Dimension(M`H[space_idx])]] :
-           space_idx in [1..#M`H]] : idx in idxs];
+		    vec_idx in [1..Dimension(M_source`H[space_idx])]] :
+           space_idx in [1..#M_source`H]] : idx in idxs];
 
   vert_blocks := [&cat mat : mat in mats];
 
@@ -512,13 +517,6 @@ function HeckeOperatorCN1(M, pR, k
       ZZq<q> := PuiseuxSeriesRing(Integers());
       invs := AssociativeArray(ZZq);
       invs[Invariant(L : Precision := ThetaPrec)] := [<L, 1>];
-      /*
-      gamma_rep := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
-      gamma := sub<M`W`G|
-		[Transpose(PullUp(Matrix(g), L, L :
-				  BeCareful := BeCareful)) :
-			  g in Generators(gamma_rep)]>;
-     */
       gamma := AutomorphismGroupOverField(L, M`W`G : Special := IsSpecialOrthogonal(M));
       M`H := [FixedSubspace(gamma, M`W)];
     else
@@ -561,7 +559,7 @@ function HeckeOperatorCN1(M, pR, k
 			       LowMemory := LowMemory,
 			       ThetaPrec := ThetaPrec);
         if AutoFill and (other_hecke_computed) and (idx lt #M`H) then
-            tmp := finalizeHecke(M, hecke, [1..#M`H]);
+            tmp := finalizeHecke(M, M, hecke, [1..#M`H]);
             column := Transpose(tmp);
             indices := [1..idx];
             is_filled, ret := fillHeckeFromRelations(M, column, indices, idx);
@@ -581,7 +579,7 @@ function HeckeOperatorCN1(M, pR, k
     end if;
 
     if (not is_filled) then
-        ret := finalizeHecke(M, hecke, [1..#M`H]);
+        ret := finalizeHecke(M, M, hecke, [1..#M`H]);
     end if;
 
     return ret;
@@ -623,7 +621,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 			     LowMemory := LowMemory,
 			     ThetaPrec := ThetaPrec);
    
-    return finalizeHecke(M, hecke, [idx]);
+    return finalizeHecke(M, M, hecke, [idx]);
 end function;
 
 function HeckeOperatorCN1Sparse(M, pR, k, s, invs
@@ -1005,7 +1003,7 @@ intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
     start := Realtime();
  
     for i in [1..fullCount] do
-	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H :
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H, M`H :
 			      ThetaPrec := ThetaPrec);
 	// Update nProc in preparation for the next neighbor
 	//  lattice.
@@ -1017,7 +1015,7 @@ intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
 	end if;
     end for;
  
-    return finalizeHecke(M, hecke, [hecke_idx]);
+    return finalizeHecke(M, M, hecke, [hecke_idx]);
 end intrinsic;
 
 // Functions for automatic determination of theta precision

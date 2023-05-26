@@ -622,10 +622,20 @@ function BuildNeighborProc(L, pR, k : BeCareful := false,
 	return nProc;
 end function;
 
+intrinsic NeighborProcess(L::ModDedLat, p::RngIntElt, k::RngIntElt : Perestroika := false) -> NeighborProc
+{Returns a process for enumerating p^k-neighbors of L}
+  return BuildNeighborProc(L, p*Integers(), k : Perestroika := Perestroika);
+end intrinsic;
+
+intrinsic NeighborProcess(L::ModDedLat, pR::RngOrdIdl, k::RngIntElt : Perestroika := false) -> NeighborProc
+{Returns a process for enumerating pR^k-neighbors of L}
+  return BuildNeighborProc(L, pR, k : Perestroika := Perestroika);
+end intrinsic;
+
 // Constructing the next p-neighbor
 
 function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
-		       Perestroika := false)
+		       Perestroika := false, Similarity := 1)
     assert nProc`isoSubspace ne [];
     
     // The affine data.
@@ -772,16 +782,6 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
             nLat := LatticeWithBasis(Q,
 				   ChangeRing(BasisMatrix(lll_ZZ), Rationals()));
       
-          // trying to save time in the next conversion
-/*
-          nLat`ZLattice := Lattice(ChangeRing(BasisMatrix(lll_ZZ), Rationals()),
-				   2*InnerForm(Q));
-          nLat`ZLattice`basisR := Basis(lll_ZZ);
-          nLat`ZLattice`basisZ := ChangeRing(BasisMatrix(lll_ZZ), Rationals());
-*/
-//    if Perestroika then
-//		nLat := ScaledLattice(nLat, 1/p);
-//	    end if;
             return nLat;
 	  end if;
 
@@ -793,10 +793,8 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 	if Perestroika then
 	  idls := [ 1*R : i in [1..#XX] ] cat
 	        [ alpha(pR) : i in [1..#ZZ] ] cat
-	// There should not be any Us
-	//	[ alpha(pR) : i in [1..#UU] ] cat
 	        [ pR * alpha(pR) * pb[1] : pb in
-						       PseudoBasis(Module(L)) ];
+					   PseudoBasis(Module(L)) ];
 	else
 	//  order to construct the neighbor lattice.
 	idls := [ pR^-1 : i in [1..#XX] ] cat
@@ -840,12 +838,7 @@ function BuildNeighbor(nProc : BeCareful := true, UseLLL := false,
 	  nLat := LatticeWithBasis(Q, Matrix(basis));
         end if;
     end if;
-/*
-    if Perestroika then
-	pi := Vpp`pElt;
-	nLat := ScaledLattice(nLat, 1/pi);
-    end if;
-*/
+
     return nLat;
 end function;
 
@@ -1001,6 +994,12 @@ procedure GetNextNeighbor(~nProc : BeCareful := false)
 	
 end procedure;
 
+intrinsic NextNeighbor(~nProc::NeighborProc)
+{Advances the process to get the next neighbor.}
+  GetNextNeighbor(~nProc);
+  return;
+end intrinsic;
+
 procedure SkipToNeighbor(~nProc, space, skew : BeCareful := false)
     nProc`isoSubspace := space;
     nProc`X, nProc`Z, nProc`U := LiftSubspace(nProc
@@ -1014,3 +1013,10 @@ procedure SkipToNeighbor(~nProc, space, skew : BeCareful := false)
     end if;
     
 end procedure;
+
+intrinsic Print(nProc::NeighborProc)
+{}
+  printf "%o^%o-Neighbor process for %o. Current neighbor corresponds to the isotropic subspace %o.",
+       nProc`pR, nProc`k, nProc`L, nProc`isoSubspace;
+  return;
+end intrinsic;

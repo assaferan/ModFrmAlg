@@ -450,3 +450,43 @@ function getHilbertDims(d,n : k := [2,2], UseFinite := false)
 	       : omfs_G in omfs]);
     return total, cusp;
 end function;
+
+intrinsic EvenClifford(Q::AlgMatElt) -> AlgQuatOrd, AlgMatElt
+{.}
+    C_0_Q, emb_Q := RationalEvenClifford(Q);
+    D, T := Diagonalization(Q);
+    v_orth := [emb_Q(r) : r in Rows(T)];
+    i := v_orth[2]*v_orth[3];
+    j := v_orth[3]*v_orth[1];
+    k := v_orth[1]*v_orth[2];
+    B, quat_emb := sub<C_0_Q | i, j>;
+    _, BB, isom := IsQuaternionAlgebra(B);
+    BBB := QuaternionAlgebra(Discriminant(BB));
+    _, isom2 := IsIsomorphic(BB,BBB : Isomorphism);
+    isom := isom*isom2;
+    BB := BBB;
+    my_basis := [1, i, j, i*j];
+    my_basis := [C_0_Q!x : x in my_basis];
+    X := Matrix(my_basis[1..4]);
+    O := QuaternionOrder([isom(v[1] + v[2]*i + v[3]*j + v[4]*i*j) : v in Rows(X^(-1))]);
+    a := D[1,1] / 2;
+    b := D[2,2] / 2;
+    c := D[3,3] / 2;
+    std_imgs := [C_0_Q| a*i, b*j, c*k];
+    sigma_mat := T^(-1)*Matrix([Eltseq(isom(x)) : x in std_imgs]);
+    sigma_mat_res := Submatrix(sigma_mat, [1..3], [2..4]);
+    return O, sigma_mat_res;
+end intrinsic;
+
+intrinsic InverseEvenClifford(O::AlgQuatOrd, Q::AlgMatElt, sigma::AlgMatElt) -> AlgMatElt
+{.}
+  basis_O := Basis(O);
+  trd := Matrix([[Norm(x+y)-Norm(x)-Norm(y) : y in basis_O] : x in basis_O]);
+  beta := Rows(trd^(-1));
+  beta_O := [&+[b[idx]*basis_O[idx] : idx in [1..4]] : b in beta];
+  basis_lambda := [Vector(Eltseq(b)[2..4]) * sigma^(-1) : b in beta_O[2..4]];
+  base_mat := Matrix(basis_lambda);
+  return Denominator(base_mat) * base_mat;
+  // This is the new Gram matrix
+//  return base_mat * Q * Transpose(base_mat);
+end intrinsic;

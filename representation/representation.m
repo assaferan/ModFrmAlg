@@ -2033,7 +2033,7 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
              redp_mat := hom<MatrixAlgebra(ZF_p, n) -> MatrixAlgebra(Fp,n) | redp>;
 	     g_p := Transpose(redp_mat(g));
 	  end if;	  
-          scalar := Determinant(Solution(rad,rad*g_p));
+          scalar := Determinant(Solution(rad,rad*Determinant(g_p)*g_p));
           scalar := (scalar eq 1) select Integers()!1 else -Integers()!1;
           return scalar*(V`M).m; 
     end function;

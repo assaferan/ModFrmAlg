@@ -213,10 +213,11 @@ function IsSimilar(M_old, M_new, p)
     h := T_old^(-1) * T_new;
    */
     reps_old := Representatives(Genus(M_old));
-    reps_new := Representatives(Genus(M_new));
-    L := reps_new[col];
-    nProc := NeighborProcess(L, p, k);
+    L := Module(M_new);
+    nProc := NeighborProcess(L, p, 1);
+    if IsEmpty(nProc`isoSubspace) then return false, _; end if;
     nLat := BuildHalfNeighborReverse(nProc);
+    isom_scale := BasisMatrix(Module(nLat));
     nLat := ScaledLattice(nLat, 1/p);
     is_iso := false;
     for L_old in reps_old do
@@ -243,14 +244,16 @@ function DegeneracyMatrix(M_old, M_new, p, k : ThetaPrec := 25)
     invs := HeckeInitializeInvs(M_old, ThetaPrec);
     // Fixing a similarity
     is_sim, h := IsSimilar(M_old, M_new, p);
-    for col->L in reps_new do
-	nProc := NeighborProcess(L, p, k);
-	while not (IsEmpty(nProc`isoSubspace)) do
-	    processNeighborWeight(~nProc, ~reps_old, ~invs, ~mat, col, ~M_old`H, M_new`H, BuildHalfNeighborReverse :
-				   Similarity := h);
-	    NextNeighbor(~nProc);
-	end while;
-    end for;
+    if is_sim then
+	for col->L in reps_new do
+	    nProc := NeighborProcess(L, p, k);
+	    while not (IsEmpty(nProc`isoSubspace)) do
+		processNeighborWeight(~nProc, ~reps_old, ~invs, ~mat, col, ~M_old`H, M_new`H, BuildHalfNeighborReverse :
+				      Similarity := h);
+		NextNeighbor(~nProc);
+	    end while;
+	end for;
+    end if;
     ret := finalizeHecke(M_old, M_new, mat, [1..#M_new`H]);
     return ret;
 end function;

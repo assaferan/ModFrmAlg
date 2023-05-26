@@ -69,7 +69,6 @@ b
 
 //imports
 
-import "modfrmalg.m" : ModFrmAlgInit;
 import "../neighbors/hecke-CN1.m" : HeckeOperatorCN1,
                                     HeckeOperatorCN1Sparse;
 

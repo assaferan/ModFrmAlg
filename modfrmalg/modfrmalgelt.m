@@ -59,9 +59,6 @@ freeze;
 
 // imports
 
-import "modfrmalg.m" : ModFrmAlgInit;
-
-import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../utils/linalg.m" : GetEigenvectors;
 
 ///////////////////////////////////////////////////////////////////
@@ -757,7 +754,7 @@ function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := false
      dw := 1;
   end if;
   if not IsDefined(L`Vpp, pR) then
-    nProc := BuildNeighborProc(L, pR, 1);
+    nProc := NeighborProcess(L, pR, 1);
   end if;
   is_split := (L`Vpp[p]`V`AnisoDim lt 2);
   p := Norm(pR);

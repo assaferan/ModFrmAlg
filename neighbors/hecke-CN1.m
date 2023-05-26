@@ -61,7 +61,7 @@ import "orbits.m" : build_polycyclic_data, orb_stab_pc, orb_stab_general;
 // It test the neighbor for isometry with the members of the genus
 // and if so, adds the appropriate weight multiple to the
 // matrix of the Hecke operator in the correct place.
-procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_target :
+procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_target, buildNbr :
 				 BeCareful := false,
 				 UseLLL := false,
 				 Weight := 1,
@@ -69,13 +69,12 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_
 				 ComputeGenus := false,
 				 ThetaPrec := 25,
 				 Perestroika := false,
-				 BuildNeighbor := BuildNeighbor,
 				 Similarity := 1)
   // Build the neighbor lattice corresponding to the
   //  current state of nProc.
-  nLat := BuildNeighbor(nProc : BeCareful := BeCareful,
-			UseLLL := UseLLL,
-			Perestroika := Perestroika, Similarity := Similarity);
+  nLat := buildNbr(nProc : BeCareful := BeCareful,
+			   UseLLL := UseLLL,
+			   Perestroika := Perestroika, Similarity := Similarity);
 
   if Perestroika then
     isom_scale := BasisMatrix(Module(nLat));
@@ -351,7 +350,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
               // Changing the skew matrix, but not the isotropic
               // subspace mod p
               repeat
-                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H, M`H:
+                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H, M`H, BuildNeighbor:
 					  BeCareful := BeCareful,
 					  UseLLL := UseLLL,
 					  Weight := w,
@@ -412,7 +411,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
 	    // subspace mod p
 	    repeat
 	        tm := Realtime();
-                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H, M`H:
+                processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~M`H, M`H, BuildNeighbor:
 				      BeCareful := BeCareful,
 				      UseLLL := UseLLL,
 				      Weight := w,
@@ -439,7 +438,7 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
       end if;
     else
 	while nProc`isoSubspace ne [] do
-	    processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, M`H, ~M`H :
+	    processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, M`H, ~M`H, BuildNeighbor :
 				  BeCareful := BeCareful,
 				  UseLLL := UseLLL,
 				  Special := IsSpecialOrthogonal(M),
@@ -998,7 +997,7 @@ intrinsic HeckePivot(M::ModFrmAlg, nProc::NeighborProc, pivot_idx::RngIntElt,
     start := Realtime();
  
     for i in [1..fullCount] do
-	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H, M`H :
+	processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, hecke_idx, ~M`H, M`H, BuildNeighbor :
 			      ThetaPrec := ThetaPrec);
 	// Update nProc in preparation for the next neighbor
 	//  lattice.

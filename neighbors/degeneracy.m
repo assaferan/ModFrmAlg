@@ -202,16 +202,33 @@ function BuildHalfNeighborReverse(nProc : BeCareful := false, UseLLL := false, P
     return nLat;
 end function;
 
-function GetSimilarity(M_old, M_new, p)
+function IsSimilar(M_old, M_new, p)
     Q_old := InnerForm(M_old);
     Q_new := InnerForm(M_new);
+    // This does not work very well. Here is another option
+    /*
     D_old, T_old, _ := Diagonalization(Q_old);
     D_new, T_new, _ := Diagonalization(1/p * Q_new);
     assert D_old eq D_new;
     h := T_old^(-1) * T_new;
+   */
+    reps_old := Representatives(Genus(M_old));
+    reps_new := Representatives(Genus(M_new));
+    L := reps_new[col];
+    nProc := NeighborProcess(L, p, k);
+    nLat := BuildHalfNeighborReverse(nProc);
+    nLat := ScaledLattice(nLat, 1/p);
+    is_iso := false;
+    for L_old in reps_old do
+	is_iso, g := IsIsometric(nLat, L_old);
+	if (is_iso) then break; end if;
+    end for;
+    if not is_iso then return false, _; end if;
+    b := ChangeRing(isom_scale, Rationals());
+    h := g*b;
     assert h * (1/p * Q_new) * Transpose(h) eq Q_old;
     h := h^(-1);
-    return h;
+    return true, h;
 end function;
 
 // We start with primes and with naive implementation, testing all for isometries
@@ -225,12 +242,12 @@ function DegeneracyMatrix(M_old, M_new, p, k : ThetaPrec := 25)
     reps_new := Representatives(Genus(M_new));
     invs := HeckeInitializeInvs(M_old, ThetaPrec);
     // Fixing a similarity
-    h := GetSimilarity(M_old, M_new, p);
+    is_sim, h := IsSimilar(M_old, M_new, p);
     for col->L in reps_new do
 	nProc := NeighborProcess(L, p, k);
 	while not (IsEmpty(nProc`isoSubspace)) do
-	    processNeighborWeight(~nProc, ~reps_old, ~invs, ~mat, col, ~M_old`H, M_new`H :
-				  BuildNeighbor := BuildHalfNeighborReverse, Similarity := h);
+	    processNeighborWeight(~nProc, ~reps_old, ~invs, ~mat, col, ~M_old`H, M_new`H, BuildHalfNeighborReverse :
+				   Similarity := h);
 	    NextNeighbor(~nProc);
 	end while;
     end for;
@@ -247,12 +264,12 @@ function DegeneracyMatrixReverse(M_new, M_old, p, k : ThetaPrec := 25)
     reps_new := Representatives(Genus(M_new));
     invs := HeckeInitializeInvs(M_new, ThetaPrec);
     // Fixing a similarity
-    h := GetSimilarity(M_old, M_new, p);
+    is_sim, h := IsSimilar(M_old, M_new, p);
     for col->L in reps_old do
 	nProc := NeighborProcess(L, p, k);
 	while not (IsEmpty(nProc`isoSubspace)) do
-	    processNeighborWeight(~nProc, ~reps_new, ~invs, ~mat, col, ~M_new`H, M_old`H :
-				  BuildNeighbor := BuildHalfNeighbor, Similarity := h^(-1));
+	    processNeighborWeight(~nProc, ~reps_new, ~invs, ~mat, col, ~M_new`H, M_old`H, BuildHalfNeighbor :
+				  Similarity := h^(-1));
 	    NextNeighbor(~nProc);
 	end while;
     end for;

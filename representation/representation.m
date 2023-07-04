@@ -1754,7 +1754,9 @@ function get_lap_kernel(lap : basis := false)
   im_vecs := [my_sum([Coefficients(b)[i]*W.(Index(im_mons, Monomials(b)[i]))
 		      : i in [1..#Monomials(b)]], W) : b in im_B];
   if basis then
-      return Basis(sub<Universe(im_vecs) | im_vecs>);
+      vec_basis :=  Basis(sub<Universe(im_vecs) | im_vecs>);
+      poly_basis := [&+[b[i] * im_mons[i] : i in [1..#im_mons]] : b in vec_basis];
+      return poly_basis;
   end if;
   K := Kernel(Matrix(im_vecs));
   return K;
@@ -1842,8 +1844,9 @@ function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
       // R_poly := BaseRing(x);
       R_poly := Universe(tau_basis);
       I := [mon*p : mon in MonomialsOfDegree(R_poly,deg_gap), p in tau_basis];
-      I_basis := get_lap_kernel(I : basis);
-      I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      // I_basis := get_lap_kernel(I : basis);
+      // I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      I_red := get_lap_kernel(I : basis);
       basis := [R_poly!b : b in basis];
       ker := get_lap_kernel(basis cat I_red);
       basis := [&+[b[i]*basis[i] : i in [1..#basis]] : b in Basis(ker)];

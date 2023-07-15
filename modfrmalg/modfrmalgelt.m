@@ -777,11 +777,13 @@ function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := false
 	     L_poly := p^(6+4*w)*x^4 - (evs[1]*p^(3+3*w))*x^3 +
 	            ((evs[2] + p^2 + 1)*p^(1+2*w))*x^2 -
 		    evs[1]*p^w*x + 1;
-          else
+          elif Valuation(D,p) eq 1 then
 	     eps_p := (-1)^w*WittInvariant(L,pR);
              nu_p := (dw mod p eq 0) select CharacterQQModSquares(D,Rationals()!p) else 1;
              L_poly := p^(3+2*w)*x^2-(eps_p*p - CharacterQQModSquares(D,Rationals()!p)*(evs[1] + 1))*p^w*x+1;
              L_poly *:= eps_p*p^(1+w)*x+1;
+	  else
+	     L_poly := p^(3+2*w)*(1+evs[2])*x^2-evs[1]*x+1;  
 	  end if;
       when 6:
           if is_split then

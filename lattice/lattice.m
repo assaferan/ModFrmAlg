@@ -1,3 +1,4 @@
+
 freeze;
 /****-*-magma-******a********************************************************
                                                                             
@@ -1755,7 +1756,7 @@ intrinsic BadPrimes(L::ModDedLat) -> []
   return ret;
 end intrinsic;  
 
-intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
+intrinsic NumberFieldLattice(L::ModDedLat : Scaling := 1) -> LatNF
 {Convert to the (now existing) magma built in type for number field lattices.}
   // We might need a GramFactor here in general, check it out.
   gram := 1/2*InnerForm(ReflexiveSpace(L));
@@ -1768,7 +1769,7 @@ intrinsic NumberFieldLattice(L::ModDedLat) -> LatNF
       ideals := [ideal<Integers(F) | Norm(I)> : I in ideals];
   end if;
   basis := [Vector(NumberField(Integers(F)), x[2]) : x in pb];
-  nfl := NumberFieldLattice(basis : Gram := gram, Ideals := ideals);
+  nfl := NumberFieldLattice(basis : InnerProduct := gram, Ideals := [Scaling*J : J in ideals]);
   return nfl;
 end intrinsic;
 

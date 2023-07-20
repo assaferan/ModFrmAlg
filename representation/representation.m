@@ -384,6 +384,7 @@ intrinsic TrivialRepresentation(G::Grp, R::Rng : name := "v") -> GrpRep
   ");
   V := GroupRepresentation(G, M, a);
   V`trivial := true;
+  V`weight := <1,0,0>;
   return V;
 end intrinsic;
 

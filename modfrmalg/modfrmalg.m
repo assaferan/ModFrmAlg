@@ -268,7 +268,7 @@ end function;
 
 intrinsic OrthogonalModularForms(lat::Lat : 
 				 weight := [0],
-				 Special := false) -> ModFrmAlg
+				 Special := false, d := 1) -> ModFrmAlg
 {Create the space of orthogonal modular forms with respect to the lattice lat.}
   Q := InnerProductMatrix(lat);
   level := BasisMatrix(lat);
@@ -278,12 +278,15 @@ intrinsic OrthogonalModularForms(lat::Lat :
     G := OrthogonalGroup(Q);
   end if;
   W := HighestWeightRepresentation(G, weight);
+  if (d ne 1) then
+      W := TensorProduct(W, SpinorNormRepresentationFast(G,d));
+  end if;
   return AlgebraicModularForms(G, W, Matrix(level));
 end intrinsic;
 
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
 				 weight::SeqEnum
-				 : Special := false) -> ModFrmAlg
+				 : Special := false, d := 1) -> ModFrmAlg
 {Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
   K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
@@ -293,11 +296,14 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
     G := OrthogonalGroup(ChangeRing(innerForm, K));
   end if;
   W := HighestWeightRepresentation(G, weight);
+  if (d ne 1) then
+      W := TensorProduct(W, SpinorNormRepresentationFast(G,d));
+  end if;
   return AlgebraicModularForms(G, W, IdentityMatrix(K,n));
 end intrinsic;
 
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
-				 weight::GrpRep : Special := false) -> ModFrmAlg
+				 weight::GrpRep : Special := false, d := 1) -> ModFrmAlg
 {Create the space of modular forms with respect to the orthogonal group stabilizing the quadratic form given by innerForm.}
 
   K := normalizeField(BaseRing(innerForm));
@@ -307,17 +313,20 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
   else
     G := OrthogonalGroup(ChangeRing(innerForm, K));
   end if;
+  if (d ne 1) then
+      weight := TensorProduct(weight, SpinorNormRepresentationFast(G,d));
+  end if;
   return AlgebraicModularForms(G, weight, IdentityMatrix(K,n));
 end intrinsic;
 
 intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng] :
-				 Special := false) -> ModFrmAlg
+				 Special := false, d := 1) -> ModFrmAlg
 {.}
   K := normalizeField(BaseRing(innerForm));
   n := Nrows(innerForm);
   W := TrivialRepresentation(GL(n,K),K);
   return OrthogonalModularForms(ChangeRing(innerForm,K), W :
-				Special := Special);
+				Special := Special, d := d);
 end intrinsic;
 
 intrinsic UnitaryModularForms(innerForm::AlgMatElt[Rng],
@@ -454,7 +463,7 @@ intrinsic OrthogonalModularForms(F::Fld,
   end if;
   W := getWeightRep(G, weight, char, F, n);
   if (d ne 1) then
-    W := TensorProduct(W, SpinorNormRepresentation(G, d));
+    W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
   end if;
   return AlgebraicModularForms(G, W);
 end intrinsic;

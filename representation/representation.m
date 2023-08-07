@@ -2033,6 +2033,9 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
 	     v := Valuation(Denominator(g),p);
 	     g_p := ChangeRing(p^v*Matrix(Transpose(g)),Fp);
 	     is_coer := true;
+	     if (v ne 0) and (#Fp eq 4) then
+	     	is_coer := false;
+	     end if;	
 	  else
 	     ZF_p := Completion(ZF, pR);
 	     // Needed to introduce this line due to a bug in Magma 2.26-12

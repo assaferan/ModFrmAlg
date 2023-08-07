@@ -794,10 +794,10 @@ function lpoly(f, p, d, Estimate, Orbits, LowMemory, ThetaPrec : Satake := false
 		 lambda := -lambda;
 		 eps_p := -eps_p;
 	     end if;
-	     L_poly := 1 - (lambda + eps_p*p)*x + p^3 * x^2;
-	     L_poly *:= 1 + eps_p*p*x;
+	     L_poly := 1 - (lambda + eps_p*p)*p^w*x + p^(3+2*w) * x^2;
+	     L_poly *:= 1 + eps_p*p^(1+w)*x;
 	  else
-	     L_poly := p^(3+2*w)*(1+evs[2])*x^2-evs[1]*x+1;  
+	     L_poly := p^(3+2*w)*(1+evs[2])*x^2-evs[1]*p^w*x+1;  
 	  end if;
       when 6:
           if is_split then

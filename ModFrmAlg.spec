@@ -20,6 +20,7 @@
       +modfrmalg.spec
   }
 
+  neighbors/degeneracy.m
   neighbors/genus-CN1.m
   neighbors/hecke-CN1.m
   neighbors/inv-CN1.m

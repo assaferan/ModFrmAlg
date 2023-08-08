@@ -234,7 +234,9 @@ end function;
 
 // We start with primes and with naive implementation, testing all for isometries
 // We also start with trivial weight and only with the AL+ map
-function DegeneracyMatrix(M_old, M_new, p, k : ThetaPrec := 25)
+intrinsic DegeneracyMatrix(M_old::ModFrmAlg, M_new::ModFrmAlg, p::RngIntElt, k::RngIntElt
+			   : ThetaPrec := 25) -> Mtrx
+{Returns the matrix representing the level raising map at p^k from M_old to M_new.}
     ModFrmAlgInit(M_old);
     ModFrmAlgInit(M_new);
     mat := [ [ [* M_new`W!0 : hh in M_new`H *] : vec_idx in [1..Dimension(h)]]
@@ -248,17 +250,18 @@ function DegeneracyMatrix(M_old, M_new, p, k : ThetaPrec := 25)
 	for col->L in reps_new do
 	    nProc := NeighborProcess(L, p, k);
 	    while not (IsEmpty(nProc`isoSubspace)) do
-		processNeighborWeight(~nProc, ~reps_old, ~invs, ~mat, col, ~M_old`H, M_new`H, BuildHalfNeighborReverse :
-				      Similarity := h);
+		processNeighborWeight(~nProc, ~reps_old, ~invs, ~mat, col, ~M_old`H, M_new`H, BuildHalfNeighborReverse : Special, Similarity := h);
 		NextNeighbor(~nProc);
 	    end while;
 	end for;
     end if;
     ret := finalizeHecke(M_old, M_new, mat, [1..#M_new`H]);
     return ret;
-end function;
+end intrinsic;
 
-function DegeneracyMatrixReverse(M_new, M_old, p, k : ThetaPrec := 25)
+intrinsic DegeneracyMatrixReverse(M_new::ModFrmAlg, M_old::ModFrmAlg, p::RngIntElt, k::RngIntElt
+				  : ThetaPrec := 25) -> Mtrx
+{Returns the matrix representing the level lowering map at p^k from M_new to M_old.}
     ModFrmAlgInit(M_old);
     ModFrmAlgInit(M_new);
     mat := [ [ [* M_old`W!0 : hh in M_old`H *] : vec_idx in [1..Dimension(h)]]
@@ -271,11 +274,10 @@ function DegeneracyMatrixReverse(M_new, M_old, p, k : ThetaPrec := 25)
     for col->L in reps_old do
 	nProc := NeighborProcess(L, p, k);
 	while not (IsEmpty(nProc`isoSubspace)) do
-	    processNeighborWeight(~nProc, ~reps_new, ~invs, ~mat, col, ~M_new`H, M_old`H, BuildHalfNeighbor :
-				  Similarity := h^(-1));
+	    processNeighborWeight(~nProc, ~reps_new, ~invs, ~mat, col, ~M_new`H, M_old`H, BuildHalfNeighbor : Special, Similarity := h^(-1), UseTargetRep := false);
 	    NextNeighbor(~nProc);
 	end while;
     end for;
     ret := finalizeHecke(M_new, M_old, mat, [1..#M_old`H]);
     return ret;
-end function;
+end intrinsic;

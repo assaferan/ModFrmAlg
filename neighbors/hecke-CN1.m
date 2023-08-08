@@ -69,7 +69,8 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_
 				 ComputeGenus := false,
 				 ThetaPrec := 25,
 				 Perestroika := false,
-				 Similarity := 1)
+				 Similarity := 1,
+                                 UseTargetRep := true)
   // Build the neighbor lattice corresponding to the
   //  current state of nProc.
   nLat := buildNbr(nProc : BeCareful := BeCareful,
@@ -128,7 +129,7 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_
   // If the weight is trivial, we don't need the isometry
   // If moreover, there is only one lattice with the invariant,
   // we can assume this is the neighbor it is isometric to.
-  if (not ComputeGenus) and IsTrivial(W_target) and #array eq 1 then
+  if (not ComputeGenus) and UseTargetRep and IsTrivial(W_target) and #array eq 1 then
     space_idx := array[1][2];
 	    
     if GetVerbose("AlgebraicModularForms") ge 2 then
@@ -162,12 +163,16 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_
         if Perestroika then
           g := g * ChangeRing(isom_scale, BaseRing(g));
         end if;
+
+	if (UseTargetRep) then
+	    if (Type(Similarity) ne RngIntElt) then
+		g := Similarity * g * Similarity^(-1);
+	    end if;
 	
-	if (Type(Similarity) ne RngIntElt) then
-	    g := Similarity * g * Similarity^(-1);
+            gg := W_target`G!ChangeRing(Transpose(g), BaseRing(W_target`G));
+	else
+	    gg := W_source`G!ChangeRing(Transpose(g), BaseRing(W_source`G));
 	end if;
-	
-        gg := W_target`G!ChangeRing(Transpose(g), BaseRing(W_target`G));
 
         if GetVerbose("AlgebraicModularForms") ge 2 then
 	  print "Updating the Hecke operator...";
@@ -178,10 +183,17 @@ procedure processNeighborWeight(~nProc, ~reps, ~invs, ~hecke, idx, ~H_source, H_
 	W_source := Codomain(iota_source);
 	for vec_idx in [1..Dimension(H_source[space_idx])] do
 	    vec := iota_source(H_source[space_idx].vec_idx);
-	    vec := W_target!Eltseq(vec);
-            if not IsTrivial(W_target) then
-		vec := gg * vec;
-            end if;
+	    if (UseTargetRep) then
+		vec := W_target!Eltseq(vec);
+		if not IsTrivial(W_target) then
+		    vec := gg * vec;
+		end if;
+	    else
+		if not IsTrivial(W_source) then
+		    vec := gg*vec;
+		end if;
+		vec := W_target!Eltseq(vec);
+	    end if;
 	    hecke[space_idx][vec_idx][idx] +:= Weight * vec;
 	end for;
 	break;

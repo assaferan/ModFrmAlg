@@ -279,7 +279,7 @@ intrinsic OrthogonalModularForms(lat::Lat :
   end if;
   W := HighestWeightRepresentation(G, weight);
   if (d ne 1) then
-    W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
+      W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
   end if;
   return AlgebraicModularForms(G, W, Matrix(level));
 end intrinsic;
@@ -297,7 +297,7 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
   end if;
   W := HighestWeightRepresentation(G, weight);
   if (d ne 1) then
-    W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
+      W := TensorProduct(W, SpinorNormRepresentationFast(G, d));
   end if;
   return AlgebraicModularForms(G, W, IdentityMatrix(K,n));
 end intrinsic;
@@ -314,7 +314,7 @@ intrinsic OrthogonalModularForms(innerForm::AlgMatElt[Rng],
     G := OrthogonalGroup(ChangeRing(innerForm, K));
   end if;
   if (d ne 1) then
-    weight := TensorProduct(weight, SpinorNormRepresentationFast(G, d));
+      weight := TensorProduct(weight, SpinorNormRepresentationFast(G, d));
   end if;
   return AlgebraicModularForms(G, weight, IdentityMatrix(K,n));
 end intrinsic;

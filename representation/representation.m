@@ -384,6 +384,7 @@ intrinsic TrivialRepresentation(G::Grp, R::Rng : name := "v") -> GrpRep
   ");
   V := GroupRepresentation(G, M, a);
   V`trivial := true;
+  V`weight := <1,0,0>;
   return V;
 end intrinsic;
 
@@ -1754,7 +1755,9 @@ function get_lap_kernel(lap : basis := false)
   im_vecs := [my_sum([Coefficients(b)[i]*W.(Index(im_mons, Monomials(b)[i]))
 		      : i in [1..#Monomials(b)]], W) : b in im_B];
   if basis then
-      return Basis(sub<Universe(im_vecs) | im_vecs>);
+      vec_basis :=  Basis(sub<Universe(im_vecs) | im_vecs>);
+      poly_basis := [&+[b[i] * im_mons[i] : i in [1..#im_mons]] : b in vec_basis];
+      return poly_basis;
   end if;
   K := Kernel(Matrix(im_vecs));
   return K;
@@ -1842,8 +1845,9 @@ function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
       // R_poly := BaseRing(x);
       R_poly := Universe(tau_basis);
       I := [mon*p : mon in MonomialsOfDegree(R_poly,deg_gap), p in tau_basis];
-      I_basis := get_lap_kernel(I : basis);
-      I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      // I_basis := get_lap_kernel(I : basis);
+      // I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      I_red := get_lap_kernel(I : basis);
       basis := [R_poly!b : b in basis];
       ker := get_lap_kernel(basis cat I_red);
       basis := [&+[b[i]*basis[i] : i in [1..#basis]] : b in Basis(ker)];
@@ -1990,6 +1994,9 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
 {new method of constructing the spinor norm representations. }
   Q := InnerForm(G,1);
   L := StandardLattice(Q);
+  disc := Norm(Discriminant(L));
+  v := Valuation(disc,p);
+  if (p eq 2) then v +:= 1; end if;
   n := Dimension(L);
   pR := Factorization(ideal<BaseRing(L) | p>)[1][1];
   nProc := BuildNeighborProc(L, pR, 1);
@@ -2005,15 +2012,17 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
   Fp := ResidueClassField(ZF_p);
   rad := rad * ChangeRing(basis, Fp);
   pRdata := [Eltseq(x) : x in Generators(pR)];
-  if (p eq 2) then
-      Q := ChangeRing(InnerForm(Q), Integers());
+  Q := ChangeRing(InnerForm(Q), Integers());
+//  if (p eq 2) then
+  for j in [2..v] do
       lift := Matrix([[Integers()!x : x in Eltseq(rad_row)] : rad_row in Rows(rad)]);
       liftQ := lift * Q;
-      lift2 := ChangeRing(liftQ div 2, GF(2));
-      sol := Solution(ChangeRing(Q, GF(2)), lift2);
+      liftp := ChangeRing(liftQ div p^(j-1), GF(p));
+      sol := Solution(ChangeRing(Q, GF(p)), -liftp);
       sol_lift := Matrix([[Integers()!x : x in Eltseq(sol_row)] : sol_row in Rows(sol)]);
-      rad := ChangeRing(lift + 2*sol_lift, Integers(4));
-  end if;
+      rad := ChangeRing(lift + p^(j-1)*sol_lift, Integers(p^j));
+  end for;
+//  end if;
   a := Sprintf("
     function action(g,m,V)
           rad := %m;
@@ -2022,8 +2031,14 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
           ZF := Integers(BaseRing(g));
           pRdata := %m;
           pR := ideal<ZF | [ZF!x : x in pRdata]>;
-	  if (#Fp eq 4) then
-	     g_p := Transpose(ChangeRing(g,Fp));
+	  p := PrimeDivisors(#Fp)[1];
+	  if (not IsPrime(#Fp)) then  
+	     v := Valuation(Denominator(g),p);
+	     g_p := ChangeRing(p^v*Matrix(Transpose(g)),Fp);
+	     is_coer := true;
+	     if (v ne 0) and (#Fp eq 4) then
+	     	is_coer := false;
+	     end if;	
 	  else
 	     ZF_p := Completion(ZF, pR);
 	     // Needed to introduce this line due to a bug in Magma 2.26-12
@@ -2031,14 +2046,26 @@ intrinsic SinglePrimeSpinorNormRepresentation(G::GrpRed, p::RngIntElt) -> GrpRep
              dummy, redp := ResidueClassField(ZF_p);
              assert Fp eq dummy;
              redp_mat := hom<MatrixAlgebra(ZF_p, n) -> MatrixAlgebra(Fp,n) | redp>;
-	     g_p := Transpose(redp_mat(g));
-	  end if;	  
-          scalar := Determinant(Solution(rad,rad*Determinant(g_p)*g_p));
+	     is_coer, g_0 := IsCoercible(MatrixAlgebra(ZF_p, n),g);
+	     if is_coer then
+	     	     g_p := Transpose(redp_mat(g_0));
+	     end if;
+	  end if;
+	  if (not is_coer) then
+	       return SpinorNormRho(p, g, %m)*(V`M).m;
+	  end if;
+	  sol := Solution(rad,rad*g_p);
+	  if (not IsPrime(#Fp)) then
+	     Mn := MatrixRing(Integers(#Fp div p^v), Nrows(sol));
+	     sol := Mn![x div p^v : x in  Eltseq(sol)];
+	  end if;
+          scalar := Determinant(sol);
+	  assert (scalar eq 1) or (scalar eq -1);
           scalar := (scalar eq 1) select Integers()!1 else -Integers()!1;
           return scalar*(V`M).m; 
     end function;
     return action;
-  ", rad, n, pRdata);
+  ", rad, n, pRdata, ChangeRing(Q, Rationals()));
   M := CombinatorialFreeModule(BaseRing(G), ["v"]);
   return GroupRepresentation(GL(n,BaseRing(G)), M, a);
 end intrinsic;

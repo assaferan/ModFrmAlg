@@ -7,24 +7,32 @@ import "../neighbors/neighbor-CN1.m" : GetNextNeighbor;
 
 // This was constructed only for quaternary lattices, change later
 
-function RationalEvenClifford(M : Isometries := [])
-  C_Q, V_Q, emb_Q := CliffordAlgebra(1/2*M);
-  dim := Dimension(V_Q);
-  e := [emb_Q(V_Q.i) : i in [1..dim]];
-  C_Q_gr := [[&*([1] cat [e[i] : i in I]) : I in Subsets({1..dim}, k)] : k in [0..dim]];
-  basis_C_Q := &cat C_Q_gr;
-  // we construct the even and odd (rational) clifford algebras.
-  basis_C_0 := &cat [C_Q_gr[1 + 2*k] : k in [0..dim div 2]];
-  C_0_Q := sub<C_Q | basis_C_0>;
-  basismat := Matrix([C_0_Q!x : x in basis_C_0]);
-  C_0_iso := [];
-  for s in Isometries do
-      s_e := [emb_Q(r) : r in Rows(s)];
-      s_C_Q_gr := [[&*([1] cat [s_e[i] : i in I]) : I in Subsets({1..dim}, k)] : k in [0..dim]];
-      s_C_0 := &cat [s_C_Q_gr[1 + 2*k] : k in [0..dim div 2]];
-      Append(~C_0_iso, Matrix([C_0_Q!l : l in s_C_0])*basismat^(-1));
-  end for;
-  return C_0_Q, emb_Q, C_0_iso;
+function RationalEvenClifford(L : Isometries := [])
+    M := InnerForm(ReflexiveSpace(L));
+    _, idls, _ := GramMatrixOfBasis(L : Half := false);
+    M := ChangeRing(M, NumberField(BaseRing(L)));
+    C_F, V_F, emb_F := CliffordAlgebra(1/2*M);
+    dim := Dimension(V_F);
+    e := [emb_F(V_F.i) : i in [1..dim]];
+    // Fixing the order of the subsets
+    subs := [[x : x in Subsets({1..dim}, k)] : k in [0..dim]];
+    C_F_gr := [[&*([1] cat [e[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
+    idls_gr := [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
+    basis_C_F := &cat C_F_gr;
+    idls_C_F := &cat idls_gr;
+    // we construct the even and odd (rational) clifford algebras.
+    basis_C_0 := &cat [C_F_gr[1 + 2*k] : k in [0..dim div 2]];
+    idls_C_0 := &cat [idls_gr[1 + 2*k] : k in [0..dim div 2]];
+    C_0_F := sub<C_F | basis_C_0>;
+    basismat := Matrix([C_0_F!x : x in basis_C_0]);
+    C_0_iso := [];
+    for s in Isometries do
+	s_e := [emb_F(r) : r in Rows(s)];
+	s_C_F_gr := [[&*([1] cat [s_e[i] : i in I]) : I in Subsets({1..dim}, k)] : k in [0..dim]];
+	s_C_0 := &cat [s_C_F_gr[1 + 2*k] : k in [0..dim div 2]];
+	Append(~C_0_iso, Matrix([C_0_F!l : l in s_C_0])*basismat^(-1));
+    end for;
+    return C_0_F, emb_F, idls_C_0, C_0_iso;
 end function;
 
 // Currently this only works for primitive lattices
@@ -233,39 +241,44 @@ end function;
 
 // Isometry is an isometry from M to another lattice
 // This gives the induced element of the quatenrion algebra.
-function get_quaternion_orders(M : Isometry := 1)
-    C_0_Q, emb_Q := RationalEvenClifford(M);
+function get_quaternion_orders(L : Isometry := 1)
+    C_0_F, emb_F, idls_C_0, _ := RationalEvenClifford(L);
+    M := InnerForm(ReflexiveSpace(L));
+    F := NumberField(BaseRing(L));
+    M := ChangeRing(M, F);
     _, T := Diagonalization(M);
-    v_orth := [emb_Q(r) : r in Rows(T)];
+    v_orth := [emb_F(r) : r in Rows(T)];
     // assert v_orth[1]*v_orth[1] eq 1;
     i := v_orth[2]*v_orth[3];
     j := v_orth[3]*v_orth[4];
-    B, quat_emb := sub<C_0_Q | i, j>;
+    B, quat_emb := sub<C_0_F | i, j>;
     _, BB, isom := IsQuaternionAlgebra(B);
-    BBB := QuaternionAlgebra(Discriminant(BB));
+    ram_f, ram_inf := RamifiedPlaces(BB);
+    // BBB := QuaternionAlgebra(Discriminant(BB));
+    BBB := QuaternionAlgebra(ram_f cat ram_inf);
     _, isom2 := IsIsomorphic(BB,BBB : Isomorphism);
     isom := isom*isom2;
     BB := BBB;
-    delta_Q := C_0_Q!(Center(C_0_Q).2);
-    delta_Q := delta_Q * Denominator(delta_Q);
-    delta_bar := Trace(delta_Q)/4 - delta_Q;
+    delta_F := C_0_F!(Center(C_0_F).2);
+    delta_F := delta_F * Denominator(delta_F);
+    delta_bar := Trace(delta_F)/4 - delta_F;
     my_basis := [1, i, j, i*j];
-    my_basis := my_basis cat [delta_Q * x : x in my_basis];
-    my_basis := [C_0_Q!x : x in my_basis];
+    my_basis := my_basis cat [delta_F * x : x in my_basis];
+    my_basis := [C_0_F!x : x in my_basis];
     // This should just be the block matrix [[1,0],[tr(delta), -1]] !?
     // my_images := my_basis[1..4] cat [delta_bar * x : x in my_basis[1..4]];
-    // sol_mat := Matrix([Solution(Matrix(my_basis), C_0_Q.i) : i in [1..8]]);
+    // sol_mat := Matrix([Solution(Matrix(my_basis), C_0_F.i) : i in [1..8]]);
     // images := Rows(Matrix(my_images) * sol_mat);
-//    images := [Solution(Matrix(my_basis), C_0_Q.i) * Matrix(my_images) : i in [1..8]];
-    // iota_Q := hom<C_0_Q -> C_0_Q | [C_0_Q!Eltseq(x) : x in images]>;
-    f<x> := MinimalPolynomial(delta_Q);
+//    images := [Solution(Matrix(my_basis), C_0_F.i) * Matrix(my_images) : i in [1..8]];
+    // iota_Q := hom<C_0_F -> C_0_F | [C_0_F!Eltseq(x) : x in images]>;
+    f<x> := MinimalPolynomial(delta_F);
     K<delta_K> := quo<Parent(f) | f>;
-    KK, roots := SplittingField(f);
+    KK, roots := SplittingField(f : Abs := false);
     BB_KK, BB_KK_emb := ChangeRing(BB, KK);
 //    roots := [x[1] : x in Roots(f)];
     //delta_homs := [hom<K -> Rationals() | r> : r in roots];
     delta_homs := [hom<K -> KK | r> : r in roots];
-    delta_mat := Matrix([delta_Q * C_0_Q.i : i in [1..8]]);
+    delta_mat := Matrix([delta_F * C_0_F.i : i in [1..8]]);
     X := Matrix(my_basis[1..4]);
     X_tmp := VerticalJoin(X, X * delta_mat);
     // X_tmp is just my_basis again. Why do we do it twice?
@@ -276,15 +289,15 @@ function get_quaternion_orders(M : Isometry := 1)
     nfl_basis := [Vector([X_tmp_inv[i,j] + delta_K * X_tmp_inv[i,j+4]
 			  : j in [1..4]]) : i in [1..8]];
     mats := [Matrix([[h(x) : x in Eltseq(b)] : b in nfl_basis]) : h in delta_homs];
-    if (Type(KK) eq FldRat) then
+    if (KK eq F) then
 	denoms := [Denominator(mat) : mat in mats];
-	int_mats := [ChangeRing(denoms[i]*mats[i], Integers()) : i in [1,2]];
+	int_mats := [ChangeRing(denoms[i]*mats[i], Integers(F)) : i in [1,2]];
 	hnfs := [HermiteForm(mat) : mat in int_mats];
-	rat_hnfs := [1/denoms[i] * ChangeRing(hnfs[i], Rationals()) : i in [1,2]];
+	rat_hnfs := [1/denoms[i] * ChangeRing(hnfs[i], F) : i in [1,2]];
 	elts := [[isom(v[1] + v[2]*i + v[3]*j + v[4]*i*j) : v in Rows(hnf)] : hnf in rat_hnfs];
 	orders := [QuaternionOrder(elt_seq) : elt_seq in elts];
     else
-	idls := [ideal<Integers(KK) | 1> : i in [1..8]];
+	idls := [ideal<Integers(KK) | idls_C_0[i]> : i in [1..8]];
 	pmat := PseudoMatrix(idls, mats[1]);
 	hnf := HermiteForm(pmat);
 	idls := CoefficientIdeals(hnf);

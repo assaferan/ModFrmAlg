@@ -46,7 +46,8 @@ end intrinsic;
 
 intrinsic BrandtGroupoid(M::ModFrmAlg) -> BrtCl
 {}
-  genus := [GramMatrix(ZLattice(lat)) : lat in Representatives(Genus(M))];
+// genus := [GramMatrix(ZLattice(lat)) : lat in Representatives(Genus(M))];
+  genus := Representatives(Genus(M));
   orders := get_genus_orders(genus);
   return BrandtGroupoid(orders);
 end intrinsic;

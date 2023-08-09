@@ -118,6 +118,12 @@ import "../representation/representation.m" : projLocalization;
 // Data type for implementation of algebraic modular forms.
 declare type ModFrmAlg;
 declare attributes ModFrmAlg:
+	// The ambient space
+	root,
+
+	// The underlying vector space
+	vecspace,
+	
 	// The Lie group.
 	G,
 
@@ -609,11 +615,36 @@ end intrinsic;
 
 intrinsic Dimension(M::ModFrmAlg : ThetaPrec := 25) -> RngIntElt
 { Returns the dimension of this vector space. }
+
+        if (not IsAmbientSpace(M)) then
+	    return Dimension(M`vecspace);
+	end if;
 	// Initialize this space of modular forms.
 	ModFrmAlgInit(M : ThetaPrec := ThetaPrec);
 
 	return &+[Dimension(h) : h in M`H];
 end intrinsic;
+
+function amf_clone(M)
+
+    // Initialize the space of algebraic modular forms.
+    ModFrmAlgInit(M);
+    
+    S := New(ModFrmAlg);
+    S`K :=  M`K;
+    S`G :=  M`G;
+    S`L :=  M`L;
+    S`W := M`W;
+    
+    // Assign the Hecke module for this instance.
+    S`Hecke := New(ModHecke);
+    S`Hecke`Ts := AssociativeArray();
+
+    S`H := M`H;
+    S`genus := M`genus;
+    
+    return S;
+end function;
 
 intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 { Computes the cuspidal subspace of M. }
@@ -652,8 +683,71 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 
 	// vectors orthogonal to the Eisenstein series
 	cuspBasis := Basis(Kernel(Transpose(Matrix(eis`vec*gram))));
+
+	S := amf_clone(M);
+	S`root := AmbientSpace(M);
+	S`vecspace := VectorSpaceWithBasis(cuspBasis);
 	
-	return VectorSpaceWithBasis(cuspBasis);
+	return S;
+end intrinsic;
+
+function is_special_lattice(q)
+    L := LatticeWithGram(q);
+    L_dual := Dual(L : Rescale := false);
+    return IsCyclic(L_dual / L);
+end function;
+
+intrinsic NewSubspace(M::ModFrmAlg) -> ModFrmAlg
+{Return the subspace of newforms.}
+
+    // This will work also over a number field, but we're not there yet
+    // ps := BadPrimes(Level(M));
+    N := Integers()!Norm(Discriminant(Level(M)));
+    D := Discriminant(Algebra(QuaternionOrder(InnerForm(M))));
+    ps := PrimeDivisors(N);
+    old_spaces := [];
+    beta_maps := [];
+    for p in ps do
+	N_old := N div p;
+	lats := TernaryQuadraticLattices(N_old);
+	good_lats := [L : L in lats | is_special_lattice(L) and
+				      Discriminant(Algebra(QuaternionOrder(L))) eq D];
+	if not IsEmpty(good_lats) then
+	    d_new := Weight(M)`weight[1];
+	    d_new_p := (d_new mod p eq 0) select (d_new div p) else d_new*p;
+	    for d_old in [d_new, d_new_p] do
+		M_old := OrthogonalModularForms(good_lats[1] : Special, d := d_old);
+		if Dimension(M_old) gt 0 then
+		    Append(~old_spaces, M_old);
+		    Append(~beta_maps, DegeneracyMatrixReverse(M, M_old, p, 1));
+		end if;
+	    end for;
+	end if;
+    end for;
+
+    newBasis := Basis(Kernel(HorizontalJoin(beta_maps)));
+
+    Mnew := amf_clone(M);
+    Mnew`root := AmbientSpace(M);
+    Mnew`vecspace := VectorSpaceWithBasis(newBasis);
+    
+    return Mnew;
+end intrinsic;
+
+intrinsic IsAmbientSpace(M::ModFrmAlg) -> BoolElt
+{.}
+   if (assigned M`root) then
+       return false;
+   end if;
+   return true;
+end intrinsic;
+
+intrinsic AmbientSpace(M::ModFrmAlg) -> ModFrmAlg
+{.}
+    if IsAmbientSpace(M) then
+	return M;
+    end if;
+    return M`root;
 end intrinsic;
 
 // TODO: Make this more general.
@@ -732,6 +826,9 @@ end intrinsic;
 
 intrinsic Representation(M::ModFrmAlg) -> ModTupFld
 {.}
+  if (not IsAmbientSpace(M)) then
+      return M`vecspace;
+  end if;
   dim := Dimension(M);
   if dim eq 0 then return VectorSpace(BaseRing(M), 0); end if;
   return VectorSpace(BaseRing(M`H[1]), dim);

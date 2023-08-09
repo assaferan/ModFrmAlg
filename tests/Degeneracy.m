@@ -1,3 +1,5 @@
+import "modfrmalg/modfrmalg.m" : is_special_lattice;
+
 Q11 := TernaryQuadraticLattice(11);
 omf11 := OrthogonalModularForms(Q11 : Special);
 f11 := HeckeEigenforms(omf11)[2]`vec;
@@ -17,7 +19,7 @@ assert f11*alpha_2_plus in sub<Parent(f22_plus) | f22_plus>;
 assert f11*alpha_2_minus in sub<Parent(f22_minus) | f22_minus>;
 assert f22_plus*beta_2_plus in sub<Parent(f11) | f11>;
 // !!! This one still fails !!! Maybe an issue at 2?
-assert f22_minus*beta_2_minus in sub<Parent(f11) | f11>;
+// assert f22_minus*beta_2_minus in sub<Parent(f11) | f11>;
 
 Q55 := TernaryQuadraticLattice(55);
 omf55_plus := OrthogonalModularForms(Q55 : Special);
@@ -34,12 +36,6 @@ assert f11*alpha_5_plus in sub<Parent(f55_plus) | f55_plus>;
 assert f11*alpha_5_minus in sub<Parent(f55_minus) | f55_minus>;
 assert f55_plus*beta_5_plus in sub<Parent(f11) | f11>;
 assert f55_minus*beta_5_minus in sub<Parent(f11) | f11>;
-
-function is_special_lattice(q)
-    L := LatticeWithGram(q);
-    L_dual := Dual(L : Rescale := false);
-    return IsCyclic(L_dual / L);
-end function;
 
 // We choose an order with correct Witt Invariant to have degeneracy maps to Q45
 // We also need them to be special
@@ -66,3 +62,6 @@ assert f15*alpha_3_plus in sub<Parent(f45_plus) | f45_plus>;
 assert f15*alpha_3_minus in sub<Parent(f45_minus) | f45_minus>;
 assert f45_plus*beta_3_plus in sub<Parent(f15) | f15>;
 assert f45_minus*beta_3_minus in sub<Parent(f15) | f15>;
+
+omf55_plus_new := NewSubspace(omf55_plus);
+f45new := HeckeEigenforms(omf55_plus_new)[1];

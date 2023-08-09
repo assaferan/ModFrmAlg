@@ -156,6 +156,18 @@ end intrinsic;
 // internal function for several of the interfaces below
 function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
 		       ComputeGenus, LowMemory, ThetaPrec)
+
+    if (not IsAmbientSpace(M)) then
+	A := AmbientSpace(M);
+	T_A := internalHecke(A, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
+			     ComputeGenus, LowMemory, ThetaPrec);
+	C := BasisMatrix(M`vecspace);
+	T := Solution(C, C*T_A);
+	T := MatrixAlgebra(BaseRing(T),Nrows(T))!T;
+	SetHeckeOperator(M, T, pR, k);
+	return T;
+    end if;
+    
     // at the moment we are still having trouble computing the Hecke operators at inert primes above 2
   if ((not IsOrthogonal(M)) and IsInert(pR)) then
       assert IsOdd(Norm(Norm(pR)));

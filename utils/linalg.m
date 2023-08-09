@@ -325,6 +325,7 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 			     Generators(primes[prime_idx])>);
    // if the prime is ramified or inert above 2, at the moment the Hecke Operator
    // is not computed correctly
+   // !!! TODO - at the moment we also skip 2 over the rationals for no good reason
    if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[prime_idx]))) then
 		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
 				    random_op : UseLLL := UseLLL,
@@ -340,10 +341,12 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    vprintf AlgebraicModularForms, 2 : "\t\t(will stop at %o)\n",
 				      Norm(primes[#primes]);
 
+   basis_mat := Solution(BasisMatrix(VectorSpace(M)), BasisMatrix(V));
+   VM := VectorSpaceWithBasis(basis_mat);
    T := Restrict(HeckeOperator(M, pR : Estimate := Estimate,
 			       Orbits := Orbits, UseLLL := UseLLL,
 			       LowMemory := LowMemory,
-			       ThetaPrec := ThetaPrec), V);
+			       ThetaPrec := ThetaPrec), VM);
    D := [* *];
 
    
@@ -624,7 +627,9 @@ function GetEigenvectors(M, D)
 	repeat
 	    p_idx +:= 1;
 	    Tp := T[keys[p_idx]];
-	    Td := Restrict(Tp,d);
+	    basis_mat := Solution(BasisMatrix(VectorSpace(M)), BasisMatrix(d));
+	    dM := VectorSpaceWithBasis(basis_mat);
+	    Td := Restrict(Tp,dM);
 	    f := CharacteristicPolynomial(Td);
 	until (IsIrreducible(f)) or (p_idx ge #keys);
 	if IsIrreducible(f) then

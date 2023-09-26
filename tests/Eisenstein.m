@@ -46,4 +46,8 @@ testEisenstein(12, 2);
 printf ",60";
 testEisenstein(60, 4);
 
+// Testing an odd class group
+printf ",229";
+testEisenstein(229, 1);
+
 printf "\n";

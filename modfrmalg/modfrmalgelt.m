@@ -557,18 +557,23 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 
 	eis := [];
 	F := BaseRing(Weight(M));
-	Z_F := Integers(F);
-	// Check, but I think we are only getting things of order 2
-	X := HeckeCharacterGroup(1*Z_F, [1..Degree(F)]);
-	A_X, A_X_map := AbelianGroup(X);
-	mul2 := hom<A_X -> A_X | [2*t : t in Generators(A_X)]>;
-	chis := [A_X_map(x) : x in Kernel(mul2)];
-	ncl_mu := ClassGroupPrimeRepresentatives(Z_F, 1*Z_F, InfinitePlaces(F));
-	ncl := Domain(ncl_mu);
-	// !!! TODO - Could do better - take only the 2-group part
-	pRs := [ncl_mu(pR_g) : pR_g in Generators(ncl)];
-	// ncl, ncl_mu := NarrowClassGroup(F);
-	// Consructing Eisenstein series with character chi
+	if (Type(F) ne FldRat) then
+	    Z_F := Integers(F);
+	    // Check, but I think we are only getting things of order 2
+	    X := HeckeCharacterGroup(1*Z_F, [1..Degree(F)]);
+	    A_X, A_X_map := AbelianGroup(X);
+	    mul2 := hom<A_X -> A_X | [2*t : t in Generators(A_X)]>;
+	    chis := [A_X_map(x) : x in Kernel(mul2)];
+	    ncl_mu := ClassGroupPrimeRepresentatives(Z_F, 1*Z_F, InfinitePlaces(F));
+	    ncl := Domain(ncl_mu);
+	    // !!! TODO - Could do better - take only the 2-group part
+	    pRs := [ncl_mu(pR_g) : pR_g in Generators(ncl)];
+	    // ncl, ncl_mu := NarrowClassGroup(F);
+	    // Consructing Eisenstein series with character chi
+	else
+	    chis := [DirichletGroup(1)!1];
+	    pRs := [2];
+	end if;
 	for chi in chis do
 	    sp := FindSpinorSigns(M, pRs, chi);
 	    vec := Vector(F, sp);

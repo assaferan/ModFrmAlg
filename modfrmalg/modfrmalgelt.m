@@ -504,6 +504,9 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 end intrinsic;
 
 function FindSpinorSigns(M, pRs, chi : ThetaPrec := 25)
+    if IsEmpty(pRs) then
+	return [1 : i in [1..Dimension(M)]];
+    end if;
     Ts := [HeckeOperator(M, pR) : pR in pRs];
     vec := [0 : i in [1..Dimension(M)]];
     vec[1] := 1;
@@ -556,8 +559,12 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 				  "There are no Eisenstein Series in a 0-dimensional space";
 
 	eis := [];
-	F := BaseRing(Weight(M));
-	if (Type(F) ne FldRat) then
+	alpha := Involution(ReflexiveSpace(Module(M)));
+	F := FixedField(alpha);
+	if (ISA(Type(F), FldOrd)) then
+	    F := NumberField(Order(F));
+	end if;
+	if (ISA(Type(F), FldNum)) then
 	    Z_F := Integers(F);
 	    // Check, but I think we are only getting things of order 2
 	    X := HeckeCharacterGroup(1*Z_F, [1..Degree(F)]);
@@ -572,11 +579,11 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 	    // Consructing Eisenstein series with character chi
 	else
 	    chis := [DirichletGroup(1)!1];
-	    pRs := [2];
+	    pRs := [];
 	end if;
 	for chi in chis do
 	    sp := FindSpinorSigns(M, pRs, chi);
-	    vec := Vector(F, sp);
+	    vec := Vector(BaseRing(Weight(M)), sp);
 	    // Create the modular form corresponding to the Eisenstein series.
 	    mform := New(ModFrmAlgElt);
 	    mform`M := M;

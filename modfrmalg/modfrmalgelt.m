@@ -61,7 +61,8 @@ freeze;
 
 import "modfrmalg.m" : ModFrmAlgInit;
 
-import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
+import "../represenation/representation.m" : spinor_norm;
+import "../neighbors/neighbor-CN1.m" : BuildNeighbor, BuildNeighborProc, GetNextNeighbor;
 import "../utils/linalg.m" : GetEigenvectors;
 
 ///////////////////////////////////////////////////////////////////
@@ -465,20 +466,34 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 		if not IsTrivial(Weight(M)) then
 		    mform`IsCuspidal := true;
 		else
-		    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
-					    i in [1..#wts]] eq 0;
+		    mform`IsCuspidal := true;
+		    for eis in EisensteinSeries(M) do
+			vec_eis := eis`vec;
+			eis_orth := &+[ Eltseq(vec)[i] * mult_wts[i] * vec_eis[i] :
+					i in [1..#wts]] eq 0;
+			if (not eis_orth) then
+			    mform`IsCuspidal := false;
+			    break;
+			end if;
+		    end for;
+//		    mform`IsCuspidal := &+[ Eltseq(vec)[i] * mult_wts[i] :
+//					    i in [1..#wts]] eq 0;
 		end if;
-		
+
+		// !!! TODO - We have already produced the eisenstein forms,
+		// but there might be "forms" occurring from failure of multiplicity one, which are both
+		// non-cuspidal and non-eisenstein.
 		// Cusp forms are not Eistenstein.
 		mform`IsEisenstein := not mform`IsCuspidal;
 
 		// Add to list.
 		Append(~eigenforms, mform);
-		
+
+		// Again, already compute the Eisenstein series
 		// Store the Eisenstein series in memory.
-		if mform`IsEisenstein then
-		    M`Hecke`EisensteinSeries := mform;
-		end if;
+		// if mform`IsEisenstein then
+		//    M`Hecke`EisensteinSeries := mform;
+		// end if;
 	    // end for;
 	end for;
 
@@ -487,6 +502,33 @@ intrinsic HeckeEigenforms(M::ModFrmAlg : Estimate := true,
 
 	return M`Hecke`Eigenforms;
 end intrinsic;
+
+function FindSpinorSigns(M, pRs, chi : ThetaPrec := 25)
+    if IsEmpty(pRs) then
+	return [1 : i in [1..Dimension(M)]];
+    end if;
+    Ts := [HeckeOperator(M, pR) : pR in pRs];
+    vec := [0 : i in [1..Dimension(M)]];
+    vec[1] := 1;
+    init := {1};
+    done := {};
+    while (&*vec eq 0) do
+	assert init ne done; // otherwise we are stuck in a connected component, which should not happpen
+	idx := Minimum([i : i in init | i notin done]);
+	for pR_idx in [1..#pRs] do
+	    T := Ts[pR_idx];
+	    pR := pRs[pR_idx];
+	    nbrs := [j : j in [1..Nrows(T)] | T[j,idx] ne 0];
+	    val := chi(pR);
+	    for nbr in nbrs do
+		vec[nbr] := val * vec[idx];
+		Include(~init, nbr);
+	    end for;
+	end for;
+	Include(~done, idx);
+    end while;
+    return vec;
+end function;
 
 intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 { Returns the normalized Eistenstein series. }
@@ -515,20 +557,48 @@ intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 
 	require Dimension(M) gt 0 :
 				  "There are no Eisenstein Series in a 0-dimensional space";
-	vec := Vector(BaseRing(M`W), [1 : i in [1..Dimension(M)]]);
+
+	eis := [];
+	alpha := Involution(ReflexiveSpace(Module(M)));
+	F := FixedField(alpha);
+	if (ISA(Type(F), FldOrd)) then
+	    F := NumberField(Order(F));
+	end if;
+	if (ISA(Type(F), FldNum)) then
+	    Z_F := Integers(F);
+	    // Check, but I think we are only getting things of order 2
+	    X := HeckeCharacterGroup(1*Z_F, [1..Degree(F)]);
+	    A_X, A_X_map := AbelianGroup(X);
+	    mul2 := hom<A_X -> A_X | [2*t : t in Generators(A_X)]>;
+	    chis := [A_X_map(x) : x in Kernel(mul2)];
+	    ncl_mu := ClassGroupPrimeRepresentatives(Z_F, 1*Z_F, InfinitePlaces(F));
+	    ncl := Domain(ncl_mu);
+	    // !!! TODO - Could do better - take only the 2-group part
+	    pRs := [ncl_mu(pR_g) : pR_g in Generators(ncl)];
+	    // ncl, ncl_mu := NarrowClassGroup(F);
+	    // Consructing Eisenstein series with character chi
+	else
+	    chis := [DirichletGroup(1)!1];
+	    pRs := [];
+	end if;
+	for chi in chis do
+	    sp := FindSpinorSigns(M, pRs, chi);
+	    vec := Vector(BaseRing(Weight(M)), sp);
+	    // Create the modular form corresponding to the Eisenstein series.
+	    mform := New(ModFrmAlgElt);
+	    mform`M := M;
+	    mform`vec := vec;
+	    mform`IsCuspidal := false;
+	    mform`IsEisenstein := true;
+	    mform`IsEigenform := true;
+	    Append(~eis, mform);
+	end for;
+	//	vec := Vector(BaseRing(M`W), [1 : i in [1..Dimension(M)]]);
 	
-	// Create the modular form corresponding to the Eisenstein series.
-	mform := New(ModFrmAlgElt);
-	mform`M := M;
-	mform`vec := vec;
-	mform`IsCuspidal := false;
-	mform`IsEisenstein := true;
-	mform`IsEigenform := true;
-
 	// Assign the Eisenstein series.
-	M`Hecke`EisensteinSeries := mform;
+	M`Hecke`EisensteinSeries := eis;
 
-	return mform;
+	return eis;
 end intrinsic;
 
 intrinsic ModularForm(f::ModFrmAlgElt) -> ModFrmElt

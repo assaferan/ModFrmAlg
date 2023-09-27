@@ -316,16 +316,16 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    end if;
 
 
-   if prime_idx gt #primes then
+   if Abs(prime_idx) gt #primes then
      return [V], false;
    end if;
 
    
    fac := Factorization(ideal<Integers(BaseRing(M))|
-			     Generators(primes[prime_idx])>);
+			Generators(primes[Abs(prime_idx)])>);
    // if the prime is ramified or inert above 2, at the moment the Hecke Operator
    // is not computed correctly
-   if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[prime_idx]))) then
+if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[Abs(prime_idx)]))) then
 		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
 				    random_op : UseLLL := UseLLL,
 						Estimate := Estimate,
@@ -340,7 +340,8 @@ function Decomposition_recurse(M, V, primes, prime_idx,
    vprintf AlgebraicModularForms, 2 : "\t\t(will stop at %o)\n",
 				      Norm(primes[#primes]);
 
-   T := Restrict(HeckeOperator(M, pR : Estimate := Estimate,
+   hecke_op := prime_idx lt 0 select PlusOperator else HeckeOperator;
+   T := Restrict(hecke_op(M, pR : Estimate := Estimate,
 			       Orbits := Orbits, UseLLL := UseLLL,
 			       LowMemory := LowMemory,
 			       ThetaPrec := ThetaPrec), V);
@@ -385,9 +386,10 @@ function Decomposition_recurse(M, V, primes, prime_idx,
          Append(~D,W);
          is_complete_W := true;
       else
-          if prime_idx lt #primes then
+	if Abs(prime_idx) lt #primes then
 	      q_idx   := Dimension(W) eq Dimension(V) select
-			 prime_idx + 1 else 1;
+			 (prime_idx gt 0 select -prime_idx 
+			  else Abs(prime_idx) + 1) else 1;
               Sub, is_complete_W  := Decomposition_recurse(M, W, primes, q_idx, 
                                             proof, random_op :
 					    UseLLL := UseLLL,

@@ -388,7 +388,7 @@ if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and I
       else
 	if Abs(prime_idx) lt #primes then
 	      q_idx   := Dimension(W) eq Dimension(V) select
-			 (prime_idx gt 0 select -prime_idx 
+			 (((prime_idx gt 0) and IsSpecialOrthogonal(M)) select -prime_idx 
 			  else Abs(prime_idx) + 1) else 1;
               Sub, is_complete_W  := Decomposition_recurse(M, W, primes, q_idx, 
                                             proof, random_op :

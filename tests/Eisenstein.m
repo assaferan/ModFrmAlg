@@ -1,4 +1,4 @@
-function BuildUnimodularLatticeAMF(d)
+function BuildUnimodularLatticeAMF(d : Special := false)
     F := QuadraticField(d);
     B := QuaternionAlgebra(InfinitePlaces(F));
     O := MaximalOrder(B);
@@ -6,7 +6,7 @@ function BuildUnimodularLatticeAMF(d)
     V := AmbientReflexiveSpace(gram_O);
     idls := [pb[1] : pb in PseudoBasis(O)];
     lat := LatticeWithBasis(V, IdentityMatrix(F, 4), idls);
-    G := OrthogonalGroup(gram_O);
+    G := Special select SO(gram_O) else OrthogonalGroup(gram_O);
     W := HighestWeightRepresentation(G, [0,0]);
     L := lat;
     M := AlgebraicModularForms(G, W, L);

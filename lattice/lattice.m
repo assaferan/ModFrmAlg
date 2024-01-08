@@ -1624,6 +1624,22 @@ intrinsic IsIntegral(L::ModDedLat, p::RngOrdIdl) -> BoolElt
   return (min_val ge -val2) and (min_diag ge 0);
 end intrinsic;
 
+intrinsic ProjectiveLineProcess(V::ModTupFld[FldFin]) -> ProcPL
+{Creates a projective line process for V}
+  PL:= New(ProcPL);
+  PL`a:= PrimitiveElement(BaseField(V));
+  PL`v:= V ! 0;
+  PL`dim:= Dimension(V);
+  PL`depth:= PL`dim+1;
+  return PL;
+end intrinsic;
+
+intrinsic ProjectiveLineProcess(k::FldFin, n::RngIntElt) -> ProcPL
+{Creates a projective line process for k^n}
+  requirege n, 1;
+  return ProjectiveLineProcess(VectorSpace(k, n));
+end intrinsic;
+
 intrinsic IsIntegral(L::ModDedLat) -> BoolElt
 {.}
   R := BaseRing(L);
@@ -1636,6 +1652,28 @@ end intrinsic;
 intrinsic IsMaximalIntegral(L::ModDedLat, p::RngIntElt) -> BoolElt, ModDedLat
 {Checks whether L is p-maximal integral. If not, a minimal integral over-lattice at p is returned}
   return IsMaximalIntegral(L, ideal<Integers() | p>);
+end intrinsic;
+
+// Magma has a bug in ProjectiveLineProcess so we add it here
+intrinsic Next(PL::ProcPL) -> ModTupFldElt
+{The next element in the process. Returns the zero vector if no more elements left}
+  if PL`depth ne 0 then
+    i:= PL`dim;
+    while true do
+      if i eq PL`depth then
+        PL`v[i]:= 0; i -:= 1;
+      elif i lt PL`depth then
+        PL`depth:= i;
+        if i ge 1 then PL`v[i]:= 1; end if;
+        break;
+      elif PL`v[i] eq 0 then PL`v[i]:= 1; break;
+      else
+        PL`v[i] *:= PL`a;
+        if PL`v[i] eq 1 then PL`v[i]:= 0; i -:= 1; else break; end if;
+      end if;
+    end while;
+  end if;
+  return PL`v;
 end intrinsic;
 
 // This function will be used in the next two intrinsics

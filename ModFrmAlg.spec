@@ -6,12 +6,10 @@
   io/saveload.m
   io/path.m
 
-  lattice/BrtCl.m
-  lattice/clifford.m
-  lattice/fracIdl.m
-  lattice/lattice.m
-  lattice/minkowski.m
-  lattice/reflexive.m
+  lattice
+  {
+      +lattice.spec
+  }
 
   lattice_db/nipp_parse.m
 

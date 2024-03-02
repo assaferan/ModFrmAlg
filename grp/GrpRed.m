@@ -264,6 +264,7 @@ end intrinsic;
 
 intrinsic SpecialOrthogonalGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
 {Construct the special orthogonal group preserving the specified symmetric form.}
+  CheckVersion();
   return SpecialOrthogonalGroup(AmbientReflexiveSpace(innerForm));
 end intrinsic;
 

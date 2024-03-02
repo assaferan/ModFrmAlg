@@ -123,6 +123,7 @@ freeze;
 // Complete(L::ModDed, p::RngOrdIdl) -> ModPad
 // Complete(L::ModDedLat, p::RngOrdIdl) -> ModPad
 
+import "ProcPL.m" : ProjectiveLineProcess, Next;
 import "quadratic_defect.m" : QuadraticDefect;
 
 ///////////////////////////////////////////////////////////////////

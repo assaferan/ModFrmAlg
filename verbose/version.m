@@ -16,7 +16,8 @@ intrinsic CheckVersion()
   version := Vector([v1, v2, v3]);
 
   if version lt Vector([2,22,6]) then   
-      error "This package is not supported on Magma version %o", version;
+      error "This package is not supported on Magma version ", 
+	    v1, ".", v2, "-", v3;
   end if;
   return;
 end intrinsic;

@@ -852,7 +852,13 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
   // In the cases of pullbacks and weight representations
   // we don't record anything, just compute from the underlying structure
   if (Type(g) ne GrpPermElt) and (Type(BaseRing(g)) ne FldFin) then
-      assert IsIsomorphic(BaseRing(V`G),BaseRing(g));
+      F1 := BaseRing(V`G);
+      F2 := BaseRing(g);
+      if Type(F1) eq FldRat then
+	  assert Type(F2) eq FldRat;
+      else
+	  assert IsIsomorphic(F1, F2);
+      end if;
   end if;
   if assigned V`pullback then
       W := V`pullback[1];

@@ -62,7 +62,8 @@ function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
       //    if (r eq 1) then w_mu := [w_mu[1]]; end if;
       e_w_mu := get_monomial(A, w_mu);
       prod := K!e_w_mu;
-      for j->alpha in alphas do
+      for j in [1..#alphas] do
+	  alpha := alphas[j];
 	  alpha_d := DualRoot(alpha, G);
 	  w_alpha_d := CorootAction(W)(alpha_d, w);
 	  w_alpha_d := ChangeRing(w_alpha_d, Integers());

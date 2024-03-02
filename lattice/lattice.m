@@ -298,7 +298,12 @@ matrix provided. }
   //  ring of the supplied basis agree.
   // require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
   F := BaseRing(rfxSpace);
-  iso := IsIsomorphic(F, FieldOfFractions(BaseRing(basis)));
+  F_other := FieldOfFractions(BaseRing(basis));
+  if Type(F) eq FldRat then
+      iso := (Type(F_other) eq FldRat);
+  else	  
+      iso := IsIsomorphic(F, F_other);
+  end if;
 
   require iso : "The base rings do not match.";
   basis := ChangeRing(basis, BaseRing(rfxSpace));

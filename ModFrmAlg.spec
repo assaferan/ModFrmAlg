@@ -40,5 +40,6 @@
   utils/struct.m
 
   verbose/verbose.m
+  verbose/version.m
 }
 

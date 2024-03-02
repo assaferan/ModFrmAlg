@@ -1810,8 +1810,10 @@ function tau_polys(x,Q,sign)
     // complements to idxs
     comp := [[x : x in [1..2*n] | x notin idx] :  idx in idxs];
     assert &and[c in idxs : c in comp];
-    for i->I in idxs do
-	for j->J_prime in idxs do
+    for i in [1..#idxs] do
+	I := idxs[i];
+	for j in [1..#idxs] do
+	    J_prime := idxs[j];
 	    J := comp[j];
 	    s := Sign(Sym(2*n)!(J_prime cat J));
 	    tau_basis[i] +:= K_polys!(sign * s * Minor(Q,I,J) * basis[j]) / scale;

@@ -999,7 +999,11 @@ intrinsic 'eq'(V1::GrpRep, V2::GrpRep) -> BoolElt
   if IsFinite(R1) then
       isom := (R1 eq R2);
   else
-      isom := IsIsomorphic(R1, R2);
+      if Type(R1) eq FldRat then
+	  isom := Type(R2) eq FldRat;
+      else
+	  isom := IsIsomorphic(R1, R2);
+      end if;
   end if;
   if (not isom) or (ChangeRing(V1`M, R2) ne V2`M) then
       return false;

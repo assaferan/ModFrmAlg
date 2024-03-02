@@ -18,12 +18,11 @@ if is_defined then
     _, Next := IsIntrinsic("Next");
 
 else
- 
-    CheckVersion();
     
     ProcPL := recformat< a, v, dim, depth>;
 
     function ProjectiveLineProcessVS(V)
+	CheckVersion();
 	PL:= rec<ProcPL|>;
 	PL`a:= PrimitiveElement(BaseField(V));
 	PL`v:= V ! 0;
@@ -33,6 +32,7 @@ else
     end function;
 
     function ProjectiveLineProcess(k, n)
+	CheckVersion();
 	assert n ge 1;
 	return ProjectiveLineProcessVS(VectorSpace(k, n));
     end function;

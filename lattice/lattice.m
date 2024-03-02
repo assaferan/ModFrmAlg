@@ -123,7 +123,7 @@ freeze;
 // Complete(L::ModDed, p::RngOrdIdl) -> ModPad
 // Complete(L::ModDedLat, p::RngOrdIdl) -> ModPad
 
-import "../version.m" : QuadraticDefect;
+import "quadratic_defect.m" : QuadraticDefect;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //

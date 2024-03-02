@@ -60,6 +60,7 @@ freeze;
 // imports
 
 import "modfrmalg.m" : ModFrmAlgInit;
+import "Primes.m" : PrimeIdealsOverPrime;
 
 import "../represenation/representation.m" : spinor_norm;
 import "../neighbors/neighbor-CN1.m" : BuildNeighbor, BuildNeighborProc, GetNextNeighbor;

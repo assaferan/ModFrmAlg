@@ -19,6 +19,8 @@ if is_defined then
 
 else
  
+    CheckVersion();
+    
     ProcPL := recformat< a, v, dim, depth>;
 
     function ProjectiveLineProcessVS(V)

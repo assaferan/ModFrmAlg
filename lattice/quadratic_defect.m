@@ -2,7 +2,7 @@ freeze;
  
 /****-*-magma-************************************************
                                                                           
-                  VERSION: Algebraic Modular Forms in Magma
+                  ModFrmAlg: Algebraic Modular Forms in Magma
 
  FILE: quadratic_defect.m (Version Support)                                        
                                                                        
@@ -21,6 +21,7 @@ if is_defined then
     
 else
     
+    CheckVersion();
     QuadraticDefectInt := function(a, p)
 	
 	assert p ge 2 and IsPrime(p: Proof:= false);

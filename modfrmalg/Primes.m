@@ -17,7 +17,6 @@ is_defined, PrimeIdealsOverPrime := IsIntrinsic("PrimeIdealsOverPrime");
 
 if not is_defined then
     function PrimeIdealsOverPrime(K, p)
-	CheckVersion();
 	R := Integers(K);
 	pR := p*R;
 	return [pa[1] : pa in Factorization(pR)];

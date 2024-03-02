@@ -179,6 +179,7 @@ intrinsic AlgebraicModularForms(G::GrpRed,
     If it is 2 (by default), we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
         require IsCompact(G) : "Group must be compact at infinity.";
+        CheckVersion();
         K := SplittingField(G);
         require IsField(K) : "Reductive group must be defined over a field.";
 	// !!! TODO : eventually want them to be the same
@@ -538,15 +539,6 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := false,
 	     
 	return M`genus;
 end intrinsic;
-
-/*
-function special_subgroup(gamma)
-    F := BaseRing(gamma);
-    C2 := sub<GL(1, F) | [-1]>;
-    h := hom<gamma -> C2 | [C2![Determinant(gamma.i)] : i in [1..Ngens(gamma)]]>;
-    return Kernel(h); 
-end function;
-*/
 
 intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
 				: BeCareful := false)

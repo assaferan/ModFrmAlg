@@ -22,7 +22,6 @@ if is_defined then
 else
    
     QuadraticDefectInt := function(a, p)
-	CheckVersion();
 	assert p ge 2 and IsPrime(p: Proof:= false);
 	if IsZero(a) then return Infinity(); end if;
 	v:= Valuation(a, p);
@@ -37,7 +36,6 @@ else
     end function;
     
     QuadraticDefect := function(a, p)
-	CheckVersion();
 	if Type(a) eq RngIntElt then
 	    a := a/1;
 	end if;
@@ -83,7 +81,6 @@ else
     end function;
     
     function IsLocalSquare(a, p)
-	CheckVersion();
 	return Type(QuadraticDefect(a,p)) eq Infty;
     end function;
     

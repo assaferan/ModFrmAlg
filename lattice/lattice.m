@@ -124,7 +124,7 @@ freeze;
 // Complete(L::ModDedLat, p::RngOrdIdl) -> ModPad
 
 import "ProcPL.m" : ProjectiveLineProcess, Next;
-import "quadratic_defect.m" : QuadraticDefect;
+import "quadratic_defect.m" : QuadraticDefect, IsLocalSquare;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //

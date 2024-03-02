@@ -15,8 +15,12 @@ freeze;
 
 is_defined, QuadraticDefect := IsIntrinsic("QuadrarticDefect");
     
-if not is_defined then
-
+if is_defined then
+    
+    _, IsLocalSquare := IsIntrinsic("IsLocalSquare");
+    
+else
+    
     QuadraticDefectInt := function(a, p)
 	
 	assert p ge 2 and IsPrime(p: Proof:= false);
@@ -77,11 +81,8 @@ if not is_defined then
 	return (w gt ee) or (w eq ee and not IsIrreducible(Polynomial([k | ((a-1)/4) @ h, 1, 1]))) select Infinity() else v+w;
     end function;
     
-end if;
-
-v1, v2, v3 := GetVersion();
-version := Vector([v1, v2, v3]);
-
-if version lt Vector([2,23,1]) then   
-    error "This package is not supported on Magma version %o", version;
+    function IsLocalSquare(a, p)
+	return Type(QuadraticDefect(a,p)) eq Infty;
+    end function;
+    
 end if;

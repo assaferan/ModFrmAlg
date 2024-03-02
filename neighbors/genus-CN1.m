@@ -40,6 +40,7 @@ freeze;
 // imports
 
 import "../lattice/lattice.m" : GramMatrixOfBasis;
+import "../lattice/quadratic_defect.m" : IsLocalSquare;
 import "../modfrmalg/modfrmalg.m" : ModFrmAlgInit;
 import "neighbor-CN1.m" : BuildNeighborProc, BuildNeighbor, GetNextNeighbor;
 

@@ -557,24 +557,15 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   for i in [1..#reps] do
      reps[i]`AutomorphismGroup := autgps[i];
   end for;
-//  gamma_reps := autgps;
-  assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
-			    BaseRing(M`W`G));
 
-  //gamma_reps := [AutomorphismGroup(r : Special := IsSpecialOrthogonal(M))
-  //		: r in reps];
-  /*
-  gammas := [sub<M`W`G|
-		[Transpose(PullUp(Matrix(g), reps[i], reps[i] :
-				  BeCareful := BeCareful)) :
-		 //			  g in Generators(gamma_reps[i])]> :
-		 g in Generators(autgps[i])]> :
-	    i in [1..#reps]];
-
-  if IsSpecialOrthogonal(M) then
-      gammas := [special_subgroup(gamma) : gamma in gammas];
+  F1 := BaseRing(AmbientSpace(reps[1]));
+  F2 := BaseRing(M`W`G);
+  if Type(F1) eq FldRat then
+      assert Type(F2) eq FldRat;
+  else
+      assert IsIsomorphic(F1, F2);
   end if;
- */
+
   gammas := [AutomorphismGroupOverField(r, M`W`G : Special := IsSpecialOrthogonal(M)) : r in reps];
   if GetVerbose("AlgebraicModularForms") ge 2 then
      printf "The sizes of the automorphism groups are %o.\n",

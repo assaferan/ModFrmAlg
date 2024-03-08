@@ -66,77 +66,41 @@ function V_cvp(A : max_num := Infinity())
     all_vs := ShortVectors(L, max_norm);
     norms := {v[2] : v in all_vs};
     norms := Sort([n : n in norms]);
-//    minA := &cat[[v,-v] : v in ShortestVectors(L)];
     minA := [];
     rsub := 0;
     norm_idx := 0;
-    while (rsub lt Rank(L)) do
-	norm_idx +:= 1;
-	n := norms[norm_idx];
-	minA cat:= &cat[[v[1],-v[1]] : v in all_vs | v[2] eq n];
-	if (#minA ge max_num) then
-	    return minA;
-	end if;
-	LminA := sub<L | minA>;
-	if (LminA eq L) then
-	    return minA;
-	end if;
-	// LminA := Lattice(ChangeRing(Matrix(minA),Rationals()), A);
-	L1 := satspan(Basis(LminA), A);
-	B1 := ChangeRing(Matrix(Basis(L1)),Rationals());
-	A1 := B1 * A * Transpose(B1);
-	B2 := Transpose(Matrix(Basis(Kernel(A*Transpose(B1)))));
-	proj := B2 * (Transpose(B2)*A*B2)^(-1) * Transpose(A*B2);
-	B2 := ChangeRing(Matrix(Basis(Lattice(Transpose(proj)))), Rationals());
-	A2 := B2 * A * Transpose(B2);
-	r := Rank(L1);
-	if (r eq Rank(L)) then
-	    V_cvp_A2 := [];
-	else
-	    V_cvp_A2 := V_cvp(A2 : max_num := max_num);
-	end if;
-	A1_part := [Vector(Rationals(), v)*B1 : v in V_wr_cvp(A1)];
-	A2_part := [Vector(v)*B2 : v in V_cvp_A2];
-	union_A2_part := &cat[ClosestVectors(L,v) : v in A2_part];
-	VA := A1_part cat union_A2_part;
-	VA := [v : v in VA | v ne 0];
-	Lsub :=  sub<L | VA>;
-	rsub := Rank(Lsub);
-    end while;
-    /*
-    if Rank(Lsub) lt Rank(L) then
-	Q, quo := L / Lsub;
-	cs := [q@@quo : q in Generators(Q)];
-	max_nc := Maximum([Norm(c) : c in cs]);
-	svs := ShortVectors(L, max_nc);
-	ns := Sort([n : n in {v[2] : v in svs}]);
-	for c in cs do
-	    for n in ns do
-		vs := [v[1] : v in svs | (v[2] eq n) and (v[1]-c) in Lsub];
-		if (#vs gt 0) then
-		    cs cat:= vs;
-		    break;
-		end if;
-	    end for;
-	end for;
-	
-	cs cat:= &cat[[v[1] : v in ShortVectors(L,Norm(c)) | v[1]-c in Lsub] 
-		      : c in cs];
-	
-	cs := [ChangeRing(c, Rationals()) : c in cs];
-	cs cat:= [-c : c in cs];
-	VA cat:= &cat[[Vector(c - ChangeRing(v,Rationals())) 
-		       : v in ClosestVectors(Lsub, Vector(c)) ] 
-		      : c in cs];
-	Lsub :=  sub<L | VA>;
+    norm_idx +:= 1;
+    n := norms[norm_idx];
+    minA cat:= &cat[[v[1],-v[1]] : v in all_vs | v[2] eq n];
+    if (#minA ge max_num) then
+	return minA;
     end if;
-    */
-    assert Rank(Lsub) eq Rank(L);
-    Q, quo := L / Lsub;
-    B := ChangeRing(Matrix(Basis(Lsub)),Rationals());
-    L_B := LatticeWithGram(B * A * Transpose(B));
-    cs := [ChangeRing(q@@quo, Rationals()) : q in Q];
-    VA cat:= &cat[[Vector(c - ChangeRing(v, Rationals())*B) : v in ClosestVectors(L_B, Vector(c*B^(-1)))] : c in cs | not IsZero(c)];
+    LminA := sub<L | minA>;
+    if (LminA eq L) then
+	return minA;
+    end if;
+    L1 := satspan(Basis(LminA), A);
+    B1 := ChangeRing(Matrix(Basis(L1)),Rationals());
+    A1 := B1 * A * Transpose(B1);
+    B2 := Transpose(Matrix(Basis(Kernel(A*Transpose(B1)))));
+    proj := B2 * (Transpose(B2)*A*B2)^(-1) * Transpose(A*B2);
+    B2 := ChangeRing(Matrix(Basis(Lattice(Transpose(proj)))), Rationals());
+    A2 := B2 * A * Transpose(B2);
+    r := Rank(L1);
+    if (r eq Rank(L)) then
+	V_cvp_A2 := [];
+    else
+	V_cvp_A2 := V_cvp(A2 : max_num := max_num);
+    end if;
+    A1_part := [Vector(Rationals(), v)*B1 : v in V_wr_cvp(A1)];
+    proj_Z := ChangeRing(Denominator(proj)*proj, Integers());
+    B2_Z := ChangeRing(Denominator(proj)*B2, Integers());
+    A2_part := [Solution(Transpose(proj_Z), Vector(v)*B2_Z) : v in V_cvp_A2];
+    union_A2_part := &cat[[v - w
+			   : w in ClosestVectors(L1,v - v*proj)]
+			  : v in A2_part];
+    VA := A1_part cat union_A2_part;
+    VA := [v : v in VA | v ne 0];
     Lsub :=  sub<L | VA>;
     assert Lsub eq L;
     return VA;

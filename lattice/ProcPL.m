@@ -11,11 +11,20 @@ freeze;
    ProjectiveLineProcess
  ***************************************************************************/
 
-is_defined, ProjectiveLineProcess := IsIntrinsic("ProjectiveLineProcee");
+// is_defined, ProjectiveLineProcess := IsIntrinsic("ProjectiveLineProcess");
+
+// The Magma command no longer works in Magma V2.28-2
+
+is_defined := false;
 
 if is_defined then
     
     _, Next := IsIntrinsic("Next");
+
+    // empty procedure in this case
+    procedure Advance(~PP)
+	return;
+    end procedure;
 
 else
     
@@ -40,7 +49,7 @@ else
 	return (q^PL`dim-1) div (q-1);
     end function;
 
-    function Next(PL)
+    procedure Advance(~PL)
 	if PL`depth ne 0 then
 	    i:= PL`dim;
 	    while true do
@@ -57,7 +66,10 @@ else
 		end if;
 	    end while;
 	end if;
+    end procedure;
+
+    function Next(PL)
 	return PL`v;
     end function;
-
+    
 end if;

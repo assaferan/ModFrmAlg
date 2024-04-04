@@ -136,6 +136,16 @@ intrinsic '-'(x::AlgCDElt, y::AlgCDElt) -> AlgCDElt
   return x+(-y);
 end intrinsic;
 
+intrinsic IsZero(x::AlgCDElt) -> BoolElt
+{.}
+  return (x`vec[1] eq 0) and (x`vec[2] eq 0);	  
+end intrinsic;
+
+intrinsic 'eq'(x::AlgCDElt, y::AlgCDElt) -> BoolElt
+{.}
+  return IsZero(x-y);
+end intrinsic;
+
 intrinsic '+'(x::FldElt, y::AlgCDElt) -> AlgCDElt
 {.}
   return (Parent(y)!x) + y;
@@ -164,8 +174,8 @@ intrinsic Conjugate(x::AlgCDElt) -> AlgCDElt
   x1, x2 := Explode(x`vec);
   sigma := B`sigma;
   return B![sigma(x1), -x2];
-end intrinsic;	  
-
+end intrinsic;
+  
 intrinsic '!'(F::Fld, x::AlgCDElt) -> FldElt
 {.}
   B := Parent(x);
@@ -179,6 +189,12 @@ intrinsic Norm(x::AlgCDElt) -> FldElt
 {.}
   B := Parent(x);
   return BaseField(B`A)!(x * Conjugate(x));
+end intrinsic;
+
+intrinsic Trace(x::AlgCDElt) -> FldElt
+{.}
+  B := Parent(x);
+  return BaseField(B`A)!(x + Conjugate(x));
 end intrinsic;
 
 intrinsic Parent(x::AlgCDElt) -> AlgCD
@@ -279,6 +295,12 @@ intrinsic Perp(S::AlgCD) -> SeqEnum[AlgCDElt]
   ker := Kernel(Q * Transpose(s));
   d := Dimension(B`A);
   return [B | [Eltseq(v)[1..d], Eltseq(v)[d+1..2*d]] : v in Basis(ker)];
+end intrinsic;
+
+// trilinear form
+intrinsic Trilinear(x::AlgCDElt, y::AlgCDElt, z::AlgCDElt) -> FldElt
+{.}
+  return Trace(x*(y*z));
 end intrinsic;
 
 // the alternating form
@@ -544,4 +566,156 @@ V.1 * std_rep_lie_alg(H1);
 std_rep_lie_alg(H1) eq Transpose(ActionMatrix(V, H1));
 
 w0 := elt< G | 6 > * elt <G | Vector([p^(Integers()!i) : i in Eltseq(alpha0_dual)])>;
+*/
+
+
+// Constructing the Lie algebra (using V7)
+
+/*
+
+H<i,j,k> := QuaternionAlgebra(Rationals(), -1, -1);
+star := map<H -> H | x :-> Trace(x)-x>;
+O := CDAlgebra(H, star, QQ!(-1));
+
+V7_basis := Perp(sub<O | O!1 >);
+V7_abs := CombinatorialFreeModule(QQ, [Sprintf("%o", x) : x in V7_basis]);
+Wedge_2_V7 := ExteriorPower(V7_abs, 2);
+names := Names(Wedge_2_V7);
+vals_on_basis := [];
+for name in names do
+    elt1 := O!eval(Split(name, "^")[1]);
+    elt2 := O!eval(Split(name, "^")[2]);
+    Append(~vals_on_basis, elt1*elt2-elt2*elt1);
+end for;
+
+function wedge_map(x)
+    t := &+[Eltseq(x)[i]*vals_on_basis[i] : i in [1..#vals_on_basis]];
+    return V7_abs!Eltseq(t)[2..8];
+end function;
+
+phi := Homomorphism(Wedge_2_V7, V7_abs, wedge_map);
+g2 := [Wedge_2_V7!b : b in Basis(Kernel(phi`morphism))];
+
+*/
+
+// Checking the structure J
+/*
+
+QQ := Rationals();
+F := FunctionField(QQ, 81);
+x_var_names := [[Sprintf("x[%o][%o]",a,b) : b in [1..8]] : a in [1..3]];
+y_var_names := [[Sprintf("y[%o][%o]",a,b) : b in [1..8]] : a in [1..3]];
+z_var_names := [[Sprintf("z[%o][%o]",a,b) : b in [1..8]] : a in [1..3]];
+c_var_names := [Sprintf("c[%o]", a) : a in [1..3]];
+d_var_names := [Sprintf("d[%o]", a) : a in [1..3]];
+e_var_names := [Sprintf("e[%o]", a) : a in [1..3]];
+var_names := (&cat x_var_names cat c_var_names) cat (&cat y_var_names cat d_var_names) cat (&cat z_var_names cat e_var_names);
+
+AssignNames(~F, var_names);
+x := [[F.Index(var_names, y) : y in z] : z in x_var_names];
+y := [[F.Index(var_names, y) : y in z] : z in y_var_names];
+z := [[F.Index(var_names, y) : y in z] : z in z_var_names];
+c := [F.Index(var_names, v) : v in c_var_names];
+d := [F.Index(var_names, v) : v in d_var_names];
+e := [F.Index(var_names, v) : v in e_var_names];
+
+H<i,j,k> := QuaternionAlgebra(F, -1, -1);
+star := map<H -> H | x :-> Trace(x)-x>;
+O := CDAlgebra(H, star, F!(-1));
+
+function NJ(X)
+c,x := Explode(X);
+return c[1]*c[2]*c[3]-c[1]*Norm(O!x[1])-c[2]*Norm(O!x[2])-c[3]*Norm(O!x[3])+Trilinear(O!x[1],O!x[2],O!x[3]);
+end function;
+
+trilinear_J := NJ(X_plus_Y_plus_Z) - NJ(X_plus_Y) - NJ(Y_plus_Z) - NJ(Z_plus_X) + NJ(X) + NJ(Y) + NJ(Z);
+
+function X_sharp(X, Z)
+c,x := Explode(X);
+e,z := Explode(Z);
+x_var := (&cat x) cat c;
+z_var := (&cat z) cat e;
+return 1/2*Evaluate(trilinear_J, x_var cat x_var cat z_var);
+end function;
+
+function X_cross_Y(X, Y, Z)
+c,x := Explode(X);
+d,y := Explode(Y);
+X_plus_Y := [* [c[i]+d[i] : i in [1..3]], [[x[i][j]+y[i][j] : j in [1..8]] : i in [1..3]] *];
+return X_sharp(X_plus_Y, Z) - X_sharp(X, Z) - X_sharp(Y,Z);
+end function;
+
+function bilinear_U(X,Y,U)
+c,x := Explode(X);
+d,y := Explode(Y);
+e,z := Explode(U);
+x_var := (&cat x) cat c;
+y_var := (&cat y) cat d;
+u_var := (&cat z) cat e;
+trilin := Evaluate(trilinear_J, x_var cat y_var cat u_var);
+return X_sharp(U, X)*X_sharp(U, Y) - trilin;
+end function;
+
+I := [* [F | 1,1,1], [Eltseq(O!0) : i in [1..3]] *];
+iota_X_sharp := [* [c[2]*c[3]-Norm(O!x[1]), c[3]*c[1]-Norm(O!x[2]), c[1]*c[2]-Norm(O!x[3])], [Eltseq(t) : t in [Conjugate(O!x[2]*O!x[3]) - c[1]*O!x[1], Conjugate(O!x[3]*O!x[1]) - c[2]*O!x[2], Conjugate(O!x[1]*O!x[2]) - c[3]*O!x[3]]] *]; 
+
+iota_X_cross_Y := [* [c[2]*d[3]+d[2]*c[3]-trd(O!x[1],O!y[1]), c[3]*d[1]+d[3]*c[1]-trd(O!x[2],O!y[2]), d[1]*c[2]+c[1]*d[2]-trd(O!x[3],O!y[3])], [Eltseq(t) : t in [Conjugate(O!y[2]*O!x[3]+O!x[2]*O!y[3])-d[1]*O!x[1]-c[1]*O!y[1], Conjugate(O!y[3]*O!x[1]+O!x[3]*O!y[1])-d[2]*O!x[2]-c[2]*O!y[2], Conjugate(O!y[1]*O!x[2]+O!x[1]*O!y[2])-d[3]*O!x[3]-c[3]*O!y[3]]] *];
+
+assert bilinear_U(iota_X_sharp, Y, I) eq X_sharp(X, Y);
+
+assert bilinear_U(iota_X_cross_Y, Z, I) eq X_cross_Y(X, Y, Z);
+
+beta := 1/2*O![-1,1,1,1,1,1,1,1];
+
+E := [* [F | 2,2,2], [Eltseq(beta) : i in [1..3]] *];
+
+es := [[0 : j in [1..i-1]] cat [1] cat [0 : j in [i+1..#var_name\
+s]] : i in [1..#var_names]];
+
+mat := Matrix([[Evaluate(bilinear_U(X,Y,E), [es[i][k]+es[27+j][k] : k in [1..81]]) : j in [1..27]] : i in [1..27]]);
+
+IsPositiveDefinite(mat);
+
+function dot(X,Y)
+c,x := Explode(X);
+d,y := Explode(Y);
+iota_X_cross_Y := [* [c[2]*d[3]+d[2]*c[3]-trd(O!x[1],O!y[1]), c[3]*d[1]+d[3]*c[1]-trd(O!x[2],O!y[2]), d[1]*c[2]+c[1]*d[2]-trd(O!x[3],O!y[3])], [Eltseq(t) : t in [Conjugate(O!y[2]*O!x[3]+O!x[2]*O!y[3])-d[1]*O!x[1]-c[1]*O!y[1], Conjugate(O!y[3]*O!x[1]+O!x[3]*O!y[1])-d[2]*O!x[2]-c[2]*O!y[2], Conjugate(O!y[1]*O!x[2]+O!x[1]*O!y[2])-d[3]*O!x[3]-c[3]*O!y[3]]] *];
+return iota_X_cross_Y;
+end function;
+
+assert bilinear_U(dot(X,Y), Z, I) eq trilinear_J;
+
+twice_iota_X_sharp := [* [2*c : c in iota_X_sharp[1]], [[2*x : x in y] : y in iota_X_sharp[2]] *];
+
+assert dot(X,X) eq twice_iota_X_sharp;
+
+assert dot(X,Y) eq dot(Y,X);
+
+function dot(X,Y)
+c,x := Explode(X);
+d,y := Explode(Y);
+X_mat := [[O!c[1], O!x[3], Conjugate(O!x[2])], [Conjugate(O!x[3]), O!c[2], O!x[1]], [O!x[2], Conjugate(O!x[1]), O!c[3] ]];
+Y_mat := [[O!d[1], O!y[3], Conjugate(O!y[2])], [Conjugate(O!y[3]), O!d[2], O!y[1]], [O!y[2], Conjugate(O!y[1]), O!d[3] ]];
+XY_mat := [[&+[X_mat[i][k]*Y_mat[k][j] : k in [1..3]] : j in [1..3]] : i in [1..3]];
+YX_mat := [[&+[Y_mat[i][k]*X_mat[k][j] : k in [1..3]] : j in [1..3]] : i in [1..3]];
+XdotY_mat := [[1/2*(XY_mat[i][j] + YX_mat[i][j]) : j in [1..3]] : i in [1..3]];
+return [* [F!XdotY_mat[i][i] : i in [1..3]], [XdotY_mat[2,3], XdotY_mat[3,1], XdotY_mat[1,2]] *];
+end function;
+
+lhs := dot(dot(X,X), dot(Y,X));
+rhs := dot(dot(dot(X,X), Y), X);
+
+assert lhs eq rhs;
+
+J := ExceptionalJordan(O);
+X := J![* c,x *];
+Y := J![* d,y *];
+Z := J![* e,z *];
+
+assert Trilinear(X,X,X) eq 6*Norm(X);
+
+assert Evaluate(X_sharp, Z) eq 1/2*Trilinear(Z,X,X);
+
+assert Evaluate(CrossProduct(X,Y),Z) eq Trilinear(Z,X,Y);
+
 */

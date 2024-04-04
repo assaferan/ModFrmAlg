@@ -1,5 +1,6 @@
 {
 
+  G2/Jordan.m
   G2/Octonion.m
     
   grp/GrpRed.m

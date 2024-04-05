@@ -110,6 +110,10 @@ intrinsic Print(b::AlgCDElt, level::MonStgElt)
   if (level eq "Magma") then
     printf "%m!%m", Parent(b), b`vec;
   end if;
+  if b`vec[2] eq 0 then // coercing to the base algebra
+      printf "%o", b`vec[1];
+      return;
+  end if;
   printf "%o", b`vec;
   return;
 end intrinsic;
@@ -341,6 +345,15 @@ function is_order(gens)
 
     return true;
 end function;
+
+intrinsic VectorSpace(O::AlgCD) -> ModTupFld
+{.}
+  W, mW := VectorSpace(O`A);
+  V, s1, s2, p1, p2 := DirectSum(W,W);
+  mV := map< O -> V | x :-> s1(mW(x`vec[1])) + s2(mW(x`vec[2])),
+	              v :-> [p1(v)@@mW, p2(v)@@mW] >;
+  return V, mV;
+end intrinsic;
 
 /* Last commands - using GroupOfLieType to regain the quadratic form
 
@@ -714,8 +727,26 @@ Z := J![* e,z *];
 
 assert Trilinear(X,X,X) eq 6*Norm(X);
 
+X_sharp := Sharp(X);
+
 assert Evaluate(X_sharp, Z) eq 1/2*Trilinear(Z,X,X);
 
 assert Evaluate(CrossProduct(X,Y),Z) eq Trilinear(Z,X,Y);
 
+assert Iota(X_sharp) eq J!iota_X_sharp;
+
+assert Iota(CrossProduct(X,Y)) eq J!iota_X_cross_Y;
+
+assert Dot(Dot(X,X), Dot(Y,X)) eq Dot(Dot(Dot(X,X), Y), X);
+
+assert Dot(InnerCrossProduct(X,X), X) eq J!Norm(X);
+
+assert Dot(InnerCrossProduct(X,Y),Z) + Dot(InnerCrossProduct(Y,Z),X) + Dot(InnerCrossProduct(Z,X),Y) eq 1/2*J!Trilinear(X,Y,Z);
+
+assert Trace(Dot(Dot(X,Y),Z) - Dot(X, Dot(Y,Z))) eq 0;
+
+// Prop. 3 in [Rum97]
+lhs := F!2*InnerCrossProduct(InnerCrossProduct(X,Y),Z);
+rhs := Dot(Dot(X,Y),Z) - Dot(Dot(Y,Z),X) - Dot(Dot(Z,X),Y) + 1/2*(Trace(Dot(Y,Z))*X+Trace(Dot(X,Z))*Y);
+assert lhs eq rhs;
 */

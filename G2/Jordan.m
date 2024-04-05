@@ -21,8 +21,8 @@ declare attributes ExcJordDual:
 declare attributes ExcJordDualElt :
 		   // the dual of the Exceptional Jordan algebra it belongs to
 		   parent,
-		   // the functional
-	func;
+	// a vector representing the functional in the dual vector space
+	vec;
 
 intrinsic ExceptionalJordan(O::AlgCD) -> ExcJord
 {Create the Exceptional Jordan algebra associated to the Cayley-Dickson algebra O.}
@@ -93,6 +93,12 @@ intrinsic IsCoercible(J::ExcJord, X::.) -> BoolElt, .
    if ISA(Type(X), SeqEnum) or ISA(Type(X), List) then
        if #X eq 2 then // of the form X = [ c, x ]
 	   c, x := Explode(X);
+	   if Type(c) ne SeqEnum then
+	       c := Eltseq(c);
+	   end if;
+	   if Type(x) ne SeqEnum then
+	       x := Eltseq(x);
+	   end if;
 	   if (#c ne 3) or (#x ne 3) then
 	       return false, "Arguments are not compatible";
 	   end if;
@@ -158,10 +164,18 @@ end intrinsic;
 
 intrinsic IsCoercible(Jdual::ExcJordDual, f::.) -> BoolElt, .
 {Coerce f into Jdual if possible.}
+    V, mV := VectorSpace(Jdual`J);
     if ISA(Type(f), UserProgram) then
 	phi := New(ExcJordDualElt);
 	phi`parent := Jdual;
-	phi`func := f;
+	phi`vec := Vector([f((V.i)@@mV) : i in [1..27]]);
+	return true, phi;
+    end if;
+    is_vec, v := IsCoercible(V, f);
+    if is_vec then
+	phi := New(ExcJordDualElt);
+	phi`parent := Jdual;
+	phi`vec := v;
 	return true, phi;
     end if;
     return false, "Illegal coercion";
@@ -214,8 +228,14 @@ intrinsic Norm(X::ExcJordElt) -> FldElt
 {.}
   c := Diagonal(X);
   x := Vector(X);
-  return c[1]*c[2]*c[3]-c[1]*Norm(x[1])-c[2]*Norm(x[2])-c[3]*Norm(x[3])+Trilinear(x[1],x[2],x[3]);
+  return &*c - &+[c[i]*Norm(x[i]) : i in [1..3]] + Trilinear(x[1],x[2],x[3]);
 end intrinsic;
+
+intrinsic Trace(X::ExcJordElt) -> FldElt
+{.}
+  c := Diagonal(X);
+  return &+c;
+end intrinsic;  
 
 intrinsic '+'(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
 {.}
@@ -223,6 +243,51 @@ intrinsic '+'(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
   Z := New(ExcJordElt);
   Z`parent := Parent(X);
   Z`mat := [[X`mat[i][j] + Y`mat[i][j] : j in [1..3]] : i in [1..3]];
+  return Z;
+end intrinsic;
+
+intrinsic '+'(X::ExcJordElt, a::FldElt) -> ExcJordElt
+{.}
+  return X + Parent(X)!a;
+end intrinsic;
+  
+
+intrinsic '-'(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
+{.}
+  require Parent(X) eq Parent(Y) : "both elements must be in the same algebra";
+  Z := New(ExcJordElt);
+  Z`parent := Parent(X);
+  Z`mat := [[X`mat[i][j] - Y`mat[i][j] : j in [1..3]] : i in [1..3]];
+  return Z;
+end intrinsic;
+
+intrinsic '*'(a::FldElt, X::ExcJordElt) -> ExcJordElt
+{.}
+  F := BaseField(Algebra(Parent(X)));
+  is_F, a_F := IsCoercible(F,a);
+  require is_F : "scalar must be in the same field";
+  Y := New(ExcJordElt);
+  Y`parent := Parent(X);
+  Y`mat := [[a_F*X`mat[i][j] : j in [1..3]] : i in [1..3]];
+  return Y;
+end intrinsic;  
+
+intrinsic 'eq'(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
+{.}
+  if Parent(X) ne Parent(Y) then
+    return false;
+  end if;
+  return &and[&and[X`mat[i][j] eq Y`mat[i][j] : j in [1..3]] : i in [1..3]];
+end intrinsic;
+
+intrinsic Dot(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
+{.}
+  require Parent(X) eq Parent(Y) : "both elements must be in the same algebra";
+  Z := New(ExcJordElt);
+  Z`parent := Parent(X);
+  XY_mat := [[&+[X`mat[i][k] * Y`mat[k][j] : k in [1..3]] : j in [1..3]] : i in [1..3]];
+  YX_mat := [[&+[Y`mat[i][k] * X`mat[k][j] : k in [1..3]] : j in [1..3]] : i in [1..3]];
+  Z`mat := [[1/2*(XY_mat[i][j]+YX_mat[i][j]) : j in [1..3]] : i in [1..3]];
   return Z;
 end intrinsic;
 
@@ -247,7 +312,7 @@ end intrinsic;
 intrinsic Print(f::ExcJordDualElt, level::MonStgElt)
 {.}
   if (level eq "Magma") then
-      printf "%m!%m", Parent(f), f`func;
+      printf "%m!%m", Parent(f), f`vec;
       return;
   end if;
   printf "functional in %o", Parent(f);
@@ -256,7 +321,9 @@ end intrinsic;
 
 intrinsic Evaluate(f::ExcJordDualElt, X::ExcJordElt) -> FldElt
 {.}
-  return f`func(X);	  
+  V, mV := VectorSpace(Parent(X));
+  X_vec := mV(X);
+  return (f`vec, X_vec);
 end intrinsic;	  
 
 intrinsic '+'(f::ExcJordDualElt, g::ExcJordDualElt) -> ExcJordDualElt
@@ -264,10 +331,7 @@ intrinsic '+'(f::ExcJordDualElt, g::ExcJordDualElt) -> ExcJordDualElt
   require Parent(f) eq Parent(g) : "both elements must be in the same algebra";
   h := New(ExcJordDualElt);
   h`parent := Parent(f);
-  function hfunc(X)
-      return f`func(X) + g`func(X);
-  end function;
-  h`func := hfunc;
+  h`vec := f`vec + g`vec;
   return h;
 end intrinsic;
 
@@ -276,10 +340,7 @@ intrinsic '-'(f::ExcJordDualElt, g::ExcJordDualElt) -> ExcJordDualElt
   require Parent(f) eq Parent(g) : "both elements must be in the same algebra";
   h := New(ExcJordDualElt);
   h`parent := Parent(f);
-  function hfunc(X)
-      return f`func(X) - g`func(X);
-  end function;
-  h`func := hfunc;
+  h`vec := f`vec - g`vec;
   return h;
 end intrinsic;
 
@@ -291,5 +352,43 @@ end intrinsic;
 intrinsic BilinearU(X::ExcJordElt,Y::ExcJordElt,U::ExcJordElt) -> FldElt
 {.}
   U_sharp := Sharp(U);
-  return U_sharp(X)*U_sharp(Y) - Trilinear(U,X,Y);
-end function;
+  return Evaluate(U_sharp, X)*Evaluate(U_sharp,Y) - Trilinear(U,X,Y);
+end intrinsic;
+
+intrinsic Iota(f::ExcJordDualElt) -> ExcJordElt
+{.}
+  J := Parent(f)`J;
+  O := Algebra(J);
+  F := BaseField(O);
+  I := J![* [F | 1,1,1], [Eltseq(O!0) : i in [1..3]] *];
+  // mat := Matrix([[BilinearU((V.i)@@mV, (V.j)@@mV, I) : j in [1..27]] : i in [1..27]]);
+  // The above is a bit slow, so we write explicitly this matrix here
+  // Leave the commented out in case we want to modify I
+  mat := DiagonalMatrix(F, [1,1,1] cat [2 : i in [1..24]]);
+  V, mV := VectorSpace(J);
+  vec := Vector([Evaluate(f, (V.i)@@mV) : i in [1..27]]);
+  sol := Solution(mat, vec);
+  return sol@@mV;
+end intrinsic;
+
+intrinsic VectorSpace(J::ExcJord) -> ExcJord
+{.}
+  W, mW := VectorSpace(J`O);
+  U := VectorSpace(BaseField(J`O), 3);
+  V, s, p := DirectSum([U, W, W, W]);
+  mV := map< J -> V | X :-> s[1](U!Diagonal(X)) + &+[s[i+1](mW(Vector(X)[i])) : i in [1..3]],
+	              v :-> [* p[1](v), [p[i+1](v)@@mW : i in [1..3]] *] >;
+  return V, mV;
+end intrinsic;
+
+intrinsic GenericMinimalPolynomial(X::ExcJordElt) -> RngUPolElt
+{.}
+  F := BaseField(Algebra(Parent(X)));
+  _<x> := PolynomialRing(F);
+  return x^3 - Trace(X)*x^2 + 1/2*(Trace(X)^2 - Trace(Dot(X,X)))*x-Norm(X);
+end intrinsic;	  
+
+intrinsic InnerCrossProduct(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
+{.}
+  return Dot(X,Y) - 1/2*(Trace(Y)*X + Trace(X)*Y) + 1/2*(Trace(X)*Trace(Y)-Trace(Dot(X,Y)));
+end intrinsic;

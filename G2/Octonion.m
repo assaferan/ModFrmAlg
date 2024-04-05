@@ -749,4 +749,17 @@ assert Trace(Dot(Dot(X,Y),Z) - Dot(X, Dot(Y,Z))) eq 0;
 lhs := F!2*InnerCrossProduct(InnerCrossProduct(X,Y),Z);
 rhs := Dot(Dot(X,Y),Z) - Dot(Dot(Y,Z),X) - Dot(Dot(Z,X),Y) + 1/2*(Trace(Dot(Y,Z))*X+Trace(Dot(X,Z))*Y);
 assert lhs eq rhs;
+
+assert Trace(TripleBracket(X,Y,Z)) eq 0;
+
+// eq (6) in [Rum97]
+assert L(X,Y)*L(Z)-L(Z)*L(X,Y) eq L(TripleBracket(Y,Z,X));
+// eq (7) in [Rum97]
+assert L(Dot(X,Y),Z) + L(Dot(Y,Z),X) + L(Dot(Z,X),Y) eq 0;
+// eq (8) in [Rum97]
+assert L(InnerCrossProduct(X,Y),Z) + L(InnerCrossProduct(Y,Z),X) + L(InnerCrossProduct(Z,X),Y) eq 0;
+
+assert Iota(CrossProduct(X,Y)) eq F!2*InnerCrossProduct(X,Y);
+
+assert BilinearU(X,Y,I) eq Trace(X)*Trace(Y)-Trace(Iota(CrossProduct(X,Y)));
 */

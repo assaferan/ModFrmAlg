@@ -392,3 +392,21 @@ intrinsic InnerCrossProduct(X::ExcJordElt, Y::ExcJordElt) -> ExcJordElt
 {.}
   return Dot(X,Y) - 1/2*(Trace(Y)*X + Trace(X)*Y) + 1/2*(Trace(X)*Trace(Y)-Trace(Dot(X,Y)));
 end intrinsic;
+
+intrinsic TripleBracket(X::ExcJordElt, Y::ExcJordElt, Z::ExcJordElt) -> ExcJordElt
+{.}
+  return Dot(Dot(X,Y),Z) - Dot(X, Dot(Y,Z));
+end intrinsic;
+
+intrinsic L(X::ExcJordElt) -> AlgMatElt
+{.}
+  V, mV := VectorSpace(Parent(X));
+  L_X := Matrix([mV(Dot(X, (V.i)@@mV)) : i in [1..27]]);
+  return L_X;
+end intrinsic;	  
+
+intrinsic L(X::ExcJordElt, Y::ExcJordElt) -> AlgMatElt
+{.}
+  return L(X)*L(Y) - L(Y)*L(X);
+end intrinsic;	  
+

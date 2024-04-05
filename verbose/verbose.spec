@@ -1,4 +1,3 @@
 {
     verbose.m
-    version.m
 }

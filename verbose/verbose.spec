@@ -1,3 +1,4 @@
 {
     verbose.m
+    version.m
 }

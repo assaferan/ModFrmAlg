@@ -513,6 +513,7 @@ function quaternary_lattice(K, M)
 	Append(~alphas, alpha);
     end for;
     basis_O_F := [alphas[i]*Vector(bb[i]) : i in [1..#bb]];
+    assert exists(sig){a : a in Automorphisms(K) | a(F.1) eq F.1 and not a(K.1) eq K.1};
     conj_basis := [Conjugate(B![sig(x) : x in Eltseq(g@@m_res_B_F)]) : g in basis_O_F];
     conj_basis_O_F := Matrix([m_res_B_F(x) : x in conj_basis]);
     mat_basis_O_F := ChangeRing(Matrix(basis_O_F),F);

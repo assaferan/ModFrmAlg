@@ -325,13 +325,13 @@ function Decomposition_recurse(M, V, primes, prime_idx,
 			Generators(primes[Abs(prime_idx)])>);
    // if the prime is ramified or inert above 2, at the moment the Hecke Operator
    // is not computed correctly
-if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[Abs(prime_idx)]))) then
-		    return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
+   if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and IsEven(Norm(primes[Abs(prime_idx)]))) then
+       return Decomposition_recurse(M, V,primes,prime_idx+1,proof,
 				    random_op : UseLLL := UseLLL,
 						Estimate := Estimate,
 						Orbits := Orbits,
-						 LowMemory := LowMemory,
-						 ThetaPrec := ThetaPrec);
+						LowMemory := LowMemory,
+						ThetaPrec := ThetaPrec);
    end if;
 
    pR := fac[1][1];
@@ -388,7 +388,7 @@ if ((#fac eq 1) and (fac[1][2] eq 2)) or ((#fac eq 1) and (fac[1][2] eq 1) and I
       else
 	if Abs(prime_idx) lt #primes then
 	      q_idx   := Dimension(W) eq Dimension(V) select
-			 (((prime_idx gt 0) and IsSpecialOrthogonal(M)) select -prime_idx 
+			 ((IsEven(Rank(Module(M))) and (prime_idx gt 0) and IsSpecialOrthogonal(M)) select -prime_idx 
 			  else Abs(prime_idx) + 1) else 1;
               Sub, is_complete_W  := Decomposition_recurse(M, W, primes, q_idx, 
                                             proof, random_op :

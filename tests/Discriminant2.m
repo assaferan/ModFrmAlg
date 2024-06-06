@@ -8,4 +8,5 @@ procedure testDiscriminant2()
     assert Norm(Discriminant(Lambda)) eq 2;
 end procedure;
 
+SetVerbose("AlgebraicModularForms", 2);
 testDiscriminant2();

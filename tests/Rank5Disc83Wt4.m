@@ -27,4 +27,5 @@ procedure testRank5Disc83Wt4( : Precision := 20)  // :Precision := NumPrimes ?
   // !! TODO - add eigenvalues of T_p,2, fix 83 to match ours
 end procedure;
 
+SetVerbose("AlgebraicModularForms", 2);
 testRank5Disc83Wt4();

@@ -503,7 +503,10 @@ function extract_root_datum(root_data)
     root_array := AssociativeArray();
 
     // Store meta data.
-    for entry in root_data do root_array[entry[1]] := entry[2]; end for;
+    for entry in root_data do
+	assert #entry eq 2;
+	root_array[entry[1]] := entry[2];
+    end for;
 
     A := root_array["SIMPLE_ROOTS"];
     B := root_array["SIMPLE_COROOTS"];

@@ -92,6 +92,11 @@ intrinsic '!!'(QQ::FldRat, I::RngIntFracIdl) -> RngIntFracIdl
   return idealCoercion(I);
 end intrinsic;
 
+intrinsic '!!'(QQ::FldRat, a::RngIntElt) -> RngIntFracIdl
+{Make the ideal I a fractional ideal.}
+  return idealCoercion(a*Integers());
+end intrinsic;
+
 // arithmetic
 
 intrinsic '^'(I::RngIntFracIdl, n::RngIntElt) -> RngIntFracIdl

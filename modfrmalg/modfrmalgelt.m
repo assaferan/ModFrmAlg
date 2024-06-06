@@ -530,6 +530,15 @@ function FindSpinorSigns(M, pRs, chi : ThetaPrec := 25)
     return vec;
 end function;
 
+/*
+variation - one can find signs of nu, when doing GSO.
+Here is a sketch that works over Q
+p := Norm(pR);
+_, tmp := NormEquation(ZK,p); // Probably easier to factor
+t := tmp[1];
+val := chi(t*ZK);
+*/
+
 intrinsic EisensteinSeries(M::ModFrmAlg) -> ModFrmAlgElt
 { Returns the normalized Eistenstein series. }
 	// Initialize the space of modular forms.

@@ -19,7 +19,11 @@ function RationalEvenClifford(L : Isometries := [])
     // Fixing the order of the subsets
     subs := [[x : x in Subsets({1..dim}, k)] : k in [0..dim]];
     C_F_gr := [[&*([1] cat [e[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
-    idls_gr := [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
+    if (ElementType(Universe(idls)) eq RngIntFracIdl) then
+	idls_gr := [[Rationals()!!1]] cat [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [1..dim]];
+    else
+	idls_gr := [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
+    end if;
     basis_C_F := &cat C_F_gr;
     idls_C_F := &cat idls_gr;
     // we construct the even and odd (rational) clifford algebras.
@@ -257,7 +261,11 @@ function get_quaternion_orders(L : Isometry := 1)
     _, BB, isom := IsQuaternionAlgebra(B);
     ram_f, ram_inf := RamifiedPlaces(BB);
     // BBB := QuaternionAlgebra(Discriminant(BB));
-    BBB := QuaternionAlgebra([Place(x) : x in ram_f] cat ram_inf);
+    if not IsEmpty(ram_f) and ElementType(Universe(ram_f)) eq RngInt then
+	BBB := QuaternionAlgebra(&*[Norm(x) : x in ram_f]);
+    else
+	BBB := QuaternionAlgebra([Place(x) : x in ram_f] cat ram_inf);
+    end if;
     _, isom2 := IsIsomorphic(BB,BBB : Isomorphism);
     isom := isom*isom2;
     BB := BBB;
@@ -297,9 +305,17 @@ function get_quaternion_orders(L : Isometry := 1)
 	hnfs := [HermiteForm(mat) : mat in int_mats];
 	rat_hnfs := [1/denoms[i] * ChangeRing(hnfs[i], F) : i in [1,2]];
 	elts := [[isom(v[1] + v[2]*i + v[3]*j + v[4]*i*j) : v in Rows(hnf)] : hnf in rat_hnfs];
-	orders := [QuaternionOrder(elt_seq) : elt_seq in elts];
+	if Type(F) eq FldRat then
+	    orders := [QuaternionOrder(elt_seq) : elt_seq in elts];
+	else
+	    orders := [Order(elt_seq) : elt_seq in elts];
+	end if;
     else
-	idls := [ideal<Integers(KK) | idls_C_0[i]> : i in [1..8]];
+	if (Type(F) eq FldRat) then
+	    idls := [Norm(idls_C_0[i])*Integers(KK) : i in [1..8]];
+	else
+	    idls := [ideal<Integers(KK) | idls_C_0[i]> : i in [1..8]];
+	end if;
 	pmat := PseudoMatrix(idls, mats[1]);
 	hnf := HermiteForm(pmat);
 	idls := CoefficientIdeals(hnf);
@@ -337,10 +353,10 @@ function get_genus_orders(genus)
 	if (Type(F) ne FldRat) then 
 	    B_prime, emb_F := ChangeRing(B_prime, F);
 	    _, isom := IsIsomorphic(B_prime, B : Isomorphism);
-	    order_B := [Order([isom(emb_F(x)) : x in Basis(O)]) : O in all_orders[idx]];
+	    order_B := [Order([isom(emb_F(x)) : x in Generators(O)]) : O in all_orders[idx]];
 	else
 	    _, isom := IsIsomorphic(B_prime, B : Isomorphism);
-	    order_B := [QuaternionOrder([isom(x) : x in Basis(O)]) : O in all_orders[idx]];
+	    order_B := [QuaternionOrder([isom(x) : x in Generators(O)]) : O in all_orders[idx]];
 	end if;
 	Append(~orders_B, order_B);
     end for;
@@ -550,4 +566,36 @@ function factor_ufd(x)
 	end if;
     end for;
     return fac;
+end function;
+
+// inverse odd clifford for the binary case
+function InverseOddClifford(I,N)
+    x1, x2 := Explode(Basis(I));
+    O := Order(I);
+    modN, red := quo<O | N*O>;
+    mat := Matrix(Integers(N), [Eltseq(red(x1)), Eltseq(red(x2))]);
+    sol := Vector(Integers(N), Eltseq(red(1)));
+    a, b := Explode(Eltseq(Solution(mat, sol)));
+    ZZ := Integers();
+    a := ZZ!a;
+    b := ZZ!b;
+    while (GCD(a,b) ne 1) do
+	if (a eq 0) then
+	    a +:= N;
+	else
+	    b +:= N;
+	end if;
+    end while;
+    _, d, c := XGCD(a,b);
+    assert a*d+b*c eq 1;
+    mat := Matrix([[a,b],[-c,d]]);
+    assert Determinant(mat) eq 1;
+    y1 := a*x1 + b*x2;
+    y2 := -c*x1 + d*x2;
+    w := y2 / y1;
+    II := ideal<O_K | [1, w]>;
+    a := Denominator(w);
+    Q_I := a*Matrix([[Norm(x+y)-Norm(x)-Norm(y) : x in Basis(II)] : y in Basis(II)]);
+    assert -Determinant(Q_I) eq Discriminant(O);
+    return Q_I;
 end function;

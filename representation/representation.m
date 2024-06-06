@@ -1252,6 +1252,8 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
   V := New(GrpRep);
   std_rep := StandardRepresentation(G);
   GL_std := Codomain(std_rep);
+  RootDat := RootDatum(G);
+  d := Dimension(RootDat);
   mats := [std_rep(x) : x in AlgebraicGenerators(G)];
   mat_grp := sub< GL_std | mats>;
   V`G := mat_grp;
@@ -1259,7 +1261,7 @@ intrinsic GroupRepresentation(G::GrpLie, hw::SeqEnum[RngIntElt]) -> GrpRep
   word_map := InverseWordMap(mat_grp);
   G_map := hom<Codomain(word_map) -> G | AlgebraicGenerators(G)>;
   if not IsSemisimple(G) then
-      RootDat := RootDatum(G);
+      // RootDat := RootDatum(G);
       AdRootDat := RootDatum(CartanName(RootDat));
       // This is the central weight
       ones := Vector([Rationals() | 1 : i in [1..Dimension(RootDat)]]);

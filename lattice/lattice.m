@@ -122,6 +122,9 @@ freeze;
 // Complete(L::ModDed, p::RngOrdIdl) -> ModPad
 // Complete(L::ModDedLat, p::RngOrdIdl) -> ModPad
 
+import "ProcPL.m" : ProjectiveLineProcess, Advance, Next;
+import "quadratic_defect.m" : QuadraticDefect, IsLocalSquare;
+
 ///////////////////////////////////////////////////////////////////
 //                                                               //
 //    ModDedLat: The lattice in a Dedekind module object.        //
@@ -1678,6 +1681,7 @@ function is_maximal_integral(L,p)
   FF:= BaseRing(BM);
   val2:= Valuation(BaseRing(L)!2, p);
   PP:= ProjectiveLineProcess(k, Nrows(V));
+  Advance(~PP);
   x:= Next(PP);
   while not IsZero(x) do
     e:= Eltseq(x * V) @@ h;
@@ -1707,6 +1711,7 @@ function is_maximal_integral(L,p)
 	assert IsIntegral(lat);
 	return false, lat; 
     end if;
+    Advance(~PP);
     x:= Next(PP);
   end while;
   // This should work but apparently does not work in the even case

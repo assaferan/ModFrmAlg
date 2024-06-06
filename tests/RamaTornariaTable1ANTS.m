@@ -24,4 +24,5 @@ procedure testRamaTornariaTable1ANTS(: PrecT1 := 500, PrecT2 := 50, PrecLSer := 
   assert CFENew(lser) lt 10^(-PrecLSer);
 end procedure;
 
+SetVerbose("AlgebraicModularForms", 2);
 testRamaTornariaTable1ANTS( : PrecT1 := 25, PrecT2 := 5, PrecLSer := 2);

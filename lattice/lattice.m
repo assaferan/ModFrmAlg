@@ -1,4 +1,3 @@
-
 freeze;
 /****-*-magma-******a********************************************************
                                                                             
@@ -2102,10 +2101,10 @@ intrinsic '#'(I::RngPadIdl) -> RngIntElt
   return (#(I`R) / (#k)^v);
 end intrinsic;  
 
-declare type ModPad[ModTupFldElt];
+declare type ModPad;
 declare attributes ModPad :
-		   // the base ring
-		   R,
+        // the base ring
+        R,
 	// the field of fractions
 	F,
 	// basis

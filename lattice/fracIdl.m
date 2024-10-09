@@ -44,6 +44,12 @@ declare type RngIntFracIdl;
 declare attributes RngIntFracIdl:
   gen;
 
+// Parent
+intrinsic Parent(I::RngIntFracIdl) -> .
+{Parent of I}
+    return PowerStructure(RngIntFracIdl);
+end intrinsic;
+
 // Constructors
 
 function idealConstructor(a)

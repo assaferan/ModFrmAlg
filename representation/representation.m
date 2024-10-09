@@ -852,7 +852,13 @@ intrinsic getMatrixAction(V::GrpRep, g::GrpElt) -> GrpMatElt
   // In the cases of pullbacks and weight representations
   // we don't record anything, just compute from the underlying structure
   if (Type(g) ne GrpPermElt) and (Type(BaseRing(g)) ne FldFin) then
-      assert IsIsomorphic(BaseRing(V`G),BaseRing(g));
+      F1 := BaseRing(V`G);
+      F2 := BaseRing(g);
+      if Type(F1) eq FldRat then
+	  assert Type(F2) eq FldRat;
+      else
+	  assert IsIsomorphic(F1, F2);
+      end if;
   end if;
   if assigned V`pullback then
       W := V`pullback[1];
@@ -993,7 +999,11 @@ intrinsic 'eq'(V1::GrpRep, V2::GrpRep) -> BoolElt
   if IsFinite(R1) then
       isom := (R1 eq R2);
   else
-      isom := IsIsomorphic(R1, R2);
+      if Type(R1) eq FldRat then
+	  isom := Type(R2) eq FldRat;
+      else
+	  isom := IsIsomorphic(R1, R2);
+      end if;
   end if;
   if (not isom) or (ChangeRing(V1`M, R2) ne V2`M) then
       return false;
@@ -1755,7 +1765,9 @@ function get_lap_kernel(lap : basis := false)
   im_vecs := [my_sum([Coefficients(b)[i]*W.(Index(im_mons, Monomials(b)[i]))
 		      : i in [1..#Monomials(b)]], W) : b in im_B];
   if basis then
-      return Basis(sub<Universe(im_vecs) | im_vecs>);
+      vec_basis :=  Basis(sub<Universe(im_vecs) | im_vecs>);
+      poly_basis := [&+[b[i] * im_mons[i] : i in [1..#im_mons]] : b in vec_basis];
+      return poly_basis;
   end if;
   K := Kernel(Matrix(im_vecs));
   return K;
@@ -1808,8 +1820,10 @@ function tau_polys(x,Q,sign)
     // complements to idxs
     comp := [[x : x in [1..2*n] | x notin idx] :  idx in idxs];
     assert &and[c in idxs : c in comp];
-    for i->I in idxs do
-	for j->J_prime in idxs do
+    for i in [1..#idxs] do
+	I := idxs[i];
+	for j in [1..#idxs] do
+	    J_prime := idxs[j];
 	    J := comp[j];
 	    s := Sign(Sym(2*n)!(J_prime cat J));
 	    tau_basis[i] +:= K_polys!(sign * s * Minor(Q,I,J) * basis[j]) / scale;
@@ -1843,8 +1857,9 @@ function get_hw_basis_so(lambda, Q : Dual := true, Special := false)
       // R_poly := BaseRing(x);
       R_poly := Universe(tau_basis);
       I := [mon*p : mon in MonomialsOfDegree(R_poly,deg_gap), p in tau_basis];
-      I_basis := get_lap_kernel(I : basis);
-      I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      // I_basis := get_lap_kernel(I : basis);
+      // I_red := [&+[b[i]*I[i] : i in [1..#I]] : b in I_basis];
+      I_red := get_lap_kernel(I : basis);
       basis := [R_poly!b : b in basis];
       ker := get_lap_kernel(basis cat I_red);
       basis := [&+[b[i]*basis[i] : i in [1..#basis]] : b in Basis(ker)];
@@ -2101,8 +2116,10 @@ function tau_alternating(V, Q)
     // complements to idxs
     comp := [[x : x in [1..2*n] | x notin idx] :  idx in idxs];
     assert &and[c in idxs : c in comp];
-    for i->I in idxs do
-	for j->J_prime in idxs do
+    for i in [1..#idxs] do
+	I := idxs[i];
+	for j in [1..#idxs] do
+	    J_prime := idxs[j];
 	    J := comp[j];
 	    s := Sign(Sym(2*n)!(J_prime cat J));
 	    tau[i][j] := s * Minor(Q,I,J);

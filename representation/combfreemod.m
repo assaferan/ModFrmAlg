@@ -282,8 +282,8 @@ intrinsic 'eq'(M1::CombFreeMod, M2::CombFreeMod) -> BoolElt
       U1 := Universe(M1`names);
       U2 := Universe(M2`names);
       if Type(BaseRing(U1)) eq FldRat then
-        is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
-        if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)|>; end if;
+	  is_isom := Type(BaseRing(U2)) eq FldRat;
+          if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)|>; end if;
       elif Type(BaseRing(U2)) eq FldRat then
 	is_isom := IsIsomorphic(BaseRing(U1), BaseRing(U2));
         if is_isom then psi := hom<BaseRing(U1) -> BaseRing(U2)| 1 >; end if;

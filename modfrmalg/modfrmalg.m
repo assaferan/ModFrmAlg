@@ -179,6 +179,7 @@ intrinsic AlgebraicModularForms(G::GrpRed,
     If it is 2 (by default), we assume that the inner form is twice the bilinear pairing, explicitly M[i,i] = 2Q(e_i)}
 
         require IsCompact(G) : "Group must be compact at infinity.";
+        CheckVersion();
         K := SplittingField(G);
         require IsField(K) : "Reductive group must be defined over a field.";
 	// !!! TODO : eventually want them to be the same
@@ -539,15 +540,6 @@ intrinsic Genus(M::ModFrmAlg : BeCareful := false,
 	return M`genus;
 end intrinsic;
 
-/*
-function special_subgroup(gamma)
-    F := BaseRing(gamma);
-    C2 := sub<GL(1, F) | [-1]>;
-    h := hom<gamma -> C2 | [C2![Determinant(gamma.i)] : i in [1..Ngens(gamma)]]>;
-    return Kernel(h); 
-end function;
-*/
-
 intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
 				: BeCareful := false)
 {Set the automorphism groups of the lattices in the genus of M.}
@@ -557,24 +549,15 @@ intrinsic SetAutomorphismGroups(~M::ModFrmAlg, autgps::SeqEnum[GrpMat]
   for i in [1..#reps] do
      reps[i]`AutomorphismGroup := autgps[i];
   end for;
-//  gamma_reps := autgps;
-  assert IsIsomorphic(BaseRing(AmbientSpace(reps[1])),
-			    BaseRing(M`W`G));
 
-  //gamma_reps := [AutomorphismGroup(r : Special := IsSpecialOrthogonal(M))
-  //		: r in reps];
-  /*
-  gammas := [sub<M`W`G|
-		[Transpose(PullUp(Matrix(g), reps[i], reps[i] :
-				  BeCareful := BeCareful)) :
-		 //			  g in Generators(gamma_reps[i])]> :
-		 g in Generators(autgps[i])]> :
-	    i in [1..#reps]];
-
-  if IsSpecialOrthogonal(M) then
-      gammas := [special_subgroup(gamma) : gamma in gammas];
+  F1 := BaseRing(AmbientSpace(reps[1]));
+  F2 := BaseRing(M`W`G);
+  if Type(F1) eq FldRat then
+      assert Type(F2) eq FldRat;
+  else
+      assert IsIsomorphic(F1, F2);
   end if;
- */
+
   gammas := [AutomorphismGroupOverField(r, M`W`G : Special := IsSpecialOrthogonal(M)) : r in reps];
   if GetVerbose("AlgebraicModularForms") ge 2 then
      printf "The sizes of the automorphism groups are %o.\n",

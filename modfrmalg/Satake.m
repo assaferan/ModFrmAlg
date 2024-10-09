@@ -53,25 +53,27 @@ function SatakeTransform(mu, G, A, sqrt_p, r, K, k, a, R)
   sum := 0;
   W_elts := [w : w in W];
   vprintf AlgebraicModularForms, 2 : "Computing Satake transform for k = %o, #W = %o\n i = ", k, #W;
-  for i->w in W_elts do
-    vprintf AlgebraicModularForms, 2 : "%o ", i;
-    w_mu := CorootAction(W)(mu, w);
-    // This might need handling of a denominator in general
-    w_mu := ChangeRing(w_mu, Integers());
-    //    if (r eq 1) then w_mu := [w_mu[1]]; end if;
-    e_w_mu := get_monomial(A, w_mu);
-    prod := K!e_w_mu;
-    for j->alpha in alphas do
-      alpha_d := DualRoot(alpha, G);
-      w_alpha_d := CorootAction(W)(alpha_d, w);
-      w_alpha_d := ChangeRing(w_alpha_d, Integers());
-//      if (r eq 1) then w_alpha_d := [w_alpha_d[1]]; end if;
-      e_w_alpha_d := get_monomial(A, w_alpha_d);
-      // TODO : !! need some better way to determine the multiplicity of a root !
-      mult := mults[j];
-      prod *:= K!(1-sqrt_p^(2*mult)*e_w_alpha_d) / K!(1-e_w_alpha_d);
-    end for;
-    sum +:= prod;
+  for i in [1..#W_elts] do
+      w := W_elts[i];
+      vprintf AlgebraicModularForms, 2 : "%o ", i;
+      w_mu := CorootAction(W)(mu, w);
+      // This might need handling of a denominator in general
+      w_mu := ChangeRing(w_mu, Integers());
+      //    if (r eq 1) then w_mu := [w_mu[1]]; end if;
+      e_w_mu := get_monomial(A, w_mu);
+      prod := K!e_w_mu;
+      for j in [1..#alphas] do
+	  alpha := alphas[j];
+	  alpha_d := DualRoot(alpha, G);
+	  w_alpha_d := CorootAction(W)(alpha_d, w);
+	  w_alpha_d := ChangeRing(w_alpha_d, Integers());
+	  //      if (r eq 1) then w_alpha_d := [w_alpha_d[1]]; end if;
+	  e_w_alpha_d := get_monomial(A, w_alpha_d);
+	  // TODO : !! need some better way to determine the multiplicity of a root !
+	  mult := mults[j];
+	  prod *:= K!(1-sqrt_p^(2*mult)*e_w_alpha_d) / K!(1-e_w_alpha_d);
+      end for;
+      sum +:= prod;
   end for;
   den := Denominator(sum);
   assert IsMonomial(R!den);

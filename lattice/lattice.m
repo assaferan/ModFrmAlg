@@ -1,4 +1,3 @@
-
 freeze;
 /****-*-magma-******a********************************************************
                                                                             
@@ -122,6 +121,9 @@ freeze;
 // 'eq'(L1::ModPad, L2::ModPad) -> BoolElt
 // Complete(L::ModDed, p::RngOrdIdl) -> ModPad
 // Complete(L::ModDedLat, p::RngOrdIdl) -> ModPad
+
+import "ProcPL.m" : ProjectiveLineProcess, Advance, Next;
+import "quadratic_defect.m" : QuadraticDefect, IsLocalSquare;
 
 ///////////////////////////////////////////////////////////////////
 //                                                               //
@@ -295,7 +297,12 @@ matrix provided. }
   //  ring of the supplied basis agree.
   // require BaseRing(rfxSpace) eq BaseRing(basis): "The base rings do not match.";
   F := BaseRing(rfxSpace);
-  iso := IsIsomorphic(F, FieldOfFractions(BaseRing(basis)));
+  F_other := FieldOfFractions(BaseRing(basis));
+  if Type(F) eq FldRat then
+      iso := (Type(F_other) eq FldRat);
+  else	  
+      iso := IsIsomorphic(F, F_other);
+  end if;
 
   require iso : "The base rings do not match.";
   basis := ChangeRing(basis, BaseRing(rfxSpace));
@@ -1717,6 +1724,7 @@ function is_maximal_integral(L,p)
   FF:= BaseRing(BM);
   val2:= Valuation(BaseRing(L)!2, p);
   PP:= ProjectiveLineProcess(k, Nrows(V));
+  Advance(~PP);
   x:= Next(PP);
   while not IsZero(x) do
     e:= Eltseq(x * V) @@ h;
@@ -1746,6 +1754,7 @@ function is_maximal_integral(L,p)
 	assert IsIntegral(lat);
 	return false, lat; 
     end if;
+    Advance(~PP);
     x:= Next(PP);
   end while;
   // This should work but apparently does not work in the even case
@@ -2130,10 +2139,10 @@ intrinsic '#'(I::RngPadIdl) -> RngIntElt
   return (#(I`R) / (#k)^v);
 end intrinsic;  
 
-declare type ModPad[ModTupFldElt];
+declare type ModPad;
 declare attributes ModPad :
-		   // the base ring
-		   R,
+        // the base ring
+        R,
 	// the field of fractions
 	F,
 	// basis

@@ -220,6 +220,7 @@ end intrinsic;
 // orthogonal
 
 function build_orthogonal(quad, special)
+    CheckVersion();
   F := BaseRing(quad);
   n := Dimension(quad);
   cartan_type := (n mod 2 eq 1) select "B" else "D";
@@ -263,6 +264,7 @@ end intrinsic;
 
 intrinsic SpecialOrthogonalGroup(innerForm::AlgMatElt[Fld]) -> GrpRed
 {Construct the special orthogonal group preserving the specified symmetric form.}
+  CheckVersion();
   return SpecialOrthogonalGroup(AmbientReflexiveSpace(innerForm));
 end intrinsic;
 

@@ -657,7 +657,8 @@ intrinsic CuspidalSubspace(M::ModFrmAlg) -> ModMatFldElt
 	gram := ChangeRing(DiagonalMatrix(mult_wts), F);
 
 	// vectors orthogonal to the Eisenstein series
-	cuspBasis := Basis(Kernel(Transpose(Matrix(eis`vec*gram))));
+	// cuspBasis := Basis(Kernel(Transpose(Matrix(eis`vec*gram))));
+	cuspBasis := Basis(Kernel(Transpose(Matrix([e`vec*gram : e in eis]))));
 	/*
 	// The change-of-basis matrix.
 	basis := Id(MatrixRing(F, dim));

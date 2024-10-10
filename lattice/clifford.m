@@ -1,9 +1,11 @@
-// freeze;
+freeze;
 // In this file we implement various methods related to the even clifford functor
 
 import "../neighbors/neighbor-CN1.m" : BuildNeighborProc;
 import "../neighbors/neighbor-CN1.m" : BuildNeighbor;
 import "../neighbors/neighbor-CN1.m" : GetNextNeighbor;
+
+import "lattice.m" : GramMatrixOfBasis;
 
 // This was constructed only for quaternary lattices, change later
 
@@ -17,7 +19,11 @@ function RationalEvenClifford(L : Isometries := [])
     // Fixing the order of the subsets
     subs := [[x : x in Subsets({1..dim}, k)] : k in [0..dim]];
     C_F_gr := [[&*([1] cat [e[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
-    idls_gr := [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
+    if (ElementType(Universe(idls)) eq RngIntFracIdl) then
+	idls_gr := [[Rationals()!!1]] cat [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [1..dim]];
+    else
+	idls_gr := [[&*([Universe(idls) | idls[i] : i in I]) : I in subs[k+1]] : k in [0..dim]];
+    end if;
     basis_C_F := &cat C_F_gr;
     idls_C_F := &cat idls_gr;
     // we construct the even and odd (rational) clifford algebras.
@@ -255,7 +261,11 @@ function get_quaternion_orders(L : Isometry := 1)
     _, BB, isom := IsQuaternionAlgebra(B);
     ram_f, ram_inf := RamifiedPlaces(BB);
     // BBB := QuaternionAlgebra(Discriminant(BB));
-    BBB := QuaternionAlgebra(ram_f cat ram_inf);
+    if not IsEmpty(ram_f) and ElementType(Universe(ram_f)) eq RngInt then
+	BBB := QuaternionAlgebra(&*[Norm(x) : x in ram_f]);
+    else
+	BBB := QuaternionAlgebra([Place(x) : x in ram_f] cat ram_inf);
+    end if;
     _, isom2 := IsIsomorphic(BB,BBB : Isomorphism);
     isom := isom*isom2;
     BB := BBB;
@@ -295,9 +305,17 @@ function get_quaternion_orders(L : Isometry := 1)
 	hnfs := [HermiteForm(mat) : mat in int_mats];
 	rat_hnfs := [1/denoms[i] * ChangeRing(hnfs[i], F) : i in [1,2]];
 	elts := [[isom(v[1] + v[2]*i + v[3]*j + v[4]*i*j) : v in Rows(hnf)] : hnf in rat_hnfs];
-	orders := [QuaternionOrder(elt_seq) : elt_seq in elts];
+	if Type(F) eq FldRat then
+	    orders := [QuaternionOrder(elt_seq) : elt_seq in elts];
+	else
+	    orders := [Order(elt_seq) : elt_seq in elts];
+	end if;
     else
-	idls := [ideal<Integers(KK) | idls_C_0[i]> : i in [1..8]];
+	if (Type(F) eq FldRat) then
+	    idls := [Norm(idls_C_0[i])*Integers(KK) : i in [1..8]];
+	else
+	    idls := [ideal<Integers(KK) | idls_C_0[i]> : i in [1..8]];
+	end if;
 	pmat := PseudoMatrix(idls, mats[1]);
 	hnf := HermiteForm(pmat);
 	idls := CoefficientIdeals(hnf);
@@ -335,10 +353,10 @@ function get_genus_orders(genus)
 	if (Type(F) ne FldRat) then 
 	    B_prime, emb_F := ChangeRing(B_prime, F);
 	    _, isom := IsIsomorphic(B_prime, B : Isomorphism);
-	    order_B := [Order([isom(emb_F(x)) : x in Basis(O)]) : O in all_orders[idx]];
+	    order_B := [Order([isom(emb_F(x)) : x in Generators(O)]) : O in all_orders[idx]];
 	else
 	    _, isom := IsIsomorphic(B_prime, B : Isomorphism);
-	    order_B := [QuaternionOrder([isom(x) : x in Basis(O)]) : O in all_orders[idx]];
+	    order_B := [QuaternionOrder([isom(x) : x in Generators(O)]) : O in all_orders[idx]];
 	end if;
 	Append(~orders_B, order_B);
     end for;
@@ -462,4 +480,122 @@ function getHilbertDims(d,n : k := [2,2], UseFinite := false)
     cusp := &+([0] cat [&+[Dimension(CuspidalSubspace(omf)) : omf in omfs_G]
 	       : omfs_G in omfs]);
     return total, cusp;
+end function;
+
+// Here M is a squarefree ideal in F, K a quadratic extension, such that every prime dividing M splits in K
+function quaternary_lattice(K, M)
+    ZF := Order(M);
+    F := NumberField(ZF);
+    ZK := Integers(K);
+    facM := Factorization(M);
+    assert F subset K;
+    assert Degree(RelativeField(F,K)) eq 2; // [K:F] = 2
+    assert &and[fa[2] eq 1 : fa in facM]; // M is squarefree
+    assert &and[#Factorization(ideal<ZK | fa[1]>) eq 2 : fa in facM]; // all primes are split in K
+    // At the moment making some simplifying assumptions such as class number 1 and taking maximal order
+    MZK := ideal<ZK | M>;
+    // We need an even number of places to create the quaternion algebra over F
+    // so if we need to, we add a nonsplit (inert or ramified) prime (so only B_F will ramify there)
+    discB_F := M;
+    if IsOdd(#facM) then
+	p := 1;
+	split := true;
+	while split do
+	    p := NextPrime(p);
+	    for P in PrimeIdealsOverPrime(F,p) do
+		split := #Factorization(ideal<ZK|P>) eq 2;
+		if not split then
+		    discB_F := P*M;
+		    break;
+		end if;
+	    end for;
+	end while;
+    end if;
+    B_F := QuaternionAlgebra(discB_F, InfinitePlaces(F));
+    B := ChangeRing(B_F, K);
+    assert Discriminant(B) eq MZK;
+    O := MaximalOrder(B);
+    res_B_F, m_res_B_F := RestrictionOfScalars(B,F);
+    gens_O_F := [m_res_B_F(b*g) : b in Basis(ZK), g in Generators(O)];
+    tmp := ChangeRing(Matrix(gens_O_F), F);
+    idls_F := [1*ZF : i in [1..Nrows(tmp)]];
+    pmat_F := PseudoMatrix(idls_F, tmp);
+    hnf := HermiteForm(pmat_F);
+    idls := CoefficientIdeals(hnf);
+    bb := Basis(hnf);
+    alphas := [];
+    for I in idls do
+	_, alpha := IsPrincipal(I);
+	Append(~alphas, alpha);
+    end for;
+    basis_O_F := [alphas[i]*Vector(bb[i]) : i in [1..#bb]];
+    assert exists(sig){a : a in Automorphisms(K) | a(F.1) eq F.1 and not a(K.1) eq K.1};
+    conj_basis := [Conjugate(B![sig(x) : x in Eltseq(g@@m_res_B_F)]) : g in basis_O_F];
+    conj_basis_O_F := Matrix([m_res_B_F(x) : x in conj_basis]);
+    mat_basis_O_F := ChangeRing(Matrix(basis_O_F),F);
+    conj_mat := Solution(mat_basis_O_F, conj_basis_O_F);
+    fixed_vecs := Eigenspace(conj_mat, 1);
+    fixed_basis := [(b * mat_basis_O_F)@@m_res_B_F : b in Basis(fixed_vecs)];
+    Q := Matrix([[Norm(x+y)-Norm(x)-Norm(y) : x in fixed_basis] : y in fixed_basis]);
+    Q := ChangeRing(Q, F);
+    det := Determinant(Q);
+    assert not IsSquare(det);
+    assert IsSquare(K!det);
+    return Q;
+end function;
+
+function factor_ufd(x)
+    if x eq 0 then
+	return [<0,1>];
+    end if;
+    F := Parent(x);
+    ZF := Integers(F);
+    fac_idl := Factorization(x*ZF);
+    fac := [];
+    for fa in fac_idl do
+	is_prin, alpha := IsPrincipal(fa[1]);
+	assert is_prin; // we assume ufd
+	Append(~fac, <F!alpha, fa[2]>);
+    end for;
+    u := x / &*[fa[1]^fa[2] : fa in fac];
+    UF, mUF := UnitGroup(F);
+    UF_coeffs := Eltseq(u@@mUF);
+    for i in [1..#UF_coeffs] do
+	if UF_coeffs[i] ne 0 then
+	    Append(~fac, <F!mUF(UF.i), UF_coeffs[i]>);
+	end if;
+    end for;
+    return fac;
+end function;
+
+// inverse odd clifford for the binary case
+function InverseOddClifford(I,N)
+    x1, x2 := Explode(Basis(I));
+    O := Order(I);
+    modN, red := quo<O | N*O>;
+    mat := Matrix(Integers(N), [Eltseq(red(x1)), Eltseq(red(x2))]);
+    sol := Vector(Integers(N), Eltseq(red(1)));
+    a, b := Explode(Eltseq(Solution(mat, sol)));
+    ZZ := Integers();
+    a := ZZ!a;
+    b := ZZ!b;
+    while (GCD(a,b) ne 1) do
+	if (a eq 0) then
+	    a +:= N;
+	else
+	    b +:= N;
+	end if;
+    end while;
+    _, d, c := XGCD(a,b);
+    assert a*d+b*c eq 1;
+    mat := Matrix([[a,b],[-c,d]]);
+    assert Determinant(mat) eq 1;
+    y1 := a*x1 + b*x2;
+    y2 := -c*x1 + d*x2;
+    w := y2 / y1;
+    II := ideal<O_K | [1, w]>;
+    a := Denominator(w);
+    Q_I := a*Matrix([[Norm(x+y)-Norm(x)-Norm(y) : x in Basis(II)] : y in Basis(II)]);
+    assert -Determinant(Q_I) eq Discriminant(O);
+    return Q_I;
 end function;

@@ -91,7 +91,7 @@ freeze;
 
 // !! TODO - fix this terrible patch
 
-import "../LieThry/Root/RootDtm.m" : rootDatum;
+import !"LieThry/Root/RootDtm.m" : rootDatum;
 
 
 ///////////////////////////////////////////////////////////////////
@@ -129,7 +129,7 @@ declare attributes GrpRedElt:
         elt;
 
 
-// !!! TODO : Add Weil restrictiond (G could be a product of Weil restrictions)
+// !!! TODO : Add Weil restrictions (G could be a product of Weil restrictions)
 
 forward SplitReflexiveSpace;
 

@@ -1,4 +1,5 @@
 {
+  canonical_form.m
   clifford.m
   fracIdl.m
   lattice.m

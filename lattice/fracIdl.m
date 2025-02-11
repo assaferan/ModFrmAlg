@@ -44,9 +44,10 @@ declare type RngIntFracIdl;
 declare attributes RngIntFracIdl:
   gen;
 
-// Parent intrinsic
-intrinsic Parent(I::RngIntFracIdl) {}
-  PowerStructure(RngIntFracIdl);
+// Parent
+intrinsic Parent(I::RngIntFracIdl) -> .
+{Parent of I}
+    return PowerStructure(RngIntFracIdl);
 end intrinsic;
 
 // Constructors
@@ -95,6 +96,11 @@ end intrinsic;
 intrinsic '!!'(QQ::FldRat, I::RngIntFracIdl) -> RngIntFracIdl
 {Make the ideal I a fractional ideal.}
   return idealCoercion(I);
+end intrinsic;
+
+intrinsic '!!'(QQ::FldRat, a::RngIntElt) -> RngIntFracIdl
+{Make the ideal I a fractional ideal.}
+  return idealCoercion(a*Integers());
 end intrinsic;
 
 // arithmetic

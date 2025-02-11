@@ -213,6 +213,7 @@ function internalHecke(M, pR, k, BeCareful, Force, Estimate, UseLLL, Orbits,
 
   // Sets the Hecke operator in the internal data structure for this
   //  algebraic modular form.
+  // At the moment we don't save the plus operator
   SetHeckeOperator(M, hecke, pR, k);
 
   // Returns the computed Hecke operator.
@@ -252,6 +253,26 @@ intrinsic PerestroikaOperator(M::ModFrmAlg, pR::RngOrdIdl
   n := Rank(Module(M));
   require IsEven(n) : "Perestroika operator only exists in even rank.";
   return internalHecke(M, pR, 0, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec);
+end intrinsic;
+
+intrinsic PlusOperator(M::ModFrmAlg, pR::RngOrdIdl
+			      : BeCareful := false,
+			      Force := false,
+			      Estimate := true,
+			      UseLLL := true,
+			      Orbits := true,
+			      ComputeGenus := false,
+			      LowMemory := false,
+			      ThetaPrec := 25) -> AlgMatElt
+{Computes the Plus Hecke operator.}
+  // TOOD : Should we check that V splits at p ?
+  // Verify that the supplied ideal is prime.
+  require IsPrime(pR): "Provided ideal must be prime.";
+  require IsSpecialOrthogonal(M): "Plus operator only exists for special orthogonal groups.";
+  n := Rank(Module(M));
+  require IsEven(n) : "Plus operator only exists in even rank.";
+  return internalHecke(M, pR, -1, BeCareful, Force, Estimate, UseLLL, Orbits,
 		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 			      
@@ -316,6 +337,28 @@ number field is the rationals. }
 		       ComputeGenus, LowMemory, ThetaPrec);
 end intrinsic;
 
+intrinsic PlusOperator(M::ModFrmAlg, pR::RngInt
+			      : BeCareful := false,
+			      Force := false,
+			      Estimate := true,
+			      UseLLL := true,
+			      Orbits := true,
+			      ComputeGenus := false,
+			      LowMemory := false,
+			      ThetaPrec := 25) -> AlgMatElt
+{Computes the Plus Hecke operator, under the assumption that the base
+number field is the rationals. }
+  // TOOD : Should we check that V splits at p ?
+  // Verify that the supplied ideal is prime.
+  require IsPrime(pR): "Provided ideal must be prime.";
+  require IsSpecialOrthogonal(M): "Plus operator only exists for special orthogonal groups.";
+  n := Rank(Module(M));
+  require IsEven(n) : "Plus operator only exists in even rank.";
+  
+  return internalHecke(M, pR, -1, BeCareful, Force, Estimate, UseLLL, Orbits,
+		       ComputeGenus, LowMemory, ThetaPrec);
+end intrinsic;
+
 intrinsic HeckeOperator(M::ModFrmAlg, pR::RngInt
 			: BeCareful := false,
 			  Force := false,
@@ -373,6 +416,28 @@ intrinsic PerestroikaOperator(M::ModFrmAlg, p::RngIntElt
 {Computes the Perestroika Hecke operator, at a prime above p.}
   pR := Factorization(ideal< BaseRing(Module(M)) | p >)[1][1];
   return PerestroikaOperator(M, pR
+			     : BeCareful := BeCareful,
+			       Force := Force,
+			       Estimate := Estimate,
+			       UseLLL := UseLLL,
+			       Orbits := Orbits,
+			       LowMemory := LowMemory,
+			       ComputeGenus := ComputeGenus,
+			       ThetaPrec := ThetaPrec);
+end intrinsic;
+
+intrinsic PlusOperator(M::ModFrmAlg, p::RngIntElt
+			      : BeCareful := false,
+			      Force := false,
+			      Estimate := true,
+			      UseLLL := true,
+			      Orbits := true,
+			      ComputeGenus := false,
+			      LowMemory := false,
+			      ThetaPrec := 25) -> AlgMatElt
+{Computes the Plus Hecke operator, at a prime above p.}
+  pR := Factorization(ideal< BaseRing(Module(M)) | p >)[1][1];
+  return PlusOperator(M, pR
 			     : BeCareful := BeCareful,
 			       Force := Force,
 			       Estimate := Estimate,

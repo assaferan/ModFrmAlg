@@ -269,8 +269,9 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
-    kk := k ne 0 select k else n div 2;
+    kk := k gt 0 select k else n div 2;
     Perestroika := k eq 0;
+    Plus := k eq -1;
     // Build neighboring procedure for this lattice.
     nProc := BuildNeighborProc(L, pR, kk
 			       : BeCareful := BeCareful,
@@ -284,21 +285,30 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
     end if;
     RR := RealField(10);
     nbr_tm := RR!0;
-    if Orbits then
-	// The affine vector space.
-	V := nProc`L`Vpp[pR]`V;
+    
+    // The affine vector space.
+    V := nProc`L`Vpp[pR]`V;
 	
-	// The base field.
-	F := BaseRing(V);
+    // The base field.
+    F := BaseRing(V);
+    
+    if (Plus) then
+	assert IsSpecialOrthogonal(M);
+	o_V := IsometryGroup(V);
+	det_map := hom< o_V -> GL(1, F) | 
+		      [Matrix([[Determinant(o_V.i)]]) : 
+		       i in [1..NumberOfGenerators(o_V)]]>;
+	so_V := Kernel(det_map);
+	iso := FirstIsotropicSubspace(V, kk);
+	iso := sub<Universe(iso) | iso> * Transpose(V`Basis);
+	so_orbit := {iso * g : g in so_V};
+	so_orbit_bases := [Basis(u) : u in so_orbit];
+    end if;
+    
+    if Orbits then
 	
 	// The automorphism group restricted to the affine space.
-	/*
-	G := AutomorphismGroup(L : Special := IsSpecialOrthogonal(M));
-	
-	gens := [PullUp(Matrix(g), L, L :
-			BeCareful := BeCareful) :
-		 g in Generators(G)];
-       */
+
 	G := AutomorphismGroupOverField(L, M`W`G : Special := IsSpecialOrthogonal(M));
 	gens := [Transpose(Matrix(g)) : g in Generators(G)];
 	
@@ -376,12 +386,28 @@ procedure HeckeOperatorCN1Update(~reps, idx, pR, k, M, ~hecke, ~invs,
           tm := Realtime();
           proj := map< G_conj -> GL(n,F) |
 	    g :-> [L`Vpp[pR]`proj_pR(x) : x in Eltseq(g)]>;
-
+	  
           isoOrbits := IsotropicOrbits(V, G_conj, kk,
 				       proj : Estimate := Estimate);
+	  if (Plus) then
+	      // orient ourselves with repsect to the first representative
+	      // TODO - figure out a better way to keep track of the orbit
+	      if (idx gt 1) and (Vector(Eltseq(hecke[idx][1][1])) eq 0) then
+		      isoOrbits := [x : x in isoOrbits | 
+			    Basis(x[1]*Transpose(V`Basis)) 
+				 notin so_orbit_bases];
+	      else
+		  isoOrbits := [x : x in isoOrbits | 
+				Basis(x[1]*Transpose(V`Basis)) 
+				in so_orbit_bases];
+	      end if;
+	  end if;
           // The constant per neighbor is really small, so we need more precision
           tm := ChangePrecision(Realtime() - tm, 10);
           nNbrs := NumberOfNeighbors(M, pR, kk);
+	  if (Plus) then
+	      nNbrs div:= 2;
+	  end if;
 	  if nNbrs ne 0 then
               vprintf AlgebraicModularForms, 1 :
 		  "IsotropicOrbits took %o sec, found %o orbits. Time per neighbor is %o sec.\n", tm, #isoOrbits, tm / nNbrs;
@@ -539,7 +565,7 @@ function HeckeOperatorCN1(M, pR, k
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
-    kk := k ne 0 select k else n div 2;
+    kk := k gt 0 select k else n div 2;
     fullCount := #M`H * NumberOfNeighbors(M, pR, kk);
     count := 0;
     elapsed := 0;
@@ -594,7 +620,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
 				       Estimate := true,
 				       Orbits := true,
 				       LowMemory := false,
-				     ThetaPrec := 25)
+				       ThetaPrec := 25)
 
     assert 1 le idx and idx le #M`H;
     // The genus representatives.
@@ -608,7 +634,7 @@ function HeckeOperatorCN1SparseBasis(M, pR, k, idx, invs
     Q := ReflexiveSpace(Module(M));
     n := Dimension(Q);
 
-    kk := k ne 0 select k else n div 2;
+    kk := k gt 0 select k else n div 2;
     fullCount := NumberOfNeighbors(M, pR, kk);
     count := 0;
     elapsed := 0;
